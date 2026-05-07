@@ -1,17 +1,123 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
 		{
-			"path": "pages/index/index",
+			"path": "pages/home/home",
 			"style": {
-				"navigationBarTitleText": "uni-app"
+				"navigationBarTitleText": "首页"
+			}
+		},
+		{
+			"path": "pages/catalog/catalog",
+			"style": {
+				"navigationBarTitleText": "字表"
+			}
+		},
+		{
+			"path": "pages/learn/session",
+			"style": {
+				"navigationBarTitleText": "学习"
+			}
+		},
+		{
+			"path": "pages/me/me",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
+		},
+		{
+			"path": "pages/me/learned",
+			"style": {
+				"navigationBarTitleText": "我学过的字库"
+			}
+		},
+		{
+			"path": "pages/me/wrong-often",
+			"style": {
+				"navigationBarTitleText": "我经常错的"
+			}
+		},
+		{
+			"path": "pages/char/detail",
+			"style": {
+				"navigationBarTitleText": "生字"
+			}
+		},
+		{
+			"path": "pages/settings/curriculum",
+			"style": {
+				"navigationBarTitleText": "教材与进度"
+			}
+		},
+		{
+			"path": "pages/vip/vip",
+			"style": {
+				"navigationBarTitleText": "会员中心"
+			}
+		},
+		{
+			"path": "pages/tools/stroke",
+			"style": {
+				"navigationBarTitleText": "笔顺实验室"
 			}
 		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "uni-app",
-		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"navigationBarTitleText": "汉字学习",
+		"navigationBarBackgroundColor": "#F4F1EA",
+		"backgroundColor": "#F4F1EA",
+		"app-plus": {
+			"background": "#F4F1EA",
+			"bounce": "none",
+			"safearea": {
+				"background": "#F4F1EA",
+				"backgroundDark": "#F4F1EA"
+			},
+			"titleNView": {
+				"titleColor": "#2c2419",
+				"backgroundColor": "#F4F1EA",
+				"splitLine": {
+					"color": "#F4F1EA",
+					"height": "0px"
+				}
+			}
+		},
+		"mp-weixin": {
+			"navigationBarBackgroundColor": "#F4F1EA",
+			"navigationBarTextStyle": "black"
+		}
+	},
+	"tabBar": {
+		"color": "#7A7E83",
+		"selectedColor": "#3d6b4a",
+		"borderStyle": "white",
+		"backgroundColor": "#ffffff",
+		"list": [
+			{
+				"pagePath": "pages/home/home",
+				"iconPath": "static/tab/home.png",
+				"selectedIconPath": "static/tab/home.png",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/catalog/catalog",
+				"iconPath": "static/tab/catalog.png",
+				"selectedIconPath": "static/tab/catalog.png",
+				"text": "字表"
+			},
+			{
+				"pagePath": "pages/learn/session",
+				"iconPath": "static/tab/learn.png",
+				"selectedIconPath": "static/tab/learn.png",
+				"text": "学习"
+			},
+			{
+				"pagePath": "pages/me/me",
+				"iconPath": "static/tab/me.png",
+				"selectedIconPath": "static/tab/me.png",
+				"text": "我的"
+			}
+		]
 	},
 	"uniIdRouter": {}
 }

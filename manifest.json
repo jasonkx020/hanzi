@@ -10,6 +10,16 @@
         "usingComponents" : true,
         "nvueStyleCompiler" : "uni-app",
         "compilerVersion" : 3,
+        "background" : "#F4F1EA",
+        "statusbar" : {
+            "immersed" : "supportedDevice",
+            "style" : "dark",
+            "background" : "#FFF4F1EA"
+        },
+        "safearea" : {
+            "background" : "#FFF4F1EA",
+            "backgroundDark" : "#FFF4F1EA"
+        },
         "splashscreen" : {
             "alwaysShowBeforeRender" : true,
             "waiting" : true,

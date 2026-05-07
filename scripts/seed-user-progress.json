@@ -1,0 +1,20 @@
+[
+  {
+    "textbook_version_id": "tongbian-rj",
+    "grade": 1,
+    "semester": "上",
+    "hanzi": "天",
+    "learned": 1,
+    "mastered": 0,
+    "wrong_count": 0
+  },
+  {
+    "textbook_version_id": "tongbian-rj",
+    "grade": 1,
+    "semester": "上",
+    "hanzi": "人",
+    "learned": 1,
+    "mastered": 0,
+    "wrong_count": 2
+  }
+]
