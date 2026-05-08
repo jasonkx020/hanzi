@@ -1,35 +1,16 @@
 <template>
 	<view class="page">
-		<text class="title">学习会话</text>
-		<text class="desc">按当前教材偏好从 hanzi_curriculum 取字序列，配合 VIP 限额策略逐字练习。</text>
-		<text class="count">当前库中本筛选字数：{{ dbCount }}（App 端有效）</text>
-		<view class="box">
-			<text class="mono">{{ debugSql }}</text>
-		</view>
-		<button type="primary" @click="goCatalog">先浏览字表</button>
+		<text class="title">学习</text>
+		<text class="desc">学习主入口已迁移到每日一练模块，点击进入新架构页面。</text>
+		<button type="primary" @click="goDaily">进入每日一练</button>
 	</view>
 </template>
 
 <script>
-import { debugSelectSql, queryCurriculumChars } from '@/utils/curriculum-db.js'
-import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
-
 export default {
-	data() {
-		return {
-			debugSql: '',
-			dbCount: 0
-		}
-	},
-	async onShow() {
-		const { sql, params } = debugSelectSql(getCurriculumPrefs())
-		this.debugSql = `${sql}\n-- params: ${JSON.stringify(params)}`
-		const rows = await queryCurriculumChars(getCurriculumPrefs())
-		this.dbCount = rows.length
-	},
 	methods: {
-		goCatalog() {
-			uni.switchTab({ url: '/pages/catalog/catalog' })
+		goDaily() {
+			uni.navigateTo({ url: '/pages/literacy/daily' })
 		}
 	}
 }
@@ -56,28 +37,6 @@ export default {
 	font-size: 26rpx;
 	color: #5a534c;
 	line-height: 1.55;
-	margin-bottom: 16rpx;
-}
-
-.count {
-	display: block;
-	font-size: 26rpx;
-	color: #3d6b4a;
-	font-weight: 600;
 	margin-bottom: 24rpx;
-}
-
-.box {
-	background: #fff;
-	padding: 20rpx;
-	border-radius: 12rpx;
-	margin-bottom: 28rpx;
-}
-
-.mono {
-	font-size: 20rpx;
-	color: #57606a;
-	word-break: break-all;
-	white-space: pre-wrap;
 }
 </style>

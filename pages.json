@@ -3,13 +3,19 @@
 		{
 			"path": "pages/home/home",
 			"style": {
-				"navigationBarTitleText": "首页"
+				"navigationBarTitleText": "识字"
 			}
 		},
 		{
-			"path": "pages/catalog/catalog",
+			"path": "pages/pinyin/index",
 			"style": {
-				"navigationBarTitleText": "字表"
+				"navigationBarTitleText": "拼音"
+			}
+		},
+		{
+			"path": "pages/dictionary/index",
+			"style": {
+				"navigationBarTitleText": "查字"
 			}
 		},
 		{
@@ -59,11 +65,71 @@
 			"style": {
 				"navigationBarTitleText": "笔顺实验室"
 			}
+		},
+		{
+			"path": "pages/literacy/textbook",
+			"style": {
+				"navigationBarTitleText": "课本同步学"
+			}
+		},
+		{
+			"path": "pages/literacy/lesson",
+			"style": {
+				"navigationBarTitleText": "课次字卡"
+			}
+		},
+		{
+			"path": "pages/literacy/char",
+			"style": {
+				"navigationBarTitleText": "单字学习"
+			}
+		},
+		{
+			"path": "pages/literacy/daily",
+			"style": {
+				"navigationBarTitleText": "每日一练"
+			}
+		},
+		{
+			"path": "pages/literacy/game",
+			"style": {
+				"navigationBarTitleText": "趣味识字营"
+			}
+		},
+		{
+			"path": "pages/pinyin/drill",
+			"style": {
+				"navigationBarTitleText": "拼音闯关"
+			}
+		},
+		{
+			"path": "pages/dictionary/result",
+			"style": {
+				"navigationBarTitleText": "查字结果"
+			}
+		},
+		{
+			"path": "pages/me/report",
+			"style": {
+				"navigationBarTitleText": "学习报告"
+			}
+		},
+		{
+			"path": "pages/me/medals",
+			"style": {
+				"navigationBarTitleText": "勋章墙"
+			}
+		},
+		{
+			"path": "pages/settings/guardian",
+			"style": {
+				"navigationBarTitleText": "家长管理"
+			}
 		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "汉字学习",
+		"navigationBarTitleText": "萌萌识字",
 		"navigationBarBackgroundColor": "#F4F1EA",
 		"backgroundColor": "#F4F1EA",
 		"app-plus": {
@@ -97,19 +163,19 @@
 				"pagePath": "pages/home/home",
 				"iconPath": "static/tab/home.png",
 				"selectedIconPath": "static/tab/home.png",
-				"text": "首页"
+				"text": "识字"
 			},
 			{
-				"pagePath": "pages/catalog/catalog",
-				"iconPath": "static/tab/catalog.png",
-				"selectedIconPath": "static/tab/catalog.png",
-				"text": "字表"
-			},
-			{
-				"pagePath": "pages/learn/session",
+				"pagePath": "pages/pinyin/index",
 				"iconPath": "static/tab/learn.png",
 				"selectedIconPath": "static/tab/learn.png",
-				"text": "学习"
+				"text": "拼音"
+			},
+			{
+				"pagePath": "pages/dictionary/index",
+				"iconPath": "static/tab/catalog.png",
+				"selectedIconPath": "static/tab/catalog.png",
+				"text": "查字"
 			},
 			{
 				"pagePath": "pages/me/me",

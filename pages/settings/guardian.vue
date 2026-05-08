@@ -1,0 +1,65 @@
+<template>
+	<view class="page">
+		<view class="card">
+			<text class="title">家长管理</text>
+			<text class="desc">学习时长、提醒时间、护眼与家长验证配置。</text>
+		</view>
+		<view class="card">
+			<text class="field-label">朗读人</text>
+			<view class="switch-row">
+				<view class="chip" :class="narrator === 'kid' ? 'chip-on' : ''" @click="pick('kid')">童声</view>
+				<view class="chip" :class="narrator === 'female' ? 'chip-on' : ''" @click="pick('female')">标准女声</view>
+			</view>
+			<text class="tip">当前：{{ narratorText }}</text>
+		</view>
+		<view class="card">
+			<text class="field-label">查字缓存</text>
+			<text class="tip">已缓存 {{ cacheCount }} 条（缓存有效期 7 天）</text>
+			<button size="mini" type="warn" @click="clearDictCache">清空查字缓存</button>
+		</view>
+	</view>
+</template>
+<script>
+import { getAudioNarrator, setAudioNarrator, getAudioNarratorLabel } from '@/utils/audio-settings.js'
+import { clearDictionaryCache, getDictionaryCacheStats } from '@/utils/dictionary-cache.js'
+
+export default {
+	data() {
+		return {
+			narrator: 'kid',
+			cacheCount: 0
+		}
+	},
+	computed: {
+		narratorText() {
+			return getAudioNarratorLabel(this.narrator)
+		}
+	},
+	onShow() {
+		this.narrator = getAudioNarrator()
+		this.cacheCount = getDictionaryCacheStats().count
+	},
+	methods: {
+		pick(v) {
+			this.narrator = setAudioNarrator(v)
+			uni.showToast({ title: `已切换为${this.narratorText}`, icon: 'none' })
+		},
+		clearDictCache() {
+			clearDictionaryCache()
+			this.cacheCount = 0
+			uni.showToast({ title: '查字缓存已清空', icon: 'none' })
+		}
+	}
+}
+</script>
+<style scoped>
+.page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
+.card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 14rpx; }
+.title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
+.desc { display: block; font-size: 25rpx; color: #6b6560; }
+.field-label { display: block; font-size: 27rpx; color: #2c2419; font-weight: 600; margin-bottom: 10rpx; }
+.switch-row { display: flex; gap: 10rpx; }
+.chip { padding: 12rpx 18rpx; border-radius: 999rpx; background: #f1ece2; font-size: 24rpx; color: #6b6560; }
+.chip-on { background: #ffe2b8; color: #2c2419; font-weight: 700; }
+.tip { display: block; margin-top: 10rpx; font-size: 22rpx; color: #8a8279; }
+</style>

@@ -2,9 +2,11 @@
 // #ifdef APP-PLUS
 import { ensureCurriculumDatabase } from '@/utils/curriculum-db.js'
 // #endif
+import { initAppStores } from '@/store/index.js'
 	export default {
 		onLaunch: function() {
 			console.log('App Launch')
+			initAppStores()
 			// #ifdef APP-PLUS
 			ensureCurriculumDatabase().catch(() => {})
 			try {

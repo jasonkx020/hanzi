@@ -36,6 +36,15 @@
 		<view class="control-row">
 			<button size="mini" type="warn" @click="testWordNotFound">测试404回调</button>
 		</view>
+		<view v-if="testFeedback || testHistory.length" class="test-panel">
+			<text
+				v-if="testFeedback"
+				class="test-feedback"
+				:class="testFeedbackType === 'bad' ? 'test-feedback-bad' : 'test-feedback-ok'"
+			>{{ testFeedback }}</text>
+			<text class="test-order-title">书写顺序记录（最新在前）</text>
+			<text v-for="(item, idx) in testHistory" :key="`${idx}-${item}`" class="test-order-item">{{ item }}</text>
+		</view>
 		<canvas
 			v-if="strokeReady"
 			canvas-id="stroke-box"
@@ -53,6 +62,8 @@
 import cnchar from 'cnchar'
 import drawNative from '@/utils/draw-native'
 import { isVipActive } from '@/utils/vip.js'
+import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { addCharWrongCount } from '@/utils/user-progress-storage.js'
 cnchar.use(drawNative)
 
 export default {
@@ -64,7 +75,22 @@ export default {
 			strokeReady: false,
 			drawWriter: null,
 			wordNotFoundRegistered: false,
-			vipActive: false
+			vipActive: false,
+			testFeedback: '',
+			testFeedbackType: '',
+			testHistory: [],
+			testWrongAddedAt: 0,
+			initialMode: 'animation'
+		}
+	},
+	onLoad(query) {
+		const fromHanzi = query?.hanzi ? decodeURIComponent(query.hanzi) : ''
+		const fromWord = query?.word ? decodeURIComponent(query.word) : ''
+		const incoming = fromHanzi || fromWord
+		if (query?.mode) this.initialMode = String(query.mode)
+		if (incoming) {
+			this.word = incoming
+			this.inputWord = incoming
 		}
 	},
 	onShow() {
@@ -73,7 +99,7 @@ export default {
 	onReady() {
 		this.registerWordNotFoundHook()
 		this.initPinyin()
-		this.runDraw('animation')
+		this.runDraw(this.initialMode)
 		this.vipActive = isVipActive()
 	},
 	onUnload() {
@@ -136,12 +162,14 @@ export default {
 						test: cnchar.draw.TYPE.TEST
 					}
 					const targetType = typeMap[mode] || cnchar.draw.TYPE.ANIMATION
+					this.resetTestPanel()
 					this.drawWriter = cnchar.draw(this.word, {
 						el: '#stroke-box',
 						vm: this,
 						type: targetType,
 						style: {
 							length: 180,
+							charInsetRatio: 0.15,
 							strokeColor: '#2c3e50',
 							outlineColor: '#d5d5d5',
 							currentColor: '#e74c3c'
@@ -169,6 +197,7 @@ export default {
 							testStrictOrder: true,
 							testDirectionWeight: 0.4,
 							onTestStatus: ({ index, status, data }) => {
+								this.handleTestStatus(index, status, data)
 								const scoreText = typeof data.score === 'number' ? ` score=${data.score}` : ''
 								console.log(`[draw-native] test[${index}] ${status}${scoreText} mistakes=${data.totalMistakes}`)
 							}
@@ -213,6 +242,58 @@ export default {
 				cnchar.draw('ABC', { el: '#stroke-box', vm: this })
 			} catch (e) {
 				console.log(`[draw-native] 测试404完成: ${e.message}`)
+			}
+		},
+		resetTestPanel() {
+			this.testFeedback = ''
+			this.testFeedbackType = ''
+			this.testHistory = []
+			this.testWrongAddedAt = 0
+		},
+		getPracticeChar() {
+			const pure = String(this.word || '').match(/[\u4e00-\u9fa5]/g)
+			return pure && pure.length ? pure[0] : ''
+		},
+		curriculumDims() {
+			const p = getCurriculumPrefs()
+			return {
+				textbook_version_id: p.textbook_version_id,
+				grade: Number(p.grade) || 1,
+				semester: p.semester === '下' ? '下' : '上'
+			}
+		},
+		pushTestHistory(text) {
+			this.testHistory = [text, ...this.testHistory].slice(0, 12)
+		},
+		handleTestStatus(index, status, data = {}) {
+			const strokeNo = Number(index) + 1
+			if (status === 'correct') {
+				this.testFeedbackType = 'ok'
+				this.testFeedback = '✓'
+				this.pushTestHistory(`第${strokeNo}笔 ✓ 顺序正确`)
+				return
+			}
+			if (status === 'mistake') {
+				const expectedNo = Number(data.expectedStroke) + 1
+				this.testFeedbackType = 'bad'
+				this.testFeedback = '✗'
+				this.pushTestHistory(`第${strokeNo}笔 ✗ 应写第${expectedNo}笔`)
+				const now = Date.now()
+				// 同一次抬笔事件仅记一次错字，避免重复写库
+				if (now - this.testWrongAddedAt > 250) {
+					const targetChar = this.getPracticeChar()
+					if (targetChar) {
+						addCharWrongCount(targetChar, 1, this.curriculumDims())
+					}
+					this.testWrongAddedAt = now
+				}
+				return
+			}
+			if (status === 'complete') {
+				this.testFeedbackType = 'ok'
+				this.testFeedback = '✓✓'
+				this.pushTestHistory('全部笔画通过')
+				uni.showToast({ title: '测试通过', icon: 'success' })
 			}
 		},
 		onCanvasTouchStart(e) {
@@ -319,9 +400,47 @@ export default {
 	margin-bottom: 16rpx;
 }
 
+.test-panel {
+	width: 92%;
+	margin-bottom: 12rpx;
+	padding: 14rpx 18rpx;
+	background: #fff;
+	border-radius: 10rpx;
+}
+
+.test-feedback {
+	font-size: 72rpx;
+	line-height: 1;
+	text-align: center;
+	font-weight: 700;
+	margin-bottom: 10rpx;
+}
+
+.test-feedback-ok {
+	color: #2e9f58;
+}
+
+.test-feedback-bad {
+	color: #d64545;
+}
+
+.test-order-title {
+	display: block;
+	font-size: 24rpx;
+	color: #6b7280;
+	margin-bottom: 8rpx;
+}
+
+.test-order-item {
+	display: block;
+	font-size: 24rpx;
+	color: #2f3640;
+	line-height: 1.45;
+}
+
 .stroke-canvas {
-	width: 420rpx;
-	height: 420rpx;
+    width: 420rpx;
+    height: 420rpx;
 	background: #fff;
 	border-radius: 12rpx;
 }

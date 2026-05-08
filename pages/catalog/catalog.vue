@@ -4,20 +4,20 @@
 			<text class="bar-text">{{ summary }}</text>
 		</view>
 		<view class="placeholder">
-			<text class="p-title">字表</text>
-			<text class="p-desc">当前筛选共 {{ chars.length }} 字（App 读 plus.sqlite；其它端无库时为 0）。</text>
+			<text class="p-title">教材目录与课次</text>
+			<text class="p-desc">当前共 {{ chars.length }} 字，按 lesson_hint 自动分组。</text>
 			<button type="primary" size="mini" @click="goSettings">筛选条件</button>
-			<button class="mt" type="default" size="mini" @click="openDemoChar">打开示例生字页</button>
 			<button class="mt" type="default" size="mini" @click="reloadDb">刷新数据</button>
 		</view>
-		<view v-if="chars.length" class="grid">
+		<view v-if="lessons.length" class="lesson-list">
 			<view
-				v-for="(row, i) in chars"
-				:key="row.id != null ? row.id : i"
-				class="cell"
-				@click="openChar(row)"
+				v-for="(lesson, i) in lessons"
+				:key="`${lesson.hint}-${i}`"
+				class="lesson-item"
+				@click="openLesson(lesson)"
 			>
-				<text class="cell-char">{{ row.hanzi }}</text>
+				<text class="lesson-title">{{ lesson.hint }}</text>
+				<text class="lesson-meta">共 {{ lesson.count }} 字 · 进入字卡</text>
 			</view>
 		</view>
 	</view>
@@ -31,7 +31,8 @@ export default {
 	data() {
 		return {
 			summary: '',
-			chars: []
+			chars: [],
+			lessons: []
 		}
 	},
 	onShow() {
@@ -41,22 +42,21 @@ export default {
 	methods: {
 		async reloadDb() {
 			this.chars = await queryCurriculumChars(getCurriculumPrefs())
-		},
-		openChar(row) {
-			const p = getCurriculumPrefs()
-			const h = encodeURIComponent(row.hanzi || '')
-			uni.navigateTo({
-				url: `/pages/char/detail?hanzi=${h}&grade=${p.grade}&semester=${encodeURIComponent(p.semester)}`
+			const map = Object.create(null)
+			this.chars.forEach((row) => {
+				const hint = String(row.lesson_hint || '未分课次')
+				if (!map[hint]) {
+					map[hint] = { hint, count: 0 }
+				}
+				map[hint].count += 1
 			})
+			this.lessons = Object.values(map)
+		},
+		openLesson(lesson) {
+			uni.navigateTo({ url: `/pages/literacy/lesson?hint=${encodeURIComponent(lesson.hint)}` })
 		},
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
-		},
-		openDemoChar() {
-			const p = getCurriculumPrefs()
-			uni.navigateTo({
-				url: `/pages/char/detail?hanzi=${encodeURIComponent('天')}&grade=${p.grade}&semester=${encodeURIComponent(p.semester)}`
-			})
 		}
 	}
 }
@@ -108,27 +108,31 @@ export default {
 	margin-top: 8rpx;
 }
 
-.grid {
+.lesson-list {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 16rpx;
+	flex-direction: column;
+	gap: 12rpx;
 	margin-top: 24rpx;
 }
 
-.cell {
-	width: calc((100% - 48rpx) / 4);
-	aspect-ratio: 1;
-	background: #fffef9;
+.lesson-item {
+	background: #fff;
 	border-radius: 12rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	padding: 18rpx 20rpx;
 	box-shadow: 0 2rpx 8rpx rgba(44, 36, 25, 0.06);
 }
 
-.cell-char {
-	font-size: 40rpx;
-	font-weight: 600;
+.lesson-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 700;
 	color: #2c2419;
+}
+
+.lesson-meta {
+	display: block;
+	font-size: 22rpx;
+	color: #8a8279;
+	margin-top: 6rpx;
 }
 </style>

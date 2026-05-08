@@ -12,24 +12,50 @@
 			<button class="btn-ghost" size="mini" @click="goSettings">调整教材与进度</button>
 		</view>
 
-		<view class="actions">
-			<button type="primary" @click="goCatalog">浏览字表</button>
-			<button type="default" @click="goSession">开始学习</button>
+		<view class="entry-list">
+			<view class="entry-card" @click="goTextbook">
+				<text class="entry-icon">📘</text>
+				<view class="entry-main">
+					<text class="entry-title">课本同步学</text>
+					<text class="entry-desc">跟着课本学生字，按课次系统学习</text>
+				</view>
+			</view>
+			<view class="entry-card" @click="goGame">
+				<text class="entry-icon">🎈</text>
+				<view class="entry-main">
+					<text class="entry-title">趣味识字营</text>
+					<text class="entry-desc">边玩边学，通过闯关记得更牢</text>
+				</view>
+			</view>
+			<view class="entry-card" @click="goDaily">
+				<text class="entry-icon">⭐</text>
+				<view class="entry-main">
+					<text class="entry-title">每日一练</text>
+					<text class="entry-desc">每天 10 个字，优先复习易错字</text>
+				</view>
+			</view>
 		</view>
 
-		<text class="hint">字库查询接入 SQLite 后，此处将展示本册统计与继续学习。</text>
+		<view class="tips">
+			<text class="tips-text">🐼 萌萌提醒：{{ encourageText }}</text>
+		</view>
 	</view>
 </template>
 
 <script>
-import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
+import { getCurriculumSummary } from '@/repositories/curriculum-repository.js'
+import { buildEncourageText } from '@/services/reward-service.js'
 import { isVipActive } from '@/utils/vip.js'
+import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
+import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
+import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
 
 export default {
 	data() {
 		return {
 			summary: '',
-			vipActive: false
+			vipActive: false,
+			encourageText: ''
 		}
 	},
 	onShow() {
@@ -37,8 +63,9 @@ export default {
 	},
 	methods: {
 		refresh() {
-			this.summary = formatCurriculumSummary(getCurriculumPrefs())
+			this.summary = getCurriculumSummary()
 			this.vipActive = isVipActive()
+			this.encourageText = buildEncourageText({ remain: 5 })
 		},
 		goVip() {
 			uni.navigateTo({ url: '/pages/vip/vip' })
@@ -46,11 +73,14 @@ export default {
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
 		},
-		goCatalog() {
-			uni.switchTab({ url: '/pages/catalog/catalog' })
+		goTextbook() {
+			startTextbookLearning()
 		},
-		goSession() {
-			uni.switchTab({ url: '/pages/learn/session' })
+		goGame() {
+			startLiteracyGame()
+		},
+		goDaily() {
+			startDailyTraining()
 		}
 	}
 }
@@ -117,16 +147,54 @@ export default {
 	margin-top: 8rpx;
 }
 
-.actions {
+.entry-list {
 	display: flex;
 	flex-direction: column;
-	gap: 20rpx;
+	gap: 18rpx;
 	margin-bottom: 24rpx;
 }
 
-.hint {
-	font-size: 22rpx;
-	color: #a8a29e;
+.entry-card {
+	display: flex;
+	align-items: center;
+	padding: 20rpx;
+	background: #fff;
+	border-radius: 20rpx;
+	box-shadow: 0 6rpx 20rpx rgba(44, 36, 25, 0.07);
+}
+
+.entry-icon {
+	font-size: 56rpx;
+	margin-right: 18rpx;
+}
+
+.entry-main {
+	flex: 1;
+}
+
+.entry-title {
+	display: block;
+	font-size: 31rpx;
+	font-weight: 600;
+	color: #2c2419;
+	margin-bottom: 6rpx;
+}
+
+.entry-desc {
+	display: block;
+	font-size: 24rpx;
+	color: #7a746e;
 	line-height: 1.5;
+}
+
+.tips {
+	background: #fff4de;
+	border-radius: 14rpx;
+	padding: 16rpx 18rpx;
+}
+
+.tips-text {
+	font-size: 24rpx;
+	color: #7a5f2a;
 }
 </style>

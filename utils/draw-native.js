@@ -50,7 +50,9 @@ const DRAW_OPTION_DEFAULT = {
 	// draw-native 扩展：测试模式严格度配置（保持默认兼容）
 	testStrictOrder: true,
 	testDirectionWeight: 0.35,
-	testScoreThreshold: null
+	testScoreThreshold: null,
+	// 字形相对外框的内缩比例（基于可绘区域），略大则字离田字格线更远
+	charInsetRatio: 0.08
 }
 
 function normalizeText(text = '') {
@@ -726,29 +728,19 @@ class NativeWriter {
 	}
 
 	getCharTransform(canvasSize) {
-		if (!this.charData || !this.charData.medians) return null
+		if (!this.charData) return null
 		const key = `${this.getMainChar()}-${canvasSize}`
 		if (this.charTransformCache[key]) return this.charTransformCache[key]
-		let minX = Number.POSITIVE_INFINITY
-		let minY = Number.POSITIVE_INFINITY
-		let maxX = Number.NEGATIVE_INFINITY
-		let maxY = Number.NEGATIVE_INFINITY
-		const medians = this.charData.medians || []
-		for (let i = 0; i < medians.length; i++) {
-			const stroke = medians[i]
-			for (let j = 0; j < stroke.length; j++) {
-				const p = stroke[j]
-				minX = Math.min(minX, p[0])
-				maxX = Math.max(maxX, p[0])
-				minY = Math.min(minY, p[1])
-				maxY = Math.max(maxY, p[1])
-			}
-		}
+		const bounds = this.getCharBounds()
+		if (!bounds) return null
+		const { minX, minY, maxX, maxY } = bounds
 		if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
 			return null
 		}
 		const padding = 10
-		const innerPadding = (canvasSize - padding * 2) * 0.08
+		const inset = Number(this.option.charInsetRatio)
+		const innerRatio = Number.isFinite(inset) ? Math.max(0, Math.min(0.28, inset)) : 0.08
+		const innerPadding = (canvasSize - padding * 2) * innerRatio
 		const drawSize = canvasSize - padding * 2 - innerPadding * 2
 		const width = Math.max(1, maxX - minX)
 		const height = Math.max(1, maxY - minY)
@@ -760,6 +752,58 @@ class NativeWriter {
 		const tf = { minX, minY, maxX, maxY, scale, left, top }
 		this.charTransformCache[key] = tf
 		return tf
+	}
+
+	getCharBounds() {
+		if (!this.charData) return null
+		let minX = Number.POSITIVE_INFINITY
+		let minY = Number.POSITIVE_INFINITY
+		let maxX = Number.NEGATIVE_INFINITY
+		let maxY = Number.NEGATIVE_INFINITY
+		let hasPoint = false
+
+		const updateBound = (x, y) => {
+			if (!Number.isFinite(x) || !Number.isFinite(y)) return
+			minX = Math.min(minX, x)
+			maxX = Math.max(maxX, x)
+			minY = Math.min(minY, y)
+			maxY = Math.max(maxY, y)
+			hasPoint = true
+		}
+
+		// 优先使用真实笔画轮廓计算几何中心，避免仅用中线导致视觉偏移
+		const strokePaths = this.charData.strokes || []
+		for (let i = 0; i < strokePaths.length; i++) {
+			const cmds = parseSvgPath(strokePaths[i] || '')
+			for (let j = 0; j < cmds.length; j++) {
+				const c = cmds[j]
+				if (c.type === 'M' || c.type === 'L') {
+					updateBound(c.x, c.y)
+				} else if (c.type === 'Q') {
+					updateBound(c.x1, c.y1)
+					updateBound(c.x, c.y)
+				} else if (c.type === 'C') {
+					updateBound(c.x1, c.y1)
+					updateBound(c.x2, c.y2)
+					updateBound(c.x, c.y)
+				}
+			}
+		}
+
+		// 回退：没有轮廓数据时，仍可用中线数据
+		if (!hasPoint) {
+			const medians = this.charData.medians || []
+			for (let i = 0; i < medians.length; i++) {
+				const stroke = medians[i]
+				for (let j = 0; j < stroke.length; j++) {
+					const p = stroke[j]
+					updateBound(p[0], p[1])
+				}
+			}
+		}
+
+		if (!hasPoint) return null
+		return { minX, minY, maxX, maxY }
 	}
 
 	buildStrokeTimeline(medianPoints, canvasSize) {

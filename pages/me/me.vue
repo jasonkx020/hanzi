@@ -2,7 +2,28 @@
 	<view class="page">
 		<view class="head">
 			<text class="name">我的</text>
-			<text class="sub">教材与会员入口</text>
+			<text class="sub">学习报告、字库与激励中心</text>
+		</view>
+		<view class="stat-row">
+			<view class="stat-card">
+				<text class="stat-num">{{ learnedCount }}</text>
+				<text class="stat-label">已学字</text>
+			</view>
+			<view class="stat-card">
+				<text class="stat-num">{{ wrongCount }}</text>
+				<text class="stat-label">待复习</text>
+			</view>
+		</view>
+		<view class="section-label">学习总览</view>
+		<view class="list">
+			<view class="item" @click="goReport">
+				<text>学习报告</text>
+				<text class="arrow">›</text>
+			</view>
+			<view class="item" @click="goMedals">
+				<text>勋章墙</text>
+				<text class="arrow">›</text>
+			</view>
 		</view>
 		<view class="section-label">我的字库</view>
 		<view class="list">
@@ -21,6 +42,10 @@
 				<text>教材与进度</text>
 				<text class="arrow">›</text>
 			</view>
+			<view class="item" @click="goGuardian">
+				<text>家长管理</text>
+				<text class="arrow">›</text>
+			</view>
 			<view class="item" @click="goVip">
 				<text>会员中心</text>
 				<text class="arrow">›</text>
@@ -36,19 +61,33 @@
 
 <script>
 import { formatCurriculumSummary, getCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
 
 export default {
 	data() {
 		return {
-			summary: ''
+			summary: '',
+			learnedCount: 0,
+			wrongCount: 0
 		}
 	},
 	onShow() {
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
+		this.learnedCount = getLearnedChars().length
+		this.wrongCount = getWrongChars().length
 	},
 	methods: {
+		goReport() {
+			uni.navigateTo({ url: '/pages/me/report' })
+		},
+		goMedals() {
+			uni.navigateTo({ url: '/pages/me/medals' })
+		},
 		goCurriculum() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
+		},
+		goGuardian() {
+			uni.navigateTo({ url: '/pages/settings/guardian' })
 		},
 		goVip() {
 			uni.navigateTo({ url: '/pages/vip/vip' })
@@ -76,6 +115,34 @@ export default {
 
 .head {
 	margin-bottom: 32rpx;
+}
+
+.stat-row {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14rpx;
+	margin-bottom: 24rpx;
+}
+
+.stat-card {
+	background: #fffef9;
+	border-radius: 16rpx;
+	padding: 18rpx;
+	text-align: center;
+}
+
+.stat-num {
+	display: block;
+	font-size: 42rpx;
+	font-weight: 700;
+	color: #2c2419;
+}
+
+.stat-label {
+	display: block;
+	font-size: 22rpx;
+	color: #8a8279;
+	margin-top: 6rpx;
 }
 
 .name {
