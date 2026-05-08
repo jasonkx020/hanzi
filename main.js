@@ -1,3 +1,4 @@
+import './utils/cnchar-setup.js'
 import App from './App'
 
 // #ifndef VUE3

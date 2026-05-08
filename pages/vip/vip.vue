@@ -257,8 +257,12 @@ export default {
 
 .compare-row {
 	display: flex;
+	flex-direction: row;
 	justify-content: space-between;
-	gap: 12rpx;
+}
+
+.compare-row > .compare-free {
+	margin-right: 12rpx;
 }
 
 .compare-free,
@@ -277,7 +281,10 @@ export default {
 .plans {
 	display: flex;
 	flex-direction: column;
-	gap: 16rpx;
+}
+
+.plans > .plan + .plan {
+	margin-top: 16rpx;
 }
 
 .plan {

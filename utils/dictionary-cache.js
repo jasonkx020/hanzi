@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'dictionary_detail_cache_v1'
+const STORAGE_KEY = 'dictionary_detail_cache_v2'
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 function readCacheMap() {

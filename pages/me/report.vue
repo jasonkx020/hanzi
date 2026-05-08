@@ -56,8 +56,20 @@ export default {
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12rpx; margin-bottom: 16rpx; }
-.stat-item { background: #fffef9; border-radius: 12rpx; padding: 18rpx 8rpx; text-align: center; }
+.stats { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 16rpx; }
+.stat-item {
+	flex: 0 0 31%;
+	width: 31%;
+	max-width: 31%;
+	box-sizing: border-box;
+	margin-right: 3.5%;
+	margin-bottom: 12rpx;
+	background: #fffef9;
+	border-radius: 12rpx;
+	padding: 18rpx 8rpx;
+	text-align: center;
+}
+.stat-item:nth-child(3n) { margin-right: 0; }
 .num { display: block; font-size: 34rpx; color: #2c2419; font-weight: 700; }
 .label { display: block; margin-top: 6rpx; font-size: 22rpx; color: #8a8279; }
 .sub-title { display: block; font-size: 28rpx; color: #2c2419; font-weight: 600; margin-bottom: 10rpx; }

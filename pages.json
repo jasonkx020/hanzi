@@ -134,7 +134,8 @@
 		"backgroundColor": "#F4F1EA",
 		"app-plus": {
 			"background": "#F4F1EA",
-			"bounce": "none",
+			"bounce": "vertical",
+			"bounceBackground": "#F4F1EA",
 			"safearea": {
 				"background": "#F4F1EA",
 				"backgroundDark": "#F4F1EA"

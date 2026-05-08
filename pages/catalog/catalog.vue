@@ -89,7 +89,14 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 16rpx;
+}
+
+.placeholder > *:not(:first-child) {
+	margin-top: 16rpx;
+}
+
+.placeholder > button + button {
+	margin-top: 24rpx;
 }
 
 .p-title {
@@ -111,8 +118,11 @@ export default {
 .lesson-list {
 	display: flex;
 	flex-direction: column;
-	gap: 12rpx;
 	margin-top: 24rpx;
+}
+
+.lesson-list > .lesson-item + .lesson-item {
+	margin-top: 12rpx;
 }
 
 .lesson-item {

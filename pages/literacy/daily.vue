@@ -50,5 +50,6 @@ export default {
 .count { display: block; font-size: 26rpx; color: #3d6b4a; font-weight: 600; margin-bottom: 24rpx; }
 .box { background: #fff; padding: 20rpx; border-radius: 12rpx; margin-bottom: 24rpx; }
 .mono { font-size: 20rpx; color: #57606a; word-break: break-all; white-space: pre-wrap; }
-.actions { display: flex; flex-direction: column; gap: 16rpx; }
+.actions { display: flex; flex-direction: column; }
+.actions > * + * { margin-top: 16rpx; }
 </style>

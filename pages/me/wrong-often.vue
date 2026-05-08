@@ -86,10 +86,14 @@ export default {
 
 .row {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	padding: 24rpx;
 	border-bottom: 1rpx solid #eee;
-	gap: 20rpx;
+}
+
+.row > * + * {
+	margin-left: 20rpx;
 }
 
 .row:last-child {
@@ -107,7 +111,10 @@ export default {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
-	gap: 6rpx;
+}
+
+.meta > * + * {
+	margin-top: 6rpx;
 }
 
 .dim {

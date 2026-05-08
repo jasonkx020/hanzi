@@ -50,6 +50,8 @@
 			canvas-id="stroke-box"
 			id="stroke-box"
 			class="stroke-canvas"
+			disable-scroll
+			:style="strokeCanvasInlineStyle"
 			@touchstart="onCanvasTouchStart"
 			@touchmove="onCanvasTouchMove"
 			@touchend="onCanvasTouchEnd"
@@ -59,12 +61,14 @@
 </template>
 
 <script>
-import cnchar from 'cnchar'
-import drawNative from '@/utils/draw-native'
+import drawNative from '@/utils/draw-native.js'
+import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { isVipActive } from '@/utils/vip.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
-cnchar.use(drawNative)
+
+/** 与 utils/draw-native.js 中 canvasSize = length + 30 保持一致 */
+const STROKE_DRAW_LENGTH = 180
 
 export default {
 	data() {
@@ -80,7 +84,19 @@ export default {
 			testFeedbackType: '',
 			testHistory: [],
 			testWrongAddedAt: 0,
-			initialMode: 'animation'
+			initialMode: 'animation',
+			strokeMountGen: 0,
+			strokeAttachTimer: null
+		}
+	},
+	computed: {
+		strokeCanvasInlineStyle() {
+			const px = STROKE_DRAW_LENGTH + 30
+			return {
+				width: px + 'px',
+				height: px + 'px',
+				display: 'block'
+			}
 		}
 	},
 	onLoad(query) {
@@ -103,6 +119,11 @@ export default {
 		this.vipActive = isVipActive()
 	},
 	onUnload() {
+		if (this.strokeAttachTimer) {
+			clearTimeout(this.strokeAttachTimer)
+			this.strokeAttachTimer = null
+		}
+		this.strokeMountGen++
 		if (this.drawWriter && typeof this.drawWriter.destroy === 'function') {
 			this.drawWriter.destroy()
 		}
@@ -113,8 +134,7 @@ export default {
 		},
 		initPinyin() {
 			try {
-				const pyList = cnchar.spell(this.word, 'poly', 'tone', 'array', 'low')
-				this.pinyinText = Array.isArray(pyList) ? pyList.join(' ') : String(pyList || '')
+				this.pinyinText = spellDisplayString(this.word, 'poly', 'tone', 'array', 'low')
 			} catch (e) {
 				this.pinyinText = ''
 				console.error(e)
@@ -134,7 +154,7 @@ export default {
 		},
 		registerWordNotFoundHook() {
 			if (this.wordNotFoundRegistered) return
-			cnchar.draw.onWordNotFound((word) => {
+			drawNative.onWordNotFound((word) => {
 				console.warn(`[draw-native] onWordNotFound 触发: ${word}`)
 			})
 			this.wordNotFoundRegistered = true
@@ -147,66 +167,94 @@ export default {
 		},
 		runDraw(mode = 'animation') {
 			try {
-				if (!cnchar.draw) {
+				if (typeof drawNative !== 'function') {
 					this.strokeReady = false
-					console.warn('[draw-native] 插件未初始化或不可用，已降级为静态文字显示')
+					console.warn('[draw-native] draw-native 未加载，已降级为静态文字显示')
 					return
 				}
 				this.strokeReady = true
 				this.destroyWriter()
+				if (this.strokeAttachTimer) {
+					clearTimeout(this.strokeAttachTimer)
+					this.strokeAttachTimer = null
+				}
+				const token = ++this.strokeMountGen
+				const bindMode = mode
+				const attach = () => {
+					this.strokeAttachTimer = null
+					if (token !== this.strokeMountGen) return
+					this.mountStrokeWriter(bindMode)
+				}
+				// App / 小程序端 canvas 常在布局未完成时 createCanvasContext 会绘制失败；双 nextTick + 短暂延迟更稳
 				this.$nextTick(() => {
-					const typeMap = {
-						normal: cnchar.draw.TYPE.NORMAL,
-						animation: cnchar.draw.TYPE.ANIMATION,
-						stroke: cnchar.draw.TYPE.STROKE,
-						test: cnchar.draw.TYPE.TEST
-					}
-					const targetType = typeMap[mode] || cnchar.draw.TYPE.ANIMATION
-					this.resetTestPanel()
-					this.drawWriter = cnchar.draw(this.word, {
-						el: '#stroke-box',
-						vm: this,
-						type: targetType,
-						style: {
-							length: 180,
-							charInsetRatio: 0.15,
-							strokeColor: '#2c3e50',
-							outlineColor: '#d5d5d5',
-							currentColor: '#e74c3c'
-						},
-						line: {
-							show: true,
-							borderColor: '#d7d7d7',
-							centerColor: '#cfcfcf',
-							diagonalColor: '#e2e2e2'
-						},
-						watermark: {
-							text: 'HanziStroke.com',
-							alpha: 0.22,
-							fontSize: 12,
-							position: 'bottom-right'
-						},
-						animation: {
-							autoAnimate: targetType === cnchar.draw.TYPE.ANIMATION,
-							loopAnimate: true,
-							strokeAnimationSpeed: 1.2,
-							delayBetweenStrokes: 400,
-							delayBetweenLoops: 1000
-						},
-						test: {
-							testStrictOrder: true,
-							testDirectionWeight: 0.4,
-							onTestStatus: ({ index, status, data }) => {
-								this.handleTestStatus(index, status, data)
-								const scoreText = typeof data.score === 'number' ? ` score=${data.score}` : ''
-								console.log(`[draw-native] test[${index}] ${status}${scoreText} mistakes=${data.totalMistakes}`)
-							}
-						}
+					this.$nextTick(() => {
+						this.strokeAttachTimer = setTimeout(attach, 48)
 					})
 				})
 			} catch (e) {
 				this.strokeReady = false
 				console.warn('[draw-native] 初始化失败，已降级为静态文字显示')
+				console.error(e)
+			}
+		},
+		mountStrokeWriter(mode = 'animation') {
+			try {
+				if (typeof drawNative !== 'function') {
+					this.strokeReady = false
+					return
+				}
+				const vm = this
+				const typeMap = {
+					normal: drawNative.TYPE.NORMAL,
+					animation: drawNative.TYPE.ANIMATION,
+					stroke: drawNative.TYPE.STROKE,
+					test: drawNative.TYPE.TEST
+				}
+				const targetType = typeMap[mode] || drawNative.TYPE.ANIMATION
+				this.resetTestPanel()
+				this.drawWriter = drawNative(this.word, {
+					el: '#stroke-box',
+					vm,
+					type: targetType,
+					style: {
+						length: STROKE_DRAW_LENGTH,
+						charInsetRatio: 0.15,
+						strokeColor: '#2c3e50',
+						outlineColor: '#d5d5d5',
+						currentColor: '#e74c3c'
+					},
+					line: {
+						show: true,
+						borderColor: '#d7d7d7',
+						centerColor: '#cfcfcf',
+						diagonalColor: '#e2e2e2'
+					},
+					watermark: {
+						text: 'HanziStroke.com',
+						alpha: 0.22,
+						fontSize: 12,
+						position: 'bottom-right'
+					},
+					animation: {
+						autoAnimate: targetType === drawNative.TYPE.ANIMATION,
+						loopAnimate: true,
+						strokeAnimationSpeed: 1.2,
+						delayBetweenStrokes: 400,
+						delayBetweenLoops: 1000
+					},
+					test: {
+						testStrictOrder: true,
+						testDirectionWeight: 0.4,
+						onTestStatus: ({ index, status, data }) => {
+							vm.handleTestStatus(index, status, data)
+							const scoreText = typeof data.score === 'number' ? ` score=${data.score}` : ''
+							console.log(`[draw-native] test[${index}] ${status}${scoreText} mistakes=${data.totalMistakes}`)
+						}
+					}
+				})
+			} catch (e) {
+				this.strokeReady = false
+				console.warn('[draw-native] mountStrokeWriter 失败，已降级为静态文字显示')
 				console.error(e)
 			}
 		},
@@ -239,7 +287,7 @@ export default {
 		},
 		testWordNotFound() {
 			try {
-				cnchar.draw('ABC', { el: '#stroke-box', vm: this })
+				drawNative('ABC', { el: '#stroke-box', vm: this })
 			} catch (e) {
 				console.log(`[draw-native] 测试404完成: ${e.message}`)
 			}
@@ -331,7 +379,6 @@ export default {
 	width: 92%;
 	display: flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 18rpx 22rpx;
 	margin-bottom: 28rpx;
 	border-radius: 16rpx;
@@ -340,6 +387,7 @@ export default {
 }
 
 .vip-strip-icon {
+	margin-right: 12rpx;
 	font-size: 24rpx;
 	color: #e8d5a3;
 }
@@ -352,6 +400,7 @@ export default {
 }
 
 .vip-strip-arrow {
+	margin-left: 12rpx;
 	font-size: 36rpx;
 	color: rgba(255, 255, 255, 0.65);
 	line-height: 1;
@@ -376,9 +425,13 @@ export default {
 .input-row {
 	width: 92%;
 	display: flex;
+	flex-direction: row;
 	align-items: center;
-	gap: 12rpx;
 	margin-bottom: 16rpx;
+}
+
+.input-row > * + * {
+	margin-left: 12rpx;
 }
 
 .hanzi-input {
@@ -394,10 +447,14 @@ export default {
 .control-row {
 	width: 92%;
 	display: flex;
+	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
-	gap: 12rpx;
 	margin-bottom: 16rpx;
+}
+
+.control-row > button {
+	margin: 6rpx;
 }
 
 .test-panel {
@@ -439,10 +496,10 @@ export default {
 }
 
 .stroke-canvas {
-    width: 420rpx;
-    height: 420rpx;
 	background: #fff;
 	border-radius: 12rpx;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .fallback-char {

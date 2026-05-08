@@ -45,7 +45,7 @@ import { initAppStores } from '@/store/index.js'
 </script>
 
 <style>
-	/* 原生导航栏与页面同色 #F4F1EA，无需再为透明导航垫高 */
+	/* 页面底色与 App 回弹露底同色 */
 	page {
 		background-color: #f4f1ea;
 		box-sizing: border-box;
@@ -62,4 +62,16 @@ import { initAppStores } from '@/store/index.js'
 		width: 100%;
 		min-height: 100%;
 	}
+
+	/* #ifdef H5 */
+	/* iOS Safari：惯性滚动 + 边界橡皮筋回弹（系统默认，避免被 overscroll-behavior 关掉） */
+	html {
+		height: 100%;
+	}
+	body {
+		min-height: 100%;
+		-webkit-overflow-scrolling: touch;
+		overscroll-behavior-y: auto;
+	}
+	/* #endif */
 </style>

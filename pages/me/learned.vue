@@ -75,19 +75,28 @@ export default {
 
 .grid {
 	display: flex;
+	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
 
 .cell {
-	width: calc((100% - 48rpx) / 4);
-	aspect-ratio: 1;
+	flex: 0 0 22%;
+	width: 22%;
+	max-width: 22%;
+	box-sizing: border-box;
+	margin-right: 4%;
+	margin-bottom: 16rpx;
+	min-height: 88rpx;
 	background: #fffef9;
 	border-radius: 12rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	box-shadow: 0 2rpx 8rpx rgba(44, 36, 25, 0.06);
+}
+
+.cell:nth-child(4n) {
+	margin-right: 0;
 }
 
 .char {

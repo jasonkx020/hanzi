@@ -38,8 +38,19 @@ export default {
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12rpx; }
-.medal { border-radius: 12rpx; padding: 16rpx; background: #fff; }
+.grid { display: flex; flex-direction: row; flex-wrap: wrap; }
+.medal {
+	flex: 0 0 48%;
+	width: 48%;
+	max-width: 48%;
+	box-sizing: border-box;
+	margin-right: 4%;
+	margin-bottom: 12rpx;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	background: #fff;
+}
+.medal:nth-child(2n) { margin-right: 0; }
 .medal-on { border: 1rpx solid #ffd36b; }
 .medal-off { border: 1rpx solid #e7e1d4; }
 .icon { display: block; font-size: 36rpx; margin-bottom: 8rpx; }

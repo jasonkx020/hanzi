@@ -58,7 +58,8 @@ export default {
 .title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }
 .field-label { display: block; font-size: 27rpx; color: #2c2419; font-weight: 600; margin-bottom: 10rpx; }
-.switch-row { display: flex; gap: 10rpx; }
+.switch-row { display: flex; flex-direction: row; }
+.switch-row > .chip + .chip { margin-left: 10rpx; }
 .chip { padding: 12rpx 18rpx; border-radius: 999rpx; background: #f1ece2; font-size: 24rpx; color: #6b6560; }
 .chip-on { background: #ffe2b8; color: #2c2419; font-weight: 700; }
 .tip { display: block; margin-top: 10rpx; font-size: 22rpx; color: #8a8279; }

@@ -38,7 +38,11 @@ export const DICTIONARY_DETAIL_MAP = {
 	七: { radical: '一', structure: '独体', strokes: 2, words: ['七天', '七月', '七个'] },
 	八: { radical: '八', structure: '独体', strokes: 2, words: ['八月', '八个', '八方'] },
 	九: { radical: '乙', structure: '独体', strokes: 2, words: ['九月', '九个', '九天'] },
-	十: { radical: '十', structure: '独体', strokes: 2, words: ['十个', '十天', '十月'] }
+	十: { radical: '十', structure: '独体', strokes: 2, words: ['十个', '十天', '十月'] },
+	萌: { radical: '艹', structure: '上下', strokes: 11, words: ['萌芽', '萌发', '卖萌'] },
+	松: { radical: '木', structure: '左右', strokes: 8, words: ['松树', '放松', '轻松'] },
+	清: { radical: '氵', structure: '左右', strokes: 11, words: ['清水', '清楚', '清明'] },
+	吧: { radical: '口', structure: '左右', strokes: 7, words: ['好吧', '来吧', '走吧'] }
 }
 
 export const RADICAL_HINT_MAP = {
@@ -73,7 +77,11 @@ export const RADICAL_HINT_MAP = {
 	七: '一',
 	八: '八',
 	九: '乙',
-	十: '十'
+	十: '十',
+	萌: '艹',
+	松: '木',
+	清: '氵',
+	吧: '口'
 }
 
 export const STRUCTURE_HINT_MAP = {

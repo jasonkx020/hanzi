@@ -97,7 +97,6 @@ export default {
 .vip-strip {
 	display: flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 18rpx 22rpx;
 	margin-bottom: 24rpx;
 	border-radius: 16rpx;
@@ -105,6 +104,7 @@ export default {
 }
 
 .vip-strip-icon {
+	margin-right: 12rpx;
 	color: #e8d5a3;
 	font-size: 24rpx;
 }
@@ -116,6 +116,7 @@ export default {
 }
 
 .vip-strip-arrow {
+	margin-left: 12rpx;
 	font-size: 36rpx;
 	color: rgba(255, 255, 255, 0.65);
 }
@@ -150,8 +151,11 @@ export default {
 .entry-list {
 	display: flex;
 	flex-direction: column;
-	gap: 18rpx;
 	margin-bottom: 24rpx;
+}
+
+.entry-list > .entry-card + .entry-card {
+	margin-top: 18rpx;
 }
 
 .entry-card {

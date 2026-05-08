@@ -4,6 +4,10 @@
 			<text class="big-char">{{ hanzi || '—' }}</text>
 			<text class="title">拼音：{{ pinyin || '-' }}</text>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
+			<view v-if="ext.tradForm" class="trad-banner">
+				<text class="trad-b-label">繁体</text>
+				<text class="trad-b-val">{{ ext.tradForm }}</text>
+			</view>
 			<view class="meta-grid">
 				<view class="meta-item">
 					<text class="meta-label">部首</text>
@@ -18,7 +22,16 @@
 					<text class="meta-value">{{ ext.strokes }}</text>
 				</view>
 			</view>
-			<text class="words-title">常用组词</text>
+			<view v-if="ext.strokeShapes || ext.strokeNames" class="stroke-panel">
+				<text class="stroke-p-title">笔顺（cnchar-order）</text>
+				<text v-if="ext.strokeShapes" class="stroke-p-glyphs">{{ ext.strokeShapes }}</text>
+				<text v-if="ext.strokeNames" class="stroke-p-names">{{ ext.strokeNames }}</text>
+			</view>
+			<view v-if="ext.explainText" class="explain-panel">
+				<text class="explain-p-title">释义（cnchar-explain）</text>
+				<text class="explain-p-body">{{ ext.explainText }}</text>
+			</view>
+			<text class="words-title">组词（cnchar-words）</text>
 			<text class="words">{{ ext.words.join(' / ') }}</text>
 			<view class="actions">
 				<button size="mini" type="primary" @click="goStroke">笔顺动画</button>
@@ -37,6 +50,7 @@
 	</view>
 </template>
 <script>
+import { displayPinyinPreferAlpha } from '@/utils/pinyin-display.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
@@ -51,7 +65,11 @@ export default {
 				radical: '-',
 				structure: '-',
 				strokes: '-',
-				words: ['暂无组词']
+				words: ['暂无组词'],
+				explainText: '',
+				strokeShapes: '',
+				strokeNames: '',
+				tradForm: ''
 			},
 			sameLesson: [],
 			similarChars: []
@@ -63,14 +81,21 @@ export default {
 		this.lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
 		const entry = await getDictionaryEntry(this.hanzi, this.lessonHint)
 		if (entry) {
-			this.pinyin = this.pinyin || entry.pinyin || ''
+			this.pinyin = displayPinyinPreferAlpha(this.pinyin || entry.pinyin || '')
 			this.lessonHint = this.lessonHint || entry.lessonHint || ''
 			this.ext = {
 				radical: entry.radical,
 				structure: entry.structure,
 				strokes: entry.strokes,
-				words: entry.words
+				words: entry.words,
+				explainText: entry.explainText || '',
+				strokeShapes: entry.strokeShapes || '',
+				strokeNames: entry.strokeNames || '',
+				tradForm: entry.tradForm || ''
 			}
+		}
+		if (!entry && this.pinyin) {
+			this.pinyin = displayPinyinPreferAlpha(this.pinyin)
 		}
 		const related = await getDictionaryRelated(this.hanzi, this.lessonHint)
 		this.sameLesson = related.sameLesson || []
@@ -104,13 +129,56 @@ export default {
 .big-char { display: block; font-size: 140rpx; line-height: 1; color: #2c2419; text-align: center; margin-bottom: 14rpx; }
 .title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; margin-bottom: 16rpx; }
-.meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10rpx; margin-bottom: 12rpx; }
-.meta-item { background: #fff8eb; border-radius: 10rpx; padding: 12rpx 10rpx; text-align: center; }
+.meta-grid { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 12rpx; }
+.meta-item {
+	flex: 0 0 31%;
+	width: 31%;
+	max-width: 31%;
+	box-sizing: border-box;
+	margin-right: 3.5%;
+	margin-bottom: 10rpx;
+	background: #fff8eb;
+	border-radius: 10rpx;
+	padding: 12rpx 10rpx;
+	text-align: center;
+}
+.meta-item:nth-child(3n) { margin-right: 0; }
+.trad-banner {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 14rpx;
+	padding: 12rpx 14rpx;
+	background: #e3f2fd;
+	border-radius: 10rpx;
+}
+.trad-b-label { font-size: 22rpx; color: #1565c0; font-weight: 700; margin-right: 10rpx; }
+.trad-b-val { font-size: 30rpx; color: #0d47a1; font-weight: 700; }
+.stroke-panel {
+	margin-bottom: 14rpx;
+	padding: 14rpx;
+	background: #f9fbe7;
+	border-radius: 10rpx;
+	border: 1rpx dashed #c5e1a5;
+}
+.stroke-p-title { display: block; font-size: 24rpx; font-weight: 700; color: #558b2f; margin-bottom: 8rpx; }
+.stroke-p-glyphs { display: block; font-size: 30rpx; color: #2c2419; margin-bottom: 6rpx; word-break: break-all; }
+.stroke-p-names { display: block; font-size: 24rpx; color: #5d4037; line-height: 1.4; }
+.explain-panel {
+	margin-bottom: 14rpx;
+	padding: 14rpx;
+	background: #fce4ec;
+	border-radius: 10rpx;
+}
+.explain-p-title { display: block; font-size: 24rpx; font-weight: 700; color: #880e4f; margin-bottom: 8rpx; }
+.explain-p-body { display: block; font-size: 26rpx; color: #4e4e4e; line-height: 1.5; }
 .meta-label { display: block; font-size: 20rpx; color: #8a8279; }
 .meta-value { display: block; margin-top: 4rpx; font-size: 26rpx; color: #2c2419; font-weight: 600; }
 .words-title { display: block; font-size: 24rpx; color: #6b6560; margin-bottom: 6rpx; }
 .words { display: block; font-size: 26rpx; color: #2c2419; margin-bottom: 16rpx; line-height: 1.5; }
-.actions { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin: 8rpx 0 12rpx; }
+.actions { display: flex; flex-direction: row; flex-wrap: wrap; margin: -6rpx; }
+.actions > button { margin: 6rpx; }
+.tags { display: flex; flex-direction: row; flex-wrap: wrap; margin: 8rpx -5rpx 12rpx; }
+.tags > .tag { margin: 5rpx; }
 .tag { padding: 6rpx 14rpx; border-radius: 999rpx; background: #fff1d4; font-size: 24rpx; color: #6a5120; }
 </style>

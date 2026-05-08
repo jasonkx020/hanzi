@@ -118,17 +118,22 @@ export default {
 }
 
 .stat-row {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 14rpx;
+	display: flex;
+	flex-direction: row;
 	margin-bottom: 24rpx;
 }
 
 .stat-card {
+	flex: 1;
+	min-width: 0;
 	background: #fffef9;
 	border-radius: 16rpx;
 	padding: 18rpx;
 	text-align: center;
+}
+
+.stat-card + .stat-card {
+	margin-left: 14rpx;
 }
 
 .stat-num {
