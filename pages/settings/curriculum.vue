@@ -1,6 +1,6 @@
 <template>
 	<view class="page">
-		<text class="hint">字段与 SQLite hanzi_curriculum 一致：textbook_version_id、grade、semester、list_type（偏好）</text>
+		<text class="hint">字段与 SQLite hanzi_curriculum 一致：textbook_version_id、年级册别（对应 grade + semester）、list_type（偏好）</text>
 
 		<view class="field">
 			<text class="label">教材版本 textbook_version_id</text>
@@ -10,16 +10,9 @@
 		</view>
 
 		<view class="field">
-			<text class="label">年级 grade（1–6）</text>
-			<picker mode="selector" :range="grades" :value="gradeIndex" @change="onGrade">
-				<view class="picker">{{ grades[gradeIndex] }}</view>
-			</picker>
-		</view>
-
-		<view class="field">
-			<text class="label">学期 semester</text>
-			<picker :range="semesters" range-key="label" :value="semesterIndex" @change="onSemester">
-				<view class="picker">{{ semesters[semesterIndex].label }}</view>
+			<text class="label">年级册别</text>
+			<picker mode="selector" :range="gradeSemesterLabels" :value="gradeSemesterIndex" @change="onGradeSemester">
+				<view class="picker">{{ gradeSemesterLabels[gradeSemesterIndex] }}</view>
 			</picker>
 		</view>
 
@@ -37,7 +30,7 @@
 
 <script>
 import { TEXTBOOK_VERSION_IDS, LIST_TYPE, LIST_TYPE_PREFERENCE } from '@/constants/curriculum-schema.js'
-import { getCurriculumPrefs, setCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { getCurriculumPrefs, setCurriculumPrefs, listGradeSemesterPickerOptions } from '@/utils/curriculum-storage.js'
 
 export default {
 	data() {
@@ -45,13 +38,8 @@ export default {
 			versionLabels: ['统编（部编）人教', '预留版本 B'],
 			versionValues: [TEXTBOOK_VERSION_IDS.TONGBIAN_RJ, 'reserved-b'],
 			versionIndex: 0,
-			grades: ['1', '2', '3', '4', '5', '6'],
-			gradeIndex: 0,
-			semesters: [
-				{ label: '上册', value: '上' },
-				{ label: '下册', value: '下' }
-			],
-			semesterIndex: 0,
+			gradeSemesterOptions: listGradeSemesterPickerOptions(),
+			gradeSemesterIndex: 0,
 			listLabels: ['全部', LIST_TYPE.SHIZI, LIST_TYPE.XIEZI, LIST_TYPE.HUIZONG],
 			listValues: [
 				LIST_TYPE_PREFERENCE.ALL,
@@ -63,12 +51,19 @@ export default {
 			saved: false
 		}
 	},
+	computed: {
+		gradeSemesterLabels() {
+			return this.gradeSemesterOptions.map((o) => o.label)
+		}
+	},
 	onLoad() {
 		const p = getCurriculumPrefs()
 		const vi = this.versionValues.indexOf(p.textbook_version_id)
 		this.versionIndex = vi >= 0 ? vi : 0
-		this.gradeIndex = Math.max(0, Math.min(5, p.grade - 1))
-		this.semesterIndex = p.semester === '下' ? 1 : 0
+		const gsi = this.gradeSemesterOptions.findIndex(
+			(o) => o.grade === p.grade && o.semester === p.semester
+		)
+		this.gradeSemesterIndex = gsi >= 0 ? gsi : 0
 		const li = this.listValues.indexOf(p.list_type_preference)
 		this.listIndex = li >= 0 ? li : 0
 	},
@@ -77,12 +72,8 @@ export default {
 			this.versionIndex = Number(e.detail.value)
 			this.saved = false
 		},
-		onGrade(e) {
-			this.gradeIndex = Number(e.detail.value)
-			this.saved = false
-		},
-		onSemester(e) {
-			this.semesterIndex = Number(e.detail.value)
+		onGradeSemester(e) {
+			this.gradeSemesterIndex = Number(e.detail.value)
 			this.saved = false
 		},
 		onList(e) {
@@ -90,10 +81,11 @@ export default {
 			this.saved = false
 		},
 		save() {
+			const gs = this.gradeSemesterOptions[this.gradeSemesterIndex]
 			setCurriculumPrefs({
 				textbook_version_id: this.versionValues[this.versionIndex],
-				grade: this.gradeIndex + 1,
-				semester: this.semesters[this.semesterIndex].value,
+				grade: gs.grade,
+				semester: gs.semester,
 				list_type_preference: this.listValues[this.listIndex]
 			})
 			this.saved = true

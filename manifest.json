@@ -26,7 +26,7 @@
             "autoclose" : true,
             "delay" : 0
         },
-        /* 模块配置 */
+        /* 模块配置（Speech 为「语音输入/识别」，与拼音 TTS 无直接关系；点读依赖 WebView 内 speechSynthesis） */
         "modules" : {},
         /* 应用发布信息 */
         "distribute" : {

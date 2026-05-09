@@ -50,15 +50,40 @@ export function setCurriculumPrefs(patch) {
 	return next
 }
 
+/** 年级中文数字（1–6） */
+const GRADE_CN = ['', '一', '二', '三', '四', '五', '六']
+
+/** 教材设置等：一年级上册 … 六年级下册 */
+export function listGradeSemesterPickerOptions() {
+	const out = []
+	for (let g = 1; g <= 6; g++) {
+		out.push({ label: `${GRADE_CN[g]}年级上册`, grade: g, semester: '上' })
+		out.push({ label: `${GRADE_CN[g]}年级下册`, grade: g, semester: '下' })
+	}
+	return out
+}
+
+/**
+ * 展示用「一年级上册」「二年级下册」等（仅 grade + semester，不含版本）
+ * @param {{ grade?: number|string, semester?: string }} prefs 若省略则从本地偏好读取
+ */
+export function formatGradeSemesterLabel(prefs) {
+	const p = prefs || getCurriculumPrefs()
+	const g = Number(p.grade)
+	const gradePart =
+		Number.isFinite(g) && g >= 1 && g <= 6 ? `${GRADE_CN[g]}年级` : `${p.grade ?? ''}年级`
+	const semPart = p.semester === '下' || p.semester === '下册' ? '下册' : '上册'
+	return `${gradePart}${semPart}`
+}
+
 /** 展示用摘要文案 */
 export function formatCurriculumSummary(prefs) {
 	const p = prefs || getCurriculumPrefs()
-	const sem = p.semester === '下' ? '下册' : '上册'
 	const lt =
 		p.list_type_preference === LIST_TYPE_PREFERENCE.ALL
 			? '全部字表'
 			: p.list_type_preference
-	return `${p.textbook_version_id} · ${p.grade}年级${sem} · ${lt}`
+	return `${p.textbook_version_id} · ${formatGradeSemesterLabel(p)} · ${lt}`
 }
 
 /**

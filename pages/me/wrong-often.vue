@@ -13,7 +13,7 @@
 			>
 				<text class="char">{{ r[COL_PROGRESS.hanzi] }}</text>
 				<view class="meta">
-					<text class="dim">{{ r[COL_PROGRESS.grade] }}年级{{ r[COL_PROGRESS.semester] }}</text>
+					<text class="dim">{{ formatGradeSemesterLabel({ grade: r[COL_PROGRESS.grade], semester: r[COL_PROGRESS.semester] }) }}</text>
 					<text class="badge">错 {{ r[COL_PROGRESS.wrong_count] }} 次</text>
 				</view>
 				<text class="arrow">›</text>
@@ -24,6 +24,8 @@
 
 <script>
 import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
+import { formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
+import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { listWrongOftenChars } from '@/utils/user-progress-storage.js'
 
 export default {
@@ -37,7 +39,9 @@ export default {
 		this.rows = listWrongOftenChars()
 	},
 	methods: {
+		formatGradeSemesterLabel,
 		openDetail(r) {
+			speakHanzi(r[COL_PROGRESS.hanzi] || '')
 			const h = encodeURIComponent(r[COL_PROGRESS.hanzi] || '')
 			const g = r[COL_PROGRESS.grade] ?? ''
 			const s = encodeURIComponent(r[COL_PROGRESS.semester] || '')

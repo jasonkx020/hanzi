@@ -66,37 +66,54 @@
 			<text class="loading-text">加载中…</text>
 		</view>
 		<view v-else-if="activeEntry" class="hero-card">
-			<view class="tianzi">
-				<text class="hero-char">{{ activeEntry.hanzi }}</text>
-			</view>
-			<view v-if="activeEntry.tradForm" class="trad-row">
-				<text class="trad-label">繁体</text>
-				<text class="trad-val">{{ activeEntry.tradForm }}</text>
-			</view>
-			<view class="meta-grid">
-				<view class="meta-cell">
-					<text class="meta-k">拼音</text>
-					<text class="meta-v">{{ pinyinDisplay }}</text>
+			<!-- 左：田字格动画；右：拼音与部首等（并排省纵向空间，便于一屏看完） -->
+			<view class="hero-top-row">
+				<view class="hero-top-left">
+					<view class="tianzi-wrap-cnchar" :style="dictStrokeWrapStyle">
+						<canvas
+							v-if="dictStrokeReady && !dictAnimFallback"
+							id="dict-stroke-box"
+							canvas-id="dict-stroke-box"
+							class="dict-stroke-canvas"
+							disable-scroll
+							:style="dictStrokeCanvasStyle"
+						/>
+						<text v-else-if="dictStrokeReady && dictAnimFallback" class="hero-char-fallback">{{ displayHanzi }}</text>
+						<text v-else class="hero-char-fallback">{{ displayHanzi }}</text>
+					</view>
+					<!-- <text class="tap-speak-tip" @click="onHeroCharTap">听读音</text>
+					<text class="stroke-anim-caption">笔顺动画</text> -->
 				</view>
-				<view class="meta-cell">
-					<text class="meta-k">部首</text>
-					<text class="meta-v">{{ activeEntry.radical }}</text>
-				</view>
-				<view class="meta-cell">
-					<text class="meta-k">结构</text>
-					<text class="meta-v">{{ activeEntry.structure }}</text>
-				</view>
-				<view class="meta-cell">
-					<text class="meta-k">笔画</text>
-					<text class="meta-v">{{ activeEntry.strokes }}</text>
+				<view class="hero-top-right">
+					<view class="meta-compact">
+						<view class="meta-compact-row">
+							<text class="meta-compact-k">拼音</text>
+							<text class="meta-compact-v">{{ pinyinDisplay }}</text>
+						</view>
+						<view class="meta-compact-row">
+							<text class="meta-compact-k">部首1</text>
+							<text class="meta-compact-v">{{ activeEntry.radical }}</text>
+						</view>
+						<view class="meta-compact-row">
+							<text class="meta-compact-k">结构</text>
+							<text class="meta-compact-v">{{ activeEntry.structure }}</text>
+						</view>
+						<view class="meta-compact-row">
+							<text class="meta-compact-k">笔画</text>
+							<text class="meta-compact-v">{{ activeEntry.strokes }}</text>
+						</view>
+						<view v-if="activeEntry.tradForm" class="meta-compact-row meta-compact-row-trad">
+							<text class="meta-compact-k">繁体</text>
+							<text class="meta-compact-v">{{ activeEntry.tradForm }}</text>
+						</view>
+					</view>
 				</view>
 			</view>
 			<view class="stroke-box">
-				<text class="stroke-title">✍️ 笔顺（cnchar-order）</text>
+				<text class="stroke-title">✍️ 笔顺分解（对照左侧动画）</text>
 				<text v-if="activeEntry.strokeShapes" class="stroke-glyphs">{{ activeEntry.strokeShapes }}</text>
 				<text v-if="activeEntry.strokeNames" class="stroke-names">{{ activeEntry.strokeNames }}</text>
 				<text class="stroke-desc">{{ strokeHint }}</text>
-				<button class="anim-btn" type="primary" size="mini" @click="openStrokeAnim">动画演示</button>
 			</view>
 			<view v-if="activeEntry.explainText" class="explain-box">
 				<text class="explain-title">📙 释义（cnchar-explain）</text>
@@ -110,13 +127,12 @@
 			</view>
 			<view class="card-actions">
 				<button class="notebook-btn" type="primary" @click="addToNotebook">➕ 加入生字本</button>
-				<button class="sub-btn" type="default" size="mini" @click="openResultPage">全屏详情</button>
 			</view>
 		</view>
 		<view v-else class="empty-card">
 			<text class="empty-title">查一查汉字</text>
 			<text class="empty-desc">
-				拼音 / 部首 / 结构 / 笔画 / 笔顺 / 组词 / 释义 / 繁体 由 cnchar 及官方扩展库计算；用手写板练笔顺；部首检索结合 cnchar-radical 与教材字库。
+				输入汉字后即显示田字格内笔顺动画、拼音 / 部首 / 结构与组词释义等；手写练习请点「手写」进入实验室。部首检索结合 cnchar-radical 与教材字库。
 			</text>
 			<button type="default" size="mini" class="empty-btn" @click="tryDemoChar">试试「天」</button>
 		</view>
@@ -162,8 +178,10 @@
 </template>
 
 <script>
-import { normalizeLatinAlphaForMatch } from '@/utils/pinyin-display.js'
+import cnchar from '@/utils/cnchar-setup.js'
+import drawNative from '@/utils/draw-native.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
+import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getDictionaryEntry, getRadicalLabel } from '@/repositories/dictionary-repository.js'
@@ -178,9 +196,18 @@ const DETECTIVES = [
 	{ clue: '「口 + 巴」是什么字？', answer: '吧' }
 ]
 
+/** draw-native canvas 绘制边长（与 utils/draw-native 中 length+30 为画布外边一致） */
+const DICTIONARY_STROKE_LENGTH = 148
+
 export default {
 	data() {
 		return {
+			dictStrokeReady: false,
+			dictAnimFallback: false,
+			dictDrawWriter: null,
+			dictStrokeMountGen: 0,
+			dictStrokeAttachTimer: null,
+			dictWordNotFoundRegistered: false,
 			summary: '',
 			chars: [],
 			hanziInput: '',
@@ -219,17 +246,160 @@ export default {
 		strokeHint() {
 			if (!this.activeEntry) return ''
 			const n = this.activeEntry.strokes
-			return `共 ${n} 笔 · 点击下方「动画演示」逐笔观看`
+			const tail =
+				this.dictStrokeReady && !this.dictAnimFallback
+					? '可看左侧动画并对照下方笔画名'
+					: '左侧动画加载中，可先对照下方笔画字形'
+			return `共 ${n} 笔 · ${tail}`
+		},
+		dictStrokeCanvasStyle() {
+			const px = DICTIONARY_STROKE_LENGTH + 30
+			return {
+				width: px + 'px',
+				height: px + 'px',
+				display: 'block'
+			}
+		},
+		/** 外包框与画布逻辑像素一致；原先固定 268rpx 小于 178px 画布会导致右侧、底边被 overflow 裁切 */
+		dictStrokeWrapStyle() {
+			const px = DICTIONARY_STROKE_LENGTH + 30
+			return {
+				width: px + 'px',
+				height: px + 'px',
+				boxSizing: 'border-box'
+			}
 		},
 		currentDetective() {
 			return DETECTIVES[this.detectiveIndex % DETECTIVES.length]
+		},
+		/** 经 cnchar 校验的展示用单字（与 draw/cnchar 数据同源） */
+		displayHanzi() {
+			const e = this.activeEntry
+			if (!e) return ''
+			return this.resolveDictHanzi(e.hanzi)
 		}
 	},
 	onShow() {
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.reloadDb()
 	},
+	onUnload() {
+		this.teardownDictStroke()
+	},
 	methods: {
+		registerDictWordNotFoundOnce() {
+			if (this.dictWordNotFoundRegistered) return
+			drawNative.onWordNotFound(() => {})
+			this.dictWordNotFoundRegistered = true
+		},
+		/** 取 cnchar 认可的单个汉字；非法则返回首字供降级展示 */
+		resolveDictHanzi(raw) {
+			const c = String(raw || '').trim().charAt(0)
+			if (!c) return ''
+			try {
+				if (typeof cnchar.isCnChar === 'function' && !cnchar.isCnChar(c)) return c
+			} catch (_) {}
+			return c
+		},
+		dictDrawSharedOpts(vm) {
+			return {
+				vm,
+				style: {
+					length: DICTIONARY_STROKE_LENGTH,
+					charInsetRatio: 0.15,
+					strokeColor: '#2c3e50',
+					outlineColor: '#d5d5d5',
+					currentColor: '#e74c3c'
+				},
+				line: {
+					show: true,
+					borderColor: '#d7d7d7',
+					centerColor: '#cfcfcf',
+					diagonalColor: '#e2e2e2'
+				},
+				watermark: {
+					text: 'HanziStroke.com',
+					alpha: 0.22,
+					fontSize: 10,
+					position: 'bottom-right'
+				},
+				test: {
+					onTestStatus: () => {}
+				}
+			}
+		},
+		teardownDictStroke() {
+			if (this.dictStrokeAttachTimer) {
+				clearTimeout(this.dictStrokeAttachTimer)
+				this.dictStrokeAttachTimer = null
+			}
+			this.dictStrokeMountGen++
+			this.dictStrokeReady = false
+			this.dictAnimFallback = false
+			if (this.dictDrawWriter && typeof this.dictDrawWriter.destroy === 'function') {
+				this.dictDrawWriter.destroy()
+			}
+			this.dictDrawWriter = null
+		},
+		destroyDictWritersOnly() {
+			if (this.dictDrawWriter && typeof this.dictDrawWriter.destroy === 'function') {
+				this.dictDrawWriter.destroy()
+			}
+			this.dictDrawWriter = null
+		},
+		scheduleDictStrokeMount() {
+			const hanzi = this.resolveDictHanzi(this.activeEntry && this.activeEntry.hanzi)
+			if (!hanzi || typeof drawNative !== 'function') {
+				this.dictStrokeReady = false
+				this.destroyDictWritersOnly()
+				return
+			}
+			this.registerDictWordNotFoundOnce()
+			this.dictStrokeReady = true
+			this.dictAnimFallback = false
+			this.destroyDictWritersOnly()
+			if (this.dictStrokeAttachTimer) {
+				clearTimeout(this.dictStrokeAttachTimer)
+				this.dictStrokeAttachTimer = null
+			}
+			const token = ++this.dictStrokeMountGen
+			const attach = () => {
+				this.dictStrokeAttachTimer = null
+				if (token !== this.dictStrokeMountGen) return
+				this.mountDictStrokeWriters(hanzi)
+			}
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					this.dictStrokeAttachTimer = setTimeout(attach, 48)
+				})
+			})
+		},
+		mountDictStrokeWriters(char) {
+			if (typeof drawNative !== 'function') {
+				this.dictStrokeReady = false
+				return
+			}
+			const vm = this
+			const base = this.dictDrawSharedOpts(vm)
+			try {
+				this.dictDrawWriter = drawNative(char, {
+					...base,
+					el: '#dict-stroke-box',
+					type: drawNative.TYPE.ANIMATION,
+					animation: {
+						autoAnimate: true,
+						loopAnimate: true,
+						strokeAnimationSpeed: 1.15,
+						delayBetweenStrokes: 400,
+						delayBetweenLoops: 1000
+					}
+				})
+			} catch (e) {
+				console.warn('[dictionary] dict animation mount failed', e)
+				this.dictDrawWriter = null
+				this.dictAnimFallback = true
+			}
+		},
 		async reloadDb() {
 			this.chars = await queryCurriculumChars(getCurriculumPrefs())
 			this.rebuildRadicalOptions()
@@ -247,11 +417,11 @@ export default {
 			)
 		},
 		normalizePinyin(s) {
-			return normalizeLatinAlphaForMatch(String(s || ''))
+			return String(s || '')
 				.toLowerCase()
-				.replace(/\s+/g, '')
 				.normalize('NFD')
 				.replace(/[\u0300-\u036f]/g, '')
+				.replace(/\s+/g, '')
 		},
 		firstHanziFromInput(s) {
 			const m = String(s || '').match(/[\u4e00-\u9fff]/)
@@ -268,6 +438,7 @@ export default {
 		async loadEntryForChar(ch) {
 			const c = String(ch || '').trim().charAt(0)
 			if (!c) return
+			this.teardownDictStroke()
 			this.loadingEntry = true
 			this.activeEntry = null
 			try {
@@ -281,13 +452,19 @@ export default {
 				this.activeEntry = entry
 				this.hanziInput = c
 				this.pinyinDisplay = entry.pinyin ? entry.pinyin : '—'
+				this.scheduleDictStrokeMount()
 			} finally {
 				this.loadingEntry = false
 			}
 		},
+		onHeroCharTap() {
+			if (!this.activeEntry?.hanzi) return
+			speakHanzi(this.activeEntry.hanzi)
+		},
 		selectGridChar(hanzi) {
 			const c = String(hanzi || '').trim().charAt(0)
 			if (!c) return
+			speakHanzi(c)
 			this.hanziInput = c
 			this.loadEntryForChar(c)
 		},
@@ -307,21 +484,6 @@ export default {
 				? `?hanzi=${encodeURIComponent(this.activeEntry.hanzi)}`
 				: ''
 			uni.navigateTo({ url: `/pages/tools/stroke${q}` })
-		},
-		openStrokeAnim() {
-			if (!this.activeEntry?.hanzi) return
-			uni.navigateTo({
-				url: `/pages/tools/stroke?hanzi=${encodeURIComponent(this.activeEntry.hanzi)}&mode=animation`
-			})
-		},
-		openResultPage() {
-			if (!this.activeEntry?.hanzi) return
-			const h = encodeURIComponent(this.activeEntry.hanzi)
-			const p = encodeURIComponent(this.pinyinDisplay === '—' ? '' : this.pinyinDisplay)
-			const l = encodeURIComponent(this.activeEntry.lessonHint || '')
-			uni.navigateTo({
-				url: `/pages/dictionary/result?hanzi=${h}&pinyin=${p}&lesson=${l}`
-			})
 		},
 		addToNotebook() {
 			if (!this.activeEntry?.hanzi) return
@@ -536,96 +698,118 @@ export default {
 	border: 1rpx solid #f5ebe0;
 }
 
-.tianzi {
-	width: 280rpx;
-	height: 280rpx;
-	margin: 0 auto 28rpx;
-	border-radius: 16rpx;
-	border: 3rpx solid #e8dfd0;
-	background-color: #fffef9;
-	background-image: linear-gradient(#dccfb8 0, #dccfb8 100%), linear-gradient(#dccfb8 0, #dccfb8 100%);
-	background-size: 100% 2rpx, 2rpx 100%;
-	background-position: center center, center center;
-	background-repeat: no-repeat;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-sizing: border-box;
-}
-
-.hero-char {
-	font-size: 168rpx;
-	line-height: 1;
-	font-weight: 700;
-	color: #4e4e4e;
-}
-
-.trad-row {
+.hero-top-row {
 	display: flex;
 	flex-direction: row;
-	align-items: center;
-	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16rpx;
 	margin-bottom: 16rpx;
-	padding: 12rpx 16rpx;
-	background: #e3f2fd;
-	border-radius: 12rpx;
-	border: 1rpx solid #90caf9;
-}
-
-.trad-label {
-	font-size: 24rpx;
-	color: #1565c0;
-	font-weight: 700;
-	margin-right: 12rpx;
-}
-
-.trad-val {
-	font-size: 32rpx;
-	color: #0d47a1;
-	font-weight: 700;
-}
-
-.meta-grid {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	margin-bottom: 8rpx;
-}
-
-.meta-cell {
-	flex: 0 0 48%;
-	width: 48%;
-	max-width: 48%;
 	box-sizing: border-box;
-	margin-right: 4%;
-	margin-bottom: 14rpx;
-	padding: 14rpx 12rpx;
+}
+
+.hero-top-left {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.hero-top-right {
+	flex: 1;
+	min-width: 0;
+	padding-top: 2rpx;
+	box-sizing: border-box;
+}
+
+.meta-compact {
 	background: #fffaf2;
 	border-radius: 12rpx;
 	border: 1rpx solid #fce8c8;
+	padding: 12rpx 14rpx;
+	box-sizing: border-box;
 }
 
-.meta-cell:nth-child(2n) {
-	margin-right: 0;
+.meta-compact-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	margin-bottom: 8rpx;
 }
 
-.meta-k {
-	display: block;
+.meta-compact-row:last-child {
+	margin-bottom: 0;
+}
+
+.meta-compact-row-trad .meta-compact-v {
+	color: #1565c0;
+}
+
+.meta-compact-k {
+	flex-shrink: 0;
+	width: 64rpx;
 	font-size: 22rpx;
 	color: #9e9e9e;
-	margin-bottom: 6rpx;
+	line-height: 1.4;
+	padding-top: 2rpx;
 }
 
-.meta-v {
-	display: block;
-	font-size: 28rpx;
+.meta-compact-v {
+	flex: 1;
+	min-width: 0;
+	font-size: 26rpx;
+	font-weight: 600;
 	color: #4e4e4e;
+	line-height: 1.4;
+	word-break: break-all;
+}
+
+/* 外包框尺寸与画布一致（由内联 dictStrokeWrapStyle 控制），田字线由 draw-native 绘制 */
+.tianzi-wrap-cnchar {
+	margin: 0 auto;
+	border-radius: 12rpx;
+	overflow: visible;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+}
+
+.stroke-anim-caption {
+	margin-top: 6rpx;
+	font-size: 20rpx;
+	color: #8a8279;
+	text-align: center;
+	line-height: 1.3;
+}
+
+.dict-stroke-canvas {
+	display: block;
+}
+
+.hero-char-fallback {
+	font-size: 132rpx;
+	line-height: 1;
 	font-weight: 700;
+	color: #6d6560;
+}
+
+.tap-speak-tip {
+	margin-top: 8rpx;
+	font-size: 20rpx;
+	color: #b8875c;
+	text-align: center;
+	padding: 6rpx 14rpx;
+	border-radius: 999rpx;
+	background: #fff8ed;
+	border: 1rpx solid #f0e0cc;
 }
 
 .stroke-box {
-	margin-top: 10rpx;
-	padding: 18rpx;
+	margin-top: 6rpx;
+	padding: 14rpx 16rpx;
 	background: #f9fbe7;
 	border-radius: 14rpx;
 	border: 1rpx dashed #c5e1a5;
@@ -633,15 +817,15 @@ export default {
 
 .stroke-title {
 	display: block;
-	font-size: 26rpx;
+	font-size: 24rpx;
 	font-weight: 700;
 	color: #558b2f;
-	margin-bottom: 8rpx;
+	margin-bottom: 6rpx;
 }
 
 .stroke-glyphs {
 	display: block;
-	font-size: 34rpx;
+	font-size: 30rpx;
 	letter-spacing: 3rpx;
 	color: #2c2419;
 	margin-bottom: 8rpx;
@@ -651,7 +835,7 @@ export default {
 
 .stroke-names {
 	display: block;
-	font-size: 24rpx;
+	font-size: 22rpx;
 	color: #5d4037;
 	margin-bottom: 10rpx;
 	line-height: 1.45;
@@ -659,21 +843,15 @@ export default {
 
 .stroke-desc {
 	display: block;
-	font-size: 24rpx;
+	font-size: 22rpx;
 	color: #6d4c41;
-	line-height: 1.5;
-	margin-bottom: 14rpx;
-}
-
-.anim-btn {
-	border-radius: 999rpx;
-	background: #ffa726 !important;
-	border: none !important;
+	line-height: 1.45;
+	margin-bottom: 0;
 }
 
 .explain-box {
-	margin-top: 20rpx;
-	padding: 18rpx;
+	margin-top: 14rpx;
+	padding: 14rpx 16rpx;
 	background: #fce4ec;
 	border-radius: 14rpx;
 	border: 1rpx solid #f48fb1;
@@ -681,7 +859,7 @@ export default {
 
 .explain-title {
 	display: block;
-	font-size: 26rpx;
+	font-size: 24rpx;
 	font-weight: 700;
 	color: #880e4f;
 	margin-bottom: 10rpx;
@@ -689,18 +867,18 @@ export default {
 
 .explain-body {
 	display: block;
-	font-size: 26rpx;
+	font-size: 24rpx;
 	color: #4e4e4e;
 	line-height: 1.55;
 }
 
 .words-box {
-	margin-top: 22rpx;
+	margin-top: 14rpx;
 }
 
 .words-title {
 	display: block;
-	font-size: 26rpx;
+	font-size: 24rpx;
 	font-weight: 700;
 	color: #42a5f5;
 	margin-bottom: 12rpx;
@@ -714,16 +892,16 @@ export default {
 }
 
 .word-chip {
-	margin: 8rpx;
-	padding: 10rpx 18rpx;
+	margin: 6rpx;
+	padding: 8rpx 14rpx;
 	border-radius: 999rpx;
 	background: #e3f2fd;
-	font-size: 26rpx;
+	font-size: 24rpx;
 	color: #1565c0;
 }
 
 .card-actions {
-	margin-top: 28rpx;
+	margin-top: 18rpx;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
@@ -735,11 +913,6 @@ export default {
 	border: none !important;
 	font-size: 30rpx;
 	font-weight: 600;
-}
-
-.sub-btn {
-	margin-top: 16rpx;
-	align-self: center;
 }
 
 .empty-card {

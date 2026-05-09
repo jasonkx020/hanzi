@@ -1,7 +1,7 @@
 <template>
 	<view class="page">
 		<view class="card">
-			<text class="big-char">{{ hanzi || '—' }}</text>
+			<text class="big-char" @click="onBigCharTap">{{ hanzi || '—' }}</text>
 			<text class="title">拼音：{{ pinyin || '-' }}</text>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
 			<view v-if="ext.tradForm" class="trad-banner">
@@ -10,7 +10,7 @@
 			</view>
 			<view class="meta-grid">
 				<view class="meta-item">
-					<text class="meta-label">部首</text>
+					<text class="meta-label">部首2</text>
 					<text class="meta-value">{{ ext.radical }}</text>
 				</view>
 				<view class="meta-item">
@@ -50,7 +50,7 @@
 	</view>
 </template>
 <script>
-import { displayPinyinPreferAlpha } from '@/utils/pinyin-display.js'
+import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
@@ -81,7 +81,7 @@ export default {
 		this.lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
 		const entry = await getDictionaryEntry(this.hanzi, this.lessonHint)
 		if (entry) {
-			this.pinyin = displayPinyinPreferAlpha(this.pinyin || entry.pinyin || '')
+			this.pinyin = String(this.pinyin || entry.pinyin || '').replace(/\s+/g, ' ').trim()
 			this.lessonHint = this.lessonHint || entry.lessonHint || ''
 			this.ext = {
 				radical: entry.radical,
@@ -95,13 +95,17 @@ export default {
 			}
 		}
 		if (!entry && this.pinyin) {
-			this.pinyin = displayPinyinPreferAlpha(this.pinyin)
+			this.pinyin = String(this.pinyin || '').replace(/\s+/g, ' ').trim()
 		}
 		const related = await getDictionaryRelated(this.hanzi, this.lessonHint)
 		this.sameLesson = related.sameLesson || []
 		this.similarChars = related.similar || []
 	},
 	methods: {
+		onBigCharTap() {
+			if (!this.hanzi || this.hanzi === '—') return
+			speakHanzi(this.hanzi)
+		},
 		goStroke() {
 			uni.navigateTo({ url: `/pages/tools/stroke?hanzi=${encodeURIComponent(this.hanzi)}&mode=animation` })
 		},
@@ -116,6 +120,7 @@ export default {
 			uni.showToast({ title: '已加入易错字', icon: 'none' })
 		},
 		goOther(ch) {
+			speakHanzi(ch)
 			uni.redirectTo({
 				url: `/pages/dictionary/result?hanzi=${encodeURIComponent(ch)}&lesson=${encodeURIComponent(this.lessonHint)}`
 			})

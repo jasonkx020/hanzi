@@ -19,6 +19,7 @@
 
 <script>
 import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
+import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { listLearnedChars } from '@/utils/user-progress-storage.js'
 
 export default {
@@ -33,6 +34,7 @@ export default {
 	},
 	methods: {
 		openDetail(r) {
+			speakHanzi(r[COL_PROGRESS.hanzi] || '')
 			const h = encodeURIComponent(r[COL_PROGRESS.hanzi] || '')
 			const g = r[COL_PROGRESS.grade] ?? ''
 			const s = encodeURIComponent(r[COL_PROGRESS.semester] || '')

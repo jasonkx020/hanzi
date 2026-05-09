@@ -1,6 +1,5 @@
-import cnchar from 'cnchar'
+import cnchar from '@/utils/cnchar-setup.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
-import { displayPinyinPreferAlpha } from '@/utils/pinyin-display.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import {
@@ -13,6 +12,12 @@ import { getCachedDictionaryDetail, setCachedDictionaryDetail } from '@/utils/di
 
 const STROKE_CACHE = Object.create(null)
 const HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
+
+/** 拼音文案：折叠空白 trim，不做 ɑ ↔ a 改写 */
+function trimPinyinText(s) {
+	if (s == null || s === '') return ''
+	return String(s).replace(/\s+/g, ' ').trim()
+}
 
 function inferRadicalFallback(hanzi) {
 	if (RADICAL_HINT_MAP[hanzi]) return RADICAL_HINT_MAP[hanzi]
@@ -209,12 +214,21 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 
 	const cached = getCachedDictionaryDetail(target)
 	if (cached && cached.source === 'cnchar_v2') {
+		const radRowCached = cncharRadicalRow(target)
 		return {
 			hanzi: target,
-			pinyin: displayPinyinPreferAlpha(cached.pinyin || ''),
+			pinyin: trimPinyinText(cached.pinyin || ''),
 			lessonHint: hint || cached.lessonHint || '',
-			radical: cached.radical,
-			structure: cached.structure,
+			radical:
+				radRowCached?.radical ||
+				cached.radical ||
+				inferRadicalFallback(target) ||
+				fallbackDictionaryDetail().radical,
+			structure:
+				radRowCached?.structure ||
+				cached.structure ||
+				inferStructureFallback(target) ||
+				fallbackDictionaryDetail().structure,
 			strokes: cached.strokes,
 			words: Array.isArray(cached.words) && cached.words.length ? cached.words : ['暂无组词'],
 			explainText: cached.explainText || '',
@@ -230,11 +244,12 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 	const fallback = fallbackDictionaryDetail()
 
 	const radRow = cncharRadicalRow(target)
+	/** 部首、结构以 cnchar-radical 为准，本地表仅作缺数据时的补充 */
 	const radical =
-		local?.radical || radRow?.radical || inferRadicalFallback(target) || fallback.radical
+		radRow?.radical || local?.radical || inferRadicalFallback(target) || fallback.radical
 	const structure =
-		local?.structure ||
 		radRow?.structure ||
+		local?.structure ||
 		inferStructureFallback(target) ||
 		fallback.structure
 
@@ -247,7 +262,7 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 
 	const pinyinRaw =
 		String(hit?.pinyin || '').trim() || cncharSpellPoly(target) || ''
-	const pinyin = displayPinyinPreferAlpha(pinyinRaw)
+	const pinyin = trimPinyinText(pinyinRaw)
 
 	const entry = {
 		hanzi: target,

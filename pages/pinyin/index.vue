@@ -11,7 +11,7 @@
 		</view>
 		<view class="panel">
 			<text class="title">{{ activeTab }}</text>
-			<!-- <text class="desc">点击拼音按钮可点读，当前支持首版离线朗读能力。</text> -->
+			<text class="desc">点击下方格子朗读对应拼音（H5 / App 均已支持）</text>
 			<text class="narrator">朗读人：{{ narrator === 'female' ? '标准女声' : '童声' }}</text>
 			<view class="switches">
 				<view class="switch-chip" :class="autoRead ? 'switch-chip-on' : ''" @click="autoRead = !autoRead">
@@ -75,6 +75,7 @@ import {
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
 import { getPinyinSymbolCategory, legendForTab } from '@/utils/pinyin-pep-category.js'
+import { speakPinyinSymbol } from '@/utils/speak-pinyin-symbol.js'
 
 export default {
 	data() {
@@ -83,7 +84,7 @@ export default {
 			activeTab: '声母',
 			symbolMap: {
 				声母: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
-				韵母: ['ɑ', 'o', 'e', 'i', 'u', 'ü', 'ai', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe', 'er', 'ɑn', 'en', 'in', 'un', 'ün','ɑng', 'eng', 'ing', 'ong'],
+				韵母: ['ɑ', 'o', 'e', 'i', 'u', 'ü', 'ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe', 'er', 'ɑn', 'en', 'in', 'un', 'ün','ɑng', 'eng', 'ing', 'ong'],
 				整体认读: ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si', 'yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying'],
 				拼读练习: ['bɑ', 'bo', 'mɑ', 'de', 'du', 'ge', 'huɑ', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
 			},
@@ -121,30 +122,20 @@ export default {
 		async speakSymbol(symbol) {
 			const text = String(symbol || '')
 			const narrator = this.narrator
-			// #ifdef APP-PLUS
-			try {
-				if (typeof plus !== 'undefined' && plus.speech && typeof plus.speech.speak === 'function') {
-					plus.speech.speak(text, {
-						engine: 'baidu',
-						volume: 1,
-						pitch: narrator === 'female' ? 1.0 : 1.25,
-						rate: narrator === 'female' ? 1.0 : 1.1
-					})
-					return
-				}
-			} catch (e) {
-				console.warn('[pinyin] speak failed', e)
+			const ok = speakPinyinSymbol(text, narrator)
+			if (!ok) {
+				uni.showToast({ title: `${getAudioNarratorLabel(narrator)}：${text}`, icon: 'none' })
 			}
-			// #endif
-			uni.showToast({ title: `${getAudioNarratorLabel(narrator)}：${text}`, icon: 'none' })
 			if (this.autoRead) {
 				const arr = this.activeSymbols
 				const idx = arr.indexOf(text)
 				const next = idx >= 0 && idx < arr.length - 1 ? arr[idx + 1] : ''
 				if (next) {
 					setTimeout(() => {
-						uni.showToast({ title: `连读下一项：${next}`, icon: 'none' })
-					}, 350)
+						if (!speakPinyinSymbol(next, narrator)) {
+							uni.showToast({ title: `下一项：${next}`, icon: 'none' })
+						}
+					}, ok ? 520 : 380)
 				}
 			}
 			if (this.followReadScore) {
@@ -223,7 +214,7 @@ export default {
 .tab-item-active { background: #ffe2b8; color: #2c2419; font-weight: 600; }
 .panel { background: #fff; border-radius: 14rpx; padding: 22rpx; }
 .title { display: block; font-size: 30rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
-.desc { display: block; font-size: 25rpx; color: #6b6560; line-height: 1.5; margin-bottom: 16rpx; }
+.desc { display: block; font-size: 24rpx; color: #6b6560; line-height: 1.45; margin-bottom: 12rpx; }
 .narrator { display: block; font-size: 23rpx; color: #8a8279; margin-bottom: 10rpx; }
 .switches { display: flex; flex-direction: row; margin-bottom: 12rpx; }
 .switch-chip + .switch-chip { margin-left: 10rpx; }
