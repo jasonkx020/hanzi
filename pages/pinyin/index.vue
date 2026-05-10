@@ -22,8 +22,29 @@
 				</view>
 			</view>
 
+			<!-- 声母：按发音部位分块 + 成阻说明 -->
+			<template v-if="activeTab === '声母'">
+				<view v-for="sec in initialSections" :key="sec.title" class="vowel-block">
+					<text class="vowel-block-title">{{ sec.title }}</text>
+					<text class="whole-block-desc">{{ sec.desc }}</text>
+					<view class="symbol-grid">
+						<view
+							v-for="entry in entriesForInitial(sec.symbols)"
+							:key="sec.title + '-' + entry.symbol"
+							class="symbol-item"
+							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
+							@click="speakSymbol(entry.symbol)"
+						>
+							<text class="symbol-text">{{ entry.symbol }}</text>
+							<view class="symbol-speaker" aria-hidden="true">
+								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							</view>
+						</view>
+					</view>
+				</view>
+			</template>
 			<!-- 韵母：分块纵向排版，避免单/复/鼻韵母混在一起 -->
-			<template v-if="activeTab === '韵母'">
+			<template v-else-if="activeTab === '韵母'">
 				<view v-for="sec in vowelSections" :key="sec.title" class="vowel-block">
 					<text class="vowel-block-title">{{ sec.title }}</text>
 					<view class="symbol-grid">
@@ -140,23 +161,70 @@ import { getPinyinSymbolCategory, legendForTab } from '@/utils/pinyin-pep-catego
 
 /** 韵母分块（顺序与教材常见层级一致，自上而下） */
 const VOWEL_SECTIONS = [
-	{ title: '单韵母', symbols: ['ɑ', 'o', 'e', 'i', 'u', 'ü'] },
-	{ title: '复韵母', symbols: ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe'] },
-	{ title: '特殊韵母', symbols: ['er'] },
-	{ title: '前鼻韵母', symbols: ['ɑn', 'en', 'in', 'un', 'ün'] },
-	{ title: '后鼻韵母', symbols: ['ɑng', 'eng', 'ing', 'ong'] }
+	{ title: '单韵母(6个)', symbols: ['ɑ', 'o', 'e', 'i', 'u', 'ü'] },
+	{ title: '复韵母(8个)', symbols: ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe'] },
+	{ title: '特殊韵母(1个)', symbols: ['er'] },
+	{ title: '前鼻韵母(5个)', symbols: ['ɑn', 'en', 'in', 'un', 'ün'] },
+	{ title: '后鼻韵母(4个)', symbols: ['ɑng', 'eng', 'ing', 'ong'] }
+]
+
+/**
+ * 声母：按发音部位分块；块与块之间的顺序为人教版常见「字母先后」教学顺序：
+ * b p m f → d t n l → g k h → j q x → zh ch sh r → z c s → y w
+ */
+const INITIAL_SECTIONS = [
+	{
+		title: '双唇音',
+		desc: '上唇与下唇接触成阻。b、p、m',
+		symbols: ['b', 'p', 'm']
+	},
+	{
+		title: '唇齿音',
+		desc: '上齿与下唇内侧接触成阻。f',
+		symbols: ['f']
+	},
+	{
+		title: '舌尖中音',
+		desc: '舌尖与上齿龈接触成阻。d、t、n、l',
+		symbols: ['d', 't', 'n', 'l']
+	},
+	{
+		title: '舌根音',
+		desc: '舌根与软腭接触成阻。g、k、h',
+		symbols: ['g', 'k', 'h']
+	},
+	{
+		title: '舌面音',
+		desc: '舌面前部与硬腭前部接触成阻。j、q、x',
+		symbols: ['j', 'q', 'x']
+	},
+	{
+		title: '舌尖后音（翘舌音）',
+		desc: '舌尖与硬腭前部接触成阻。zh、ch、sh、r',
+		symbols: ['zh', 'ch', 'sh', 'r']
+	},
+	{
+		title: '舌尖前音（平舌音）',
+		desc: '舌尖与上齿背接触成阻。z、c、s',
+		symbols: ['z', 'c', 's']
+	},
+	{
+		title: '隔音字母',
+		desc: '写在音节开头起隔音作用，读音分别接近韵母 i、u。y、w',
+		symbols: ['y', 'w']
+	}
 ]
 
 /** 整体认读：分块 + 说明（与韵母页 vowel-block 一致） */
 const WHOLE_READING_SECTIONS = [
 	{
-		title: '第一类',
+		title: '第一类(7个)',
 		desc:
 			'（zhi、chi、shi、ri、zi、ci、si）它们的韵母不是普通的「i（衣）」，而是发音特殊的「-i」，直接拼读很困难，所以需要整体记住读音。',
 		symbols: ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si']
 	},
 	{
-		title: '第二类',
+		title: '第二类(9个)',
 		desc:
 			'（yi、wu、yu、ye、yue、yuɑn、yin、yun、ying）它们按照拼写规则变化而来（如增加 y 或 w，或省略 ü 上两点等）。为不加重拼写规则负担，就作为整体来认读。',
 		symbols: ['yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying']
@@ -181,7 +249,7 @@ export default {
 			toneColumnLabels: ['本音', '一声', '二声', '三声', '四声'],
 			activeTab: '声母',
 			symbolMap: {
-				声母: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
+				声母: INITIAL_SECTIONS.flatMap((s) => s.symbols),
 				韵母: VOWEL_SECTIONS.flatMap((s) => s.symbols),
 				整体认读: WHOLE_READING_SECTIONS.flatMap((s) => s.symbols),
 				拼读练习: ['bɑ', 'bo', 'mɑ', 'de', 'du', 'ge', 'huɑ', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
@@ -194,6 +262,7 @@ export default {
 			lastScoreText: '',
 			lastRecordFile: '',
 			vowelSections: VOWEL_SECTIONS,
+			initialSections: INITIAL_SECTIONS,
 			wholeReadingSections: WHOLE_READING_SECTIONS
 		}
 	},
@@ -241,7 +310,7 @@ export default {
 			})
 		},
 		activeLegend() {
-			if (this.activeTab === '音调' || this.activeTab === '整体认读') return []
+			if (this.activeTab === '音调' || this.activeTab === '整体认读' || this.activeTab === '声母') return []
 			return legendForTab(this.activeTab, this.activeSymbols)
 		}
 	},
@@ -283,6 +352,13 @@ export default {
 		},
 		entriesForWholeReading(symbols) {
 			const tab = '整体认读'
+			return (symbols || []).map((symbol) => {
+				const cat = getPinyinSymbolCategory(symbol, tab)
+				return { symbol, bg: cat.bg, bd: cat.bd, key: cat.key }
+			})
+		},
+		entriesForInitial(symbols) {
+			const tab = '声母'
 			return (symbols || []).map((symbol) => {
 				const cat = getPinyinSymbolCategory(symbol, tab)
 				return { symbol, bg: cat.bg, bd: cat.bd, key: cat.key }
