@@ -1,9 +1,5 @@
 <template>
-	<view class="page">
-		<view class="head">
-			<text class="name">我的</text>
-			<text class="sub">学习报告、字库与激励中心</text>
-		</view>
+	<view class="page tab-root-page" :style="tabPageStyle">
 		<view class="stat-row">
 			<view class="stat-card">
 				<text class="stat-num">{{ learnedCount }}</text>
@@ -62,8 +58,10 @@
 <script>
 import { formatCurriculumSummary, getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
+import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
+	mixins: [tabMain],
 	data() {
 		return {
 			summary: '',
@@ -72,6 +70,7 @@ export default {
 		}
 	},
 	onShow() {
+		this.setTabBarIndex(3)
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.learnedCount = getLearnedChars().length
 		this.wrongCount = getWrongChars().length
@@ -113,14 +112,11 @@ export default {
 	box-sizing: border-box;
 }
 
-.head {
-	margin-bottom: 32rpx;
-}
-
 .stat-row {
 	display: flex;
 	flex-direction: row;
 	margin-bottom: 24rpx;
+	margin-top: 4rpx;
 }
 
 .stat-card {
@@ -148,20 +144,6 @@ export default {
 	font-size: 22rpx;
 	color: #8a8279;
 	margin-top: 6rpx;
-}
-
-.name {
-	display: block;
-	font-size: 40rpx;
-	font-weight: 700;
-	color: #2c2419;
-}
-
-.sub {
-	display: block;
-	font-size: 24rpx;
-	color: #8a8279;
-	margin-top: 8rpx;
 }
 
 .section-label {

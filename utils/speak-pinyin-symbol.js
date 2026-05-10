@@ -11,6 +11,7 @@
  * 5) 微信小程序等：通常无 speechSynthesis，本工具会返回 false。
  */
 import { getAudioNarrator, AUDIO_NARRATOR } from './audio-settings.js'
+import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 
 function normalizeForTts(raw) {
 	return String(raw || '')
@@ -57,6 +58,24 @@ function tryPlusSpeechSpeakIfExists(text, narrator) {
 	}
 	// #endif
 	return false
+}
+
+/**
+ * 等待 Web Speech 当前队列播完（speechSynthesis 无 speaking/pending）。
+ * 用于「同步发起 speak」类兜底，避免多音字下一段过早开始。
+ * @param {number} [maxMs=15000]
+ */
+export async function waitForSpeechSynthesisIdle(maxMs = 15000) {
+	try {
+		const root =
+			typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null
+		const synth = root?.speechSynthesis
+		if (!synth || typeof synth.speaking !== 'boolean') return
+		const t0 = Date.now()
+		while ((synth.speaking || synth.pending) && Date.now() - t0 < maxMs) {
+			await new Promise((r) => setTimeout(r, 50))
+		}
+	} catch (_) {}
 }
 
 function pickVoiceMatch(voices, langPrefix) {
@@ -141,4 +160,107 @@ export function speakPinyinSymbol(symbol, narrator) {
 	if (tryWebSpeech(text, n)) return true
 	if (tryPlusSpeechSpeakIfExists(text, n)) return true
 	return false
+}
+
+/**
+ * 单次拼音朗读；Web Speech 时在 onend 解析；App plus.speech 用成功回调。
+ * @returns {Promise<boolean>}
+ */
+export function speakPinyinSymbolAsync(symbol, narrator) {
+	const text = normalizeForTts(symbol)
+	if (!text) {
+		logHanziSpeak('tts.skip_empty_text', { symbol })
+		return Promise.resolve(false)
+	}
+	const n = narrator != null ? narrator : getAudioNarrator()
+	logHanziSpeak('tts.start', { symbol, text, narrator: n })
+
+	return new Promise((resolve) => {
+		let settled = false
+		const finish = (v) => {
+			if (settled) return
+			settled = true
+			logHanziSpeak('tts.finish', { symbol, text, ok: v })
+			resolve(v)
+		}
+
+		try {
+			const root =
+				typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null
+			const synth = root?.speechSynthesis
+			const Utter = root?.SpeechSynthesisUtterance
+			if (synth && typeof Utter === 'function' && typeof synth.speak === 'function') {
+				try {
+					synth.cancel()
+				} catch (_) {}
+				const u = new Utter(text)
+				u.lang = 'zh-CN'
+				u.volume = 1
+				u.rate = n === AUDIO_NARRATOR.FEMALE ? 0.92 : 1.05
+				u.pitch = n === AUDIO_NARRATOR.FEMALE ? 1.0 : 1.18
+				let voices = []
+				try {
+					voices = synth.getVoices() || []
+				} catch (_) {
+					voices = []
+				}
+				let voice = pickVoiceMatch(voices, 'zh')
+				if (!voice) voice = pickVoiceMatch(voices, 'en')
+				if (voice) u.voice = voice
+				const latinLike = /^[a-zA-Z.\s\-()|]+$/.test(text)
+				if (!voice && latinLike) u.lang = 'en-US'
+				u.onend = () => finish(true)
+				u.onerror = () => finish(false)
+
+				let spoke = false
+				const run = () => {
+					if (spoke || settled) return
+					spoke = true
+					try {
+						synth.speak(u)
+					} catch (_) {
+						finish(false)
+					}
+				}
+				if ((synth.getVoices() || []).length > 0) {
+					run()
+				} else {
+					const onVc = () => run()
+					if (typeof synth.addEventListener === 'function') {
+						synth.addEventListener('voiceschanged', onVc, { once: true })
+					}
+					setTimeout(run, 450)
+				}
+				return
+			}
+		} catch (_) {}
+
+		// #ifdef APP-PLUS
+		try {
+			if (typeof plus !== 'undefined' && plus.speech && typeof plus.speech.speak === 'function') {
+				try {
+					plus.speech.speak(
+						text,
+						plusSpeechOpts(n),
+						() => finish(true),
+						() => finish(false)
+					)
+				} catch (_) {
+					finish(false)
+				}
+				return
+			}
+		} catch (_) {}
+		// #endif
+
+		void (async () => {
+			const ok = speakPinyinSymbol(symbol, n)
+			if (!ok) {
+				finish(false)
+				return
+			}
+			await waitForSpeechSynthesisIdle()
+			finish(true)
+		})()
+	})
 }

@@ -25,6 +25,8 @@
 
 		<button type="primary" @click="save">保存到本地</button>
 		<text class="ok" v-if="saved">已写入 uni.storage（键 curriculum_prefs_v1）</text>
+
+		<button type="default" class="debug-nav" @click="goDebugConsole">调试：查看 JS 日志（Console）</button>
 	</view>
 </template>
 
@@ -90,6 +92,9 @@ export default {
 			})
 			this.saved = true
 			uni.showToast({ title: '已保存', icon: 'success' })
+		},
+		goDebugConsole() {
+			uni.navigateTo({ url: '/pages/debug/console' })
 		}
 	}
 }
@@ -135,5 +140,13 @@ export default {
 	margin-top: 20rpx;
 	font-size: 22rpx;
 	color: #3d6b4a;
+}
+
+.debug-nav {
+	margin-top: 36rpx;
+	font-size: 26rpx;
+	color: #6b6560;
+	background: #fff;
+	border: 1rpx dashed #c9c4bc;
 }
 </style>

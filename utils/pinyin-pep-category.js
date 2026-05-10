@@ -74,7 +74,8 @@ const INITIAL_DEFS = [
 
 /** 韵母结构：单韵母 / 复韵母 / er / 前鼻韵母 / 后鼻韵母 */
 const FINAL_SIMPLE = ['ɑ', 'o', 'e', 'i', 'u', 'ü']
-const FINAL_COMPOUND = ['ai', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe']
+/** 与拼音页网格一致：教材 ɑ 形（ɑi / ɑo） */
+const FINAL_COMPOUND = ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe']
 
 const FINAL_DEFS = [
 	{
@@ -117,6 +118,8 @@ const FINAL_DEFS = [
 /** 整体认读音节常见二分：翘舌一组、其余一组（教材常对比呈现） */
 const WHOLE_zhishi = ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si']
 
+const WHOLE_OTHER = ['yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying']
+
 const WHOLE_DEFS = [
 	{
 		key: 'whole_zh_ch',
@@ -130,19 +133,23 @@ const WHOLE_DEFS = [
 		label: 'yi wu yu ye yue yuɑn yin yun ying',
 		bg: '#e8eeff',
 		bd: '#a8b4e8',
-		symbols: new Set([
-			'yi',
-			'wu',
-			'yu',
-			'ye',
-			'yue',
-			'yuɑn',
-			'yin',
-			'yun',
-			'ying'
-		])
+		symbols: new Set(WHOLE_OTHER)
 	}
 ]
+
+/** 教材「整体认读音节」：拼读练习遇此类不拆分（含 zhi…si、yi…ying；另接纳 latin yuan） */
+const WHOLE_READING_SYLLABLES = new Set([...WHOLE_zhishi, ...WHOLE_OTHER, 'yuan'])
+
+function normWholeReadingLookup(raw) {
+	return String(raw || '')
+		.trim()
+		.toLowerCase()
+		.replace(/v/g, '\u00fc')
+}
+
+export function isPinyinWholeReadingSyllable(symbol) {
+	return WHOLE_READING_SYLLABLES.has(normWholeReadingLookup(symbol))
+}
 
 /** 拼读练习：区分两拼音节 / 含 üe 或撮口呼 / 三拼音节示例 */
 const DRILL_TRI = ['huɑ']

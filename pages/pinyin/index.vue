@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page tab-root-page" :style="tabPageStyle">
 		<view class="tabs">
 			<view
 				v-for="item in tabList"
@@ -11,8 +11,8 @@
 		</view>
 		<view class="panel">
 			<text class="title">{{ activeTab }}</text>
-			<text class="desc">点击下方格子朗读对应拼音（H5 / App 均已支持）</text>
-			<text class="narrator">朗读人：{{ narrator === 'female' ? '标准女声' : '童声' }}</text>
+			<!-- <text class="desc">点击下方格子朗读对应拼音（H5 / App 均已支持）</text>
+			<text class="narrator">朗读人：{{ narrator === 'female' ? '标准女声' : '童声' }}</text> -->
 			<view class="switches">
 				<view class="switch-chip" :class="autoRead ? 'switch-chip-on' : ''" @click="autoRead = !autoRead">
 					自动连读：{{ autoRead ? '开' : '关' }}
@@ -21,20 +21,79 @@
 					跟读评分：{{ followReadScore ? '开' : '关' }}
 				</view>
 			</view>
-			<view v-if="activeLegend.length" class="legend">
-				<text class="legend-title">颜色分类（人教版常见分法）</text>
-				<view class="legend-row">
-					<view
-						v-for="item in activeLegend"
-						:key="item.key"
-						class="legend-chip"
-						:style="{ backgroundColor: item.bg, borderColor: item.bd }"
-					>
-						<text class="legend-chip-text">{{ item.label }}</text>
+
+			<!-- 韵母：分块纵向排版，避免单/复/鼻韵母混在一起 -->
+			<template v-if="activeTab === '韵母'">
+				<view v-for="sec in vowelSections" :key="sec.title" class="vowel-block">
+					<text class="vowel-block-title">{{ sec.title }}</text>
+					<view class="symbol-grid">
+						<view
+							v-for="entry in entriesForSymbols(sec.symbols)"
+							:key="sec.title + '-' + entry.symbol"
+							class="symbol-item"
+							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
+							@click="speakSymbol(entry.symbol)"
+						>
+							<text class="symbol-text">{{ entry.symbol }}</text>
+							<view class="symbol-speaker" aria-hidden="true">
+								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							</view>
+						</view>
 					</view>
 				</view>
-			</view>
-			<view class="symbol-grid">
+			</template>
+			<!-- 音调：单列自上向下，块标题与「韵母」页一致；先韵母块再整体认读块 -->
+			<template v-else-if="activeTab === '音调'">
+				<view v-for="block in toneTabBlocks" :key="block.key" class="vowel-block">
+					<text class="vowel-block-title">{{ block.title }}</text>
+					<view class="tone-wrap">
+						<view class="tone-header-row">
+							<text v-for="lab in toneColumnLabels" :key="block.key + '-' + lab" class="tone-head-cell">{{ lab }}</text>
+						</view>
+						<view
+							v-for="row in block.rows"
+							:key="block.key + '-row-' + row.bare"
+							class="tone-data-row"
+						>
+							<view
+								v-for="(cell, ci) in row.cells"
+								:key="'c-' + ci"
+								class="tone-cell symbol-item"
+								:class="{ 'tone-cell-disabled': cell.disabled }"
+								:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
+								@click="!cell.disabled && speakSymbol(cell.play, { asNeutral: cell.asNeutral })"
+							>
+								<text class="symbol-text tone-cell-text">{{ cell.display }}</text>
+								<view class="symbol-speaker" aria-hidden="true">
+									<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+			</template>
+			<!-- 整体认读：分块 + 说明，排版同韵母页 -->
+			<template v-else-if="activeTab === '整体认读'">
+				<view v-for="sec in wholeReadingSections" :key="sec.title" class="vowel-block">
+					<text class="vowel-block-title">{{ sec.title }}</text>
+					<text class="whole-block-desc">{{ sec.desc }}</text>
+					<view class="symbol-grid">
+						<view
+							v-for="entry in entriesForWholeReading(sec.symbols)"
+							:key="sec.title + '-' + entry.symbol"
+							class="symbol-item"
+							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
+							@click="speakSymbol(entry.symbol)"
+						>
+							<text class="symbol-text">{{ entry.symbol }}</text>
+							<view class="symbol-speaker" aria-hidden="true">
+								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							</view>
+						</view>
+					</view>
+				</view>
+			</template>
+			<view v-else class="symbol-grid">
 				<view
 					v-for="entry in activeSymbolEntries"
 					:key="entry.symbol"
@@ -43,11 +102,14 @@
 					@click="speakSymbol(entry.symbol)"
 				>
 					<text class="symbol-text">{{ entry.symbol }}</text>
+					<view class="symbol-speaker" aria-hidden="true">
+						<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+					</view>
 				</view>
 			</view>
 			<view class="actions">
 				<button size="mini" type="primary" @click="goDrill">进入闯关</button>
-				<button size="mini" @click="goGuardian">切换朗读人</button>
+				<button size="mini" @click="goGuardian" :disabled="true">切换朗读人</button>
 				<button size="mini" type="warn" @click="startRecord" :disabled="recording">开始跟读</button>
 				<button size="mini" @click="stopRecordAndScore" :disabled="!recording">结束并评分</button>
 			</view>
@@ -66,7 +128,7 @@
 </template>
 
 <script>
-import { getAudioNarrator, getAudioNarratorLabel } from '@/utils/audio-settings.js'
+import { getAudioNarrator } from '@/utils/audio-settings.js'
 import {
 	getFollowReadState,
 	getFollowReadHistory,
@@ -75,17 +137,53 @@ import {
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
 import { getPinyinSymbolCategory, legendForTab } from '@/utils/pinyin-pep-category.js'
-import { speakPinyinSymbol } from '@/utils/speak-pinyin-symbol.js'
+
+/** 韵母分块（顺序与教材常见层级一致，自上而下） */
+const VOWEL_SECTIONS = [
+	{ title: '单韵母', symbols: ['ɑ', 'o', 'e', 'i', 'u', 'ü'] },
+	{ title: '复韵母', symbols: ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe'] },
+	{ title: '特殊韵母', symbols: ['er'] },
+	{ title: '前鼻韵母', symbols: ['ɑn', 'en', 'in', 'un', 'ün'] },
+	{ title: '后鼻韵母', symbols: ['ɑng', 'eng', 'ing', 'ong'] }
+]
+
+/** 整体认读：分块 + 说明（与韵母页 vowel-block 一致） */
+const WHOLE_READING_SECTIONS = [
+	{
+		title: '第一类',
+		desc:
+			'（zhi、chi、shi、ri、zi、ci、si）它们的韵母不是普通的「i（衣）」，而是发音特殊的「-i」，直接拼读很困难，所以需要整体记住读音。',
+		symbols: ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si']
+	},
+	{
+		title: '第二类',
+		desc:
+			'（yi、wu、yu、ye、yue、yuɑn、yin、yun、ying）它们按照拼写规则变化而来（如增加 y 或 w，或省略 ü 上两点等）。为不加重拼写规则负担，就作为整体来认读。',
+		symbols: ['yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying']
+	}
+]
+import { applyToneToSyllableStem, playToneGridCell, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
+import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
+import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
+	mixins: [tabMain],
 	data() {
 		return {
-			tabList: ['声母', '韵母', '整体认读', '拼读练习'],
+			/** 右下角小喇叭（SVG data URL，不依赖静态资源文件） */
+			pinyinSpeakerIconSrc:
+				'data:image/svg+xml,' +
+				encodeURIComponent(
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#9a9289"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
+				),
+			tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
+			toneColumnLabels: ['本音', '一声', '二声', '三声', '四声'],
 			activeTab: '声母',
 			symbolMap: {
 				声母: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
-				韵母: ['ɑ', 'o', 'e', 'i', 'u', 'ü', 'ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe', 'er', 'ɑn', 'en', 'in', 'un', 'ün','ɑng', 'eng', 'ing', 'ong'],
-				整体认读: ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si', 'yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying'],
+				韵母: VOWEL_SECTIONS.flatMap((s) => s.symbols),
+				整体认读: WHOLE_READING_SECTIONS.flatMap((s) => s.symbols),
 				拼读练习: ['bɑ', 'bo', 'mɑ', 'de', 'du', 'ge', 'huɑ', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
 			},
 			narrator: 'kid',
@@ -94,11 +192,44 @@ export default {
 			recording: false,
 			followReadHistory: [],
 			lastScoreText: '',
-			lastRecordFile: ''
+			lastRecordFile: '',
+			vowelSections: VOWEL_SECTIONS,
+			wholeReadingSections: WHOLE_READING_SECTIONS
 		}
 	},
 	computed: {
+		/** 音调页：自上而下两块，标题「韵母」「整体认读」（排版同韵母 Tab 的 vowel-block） */
+		toneTabBlocks() {
+			return [
+				{
+					key: 'final',
+					title: '韵母',
+					rows: this.buildToneRows(this.symbolMap['韵母'] || [], '韵母')
+				},
+				{
+					key: 'whole',
+					title: '整体认读',
+					rows: this.buildToneRows(this.symbolMap['整体认读'] || [], '整体认读')
+				}
+			]
+		},
+		/** 自动连读：先左栏韵母整表，再右栏整体认读（自上而下、每行本音→四声） */
+		autoReadQueue() {
+			if (this.activeTab === '音调') {
+				return this.toneTabBlocks.flatMap((block) =>
+					block.rows.flatMap((row) =>
+						row.cells
+							.filter((c) => c.play && !c.disabled)
+							.map((c) => ({ symbol: c.play, asNeutral: c.asNeutral }))
+					)
+				)
+			}
+			return (this.symbolMap[this.activeTab] || []).map((s) => ({ symbol: s, asNeutral: false }))
+		},
 		activeSymbols() {
+			if (this.activeTab === '音调') {
+				return this.autoReadQueue.map((q) => q.symbol)
+			}
 			return this.symbolMap[this.activeTab] || []
 		},
 		activeSymbolEntries() {
@@ -110,32 +241,86 @@ export default {
 			})
 		},
 		activeLegend() {
+			if (this.activeTab === '音调' || this.activeTab === '整体认读') return []
 			return legendForTab(this.activeTab, this.activeSymbols)
 		}
 	},
 	onShow() {
+		this.setTabBarIndex(1)
 		this.narrator = getAudioNarrator()
 		this.recording = getFollowReadState().recording
 		this.followReadHistory = getFollowReadHistory()
 	},
+	onHide() {
+		stopLocalPinyinAudio()
+	},
 	methods: {
-		async speakSymbol(symbol) {
+		buildToneRows(symbols, categoryTab) {
+			return (symbols || []).map((sym) => {
+				const bare = stripPinyinToneMarks(String(sym).trim().toLowerCase())
+				const cat = getPinyinSymbolCategory(sym, categoryTab)
+				const cells = [
+					{ display: sym, play: bare, asNeutral: true, disabled: false },
+					...[1, 2, 3, 4].map((t) => {
+						const stem = applyToneToSyllableStem(bare, t)
+						return {
+							display: stem || '—',
+							play: stem,
+							asNeutral: false,
+							disabled: !stem
+						}
+					})
+				]
+				return { bare: sym, cat, cells }
+			})
+		},
+		entriesForSymbols(symbols) {
+			const tab = this.activeTab
+			return (symbols || []).map((symbol) => {
+				const cat = getPinyinSymbolCategory(symbol, tab)
+				return { symbol, bg: cat.bg, bd: cat.bd, key: cat.key }
+			})
+		},
+		entriesForWholeReading(symbols) {
+			const tab = '整体认读'
+			return (symbols || []).map((symbol) => {
+				const cat = getPinyinSymbolCategory(symbol, tab)
+				return { symbol, bg: cat.bg, bd: cat.bd, key: cat.key }
+			})
+		},
+		async speakSymbol(symbol, opts) {
 			const text = String(symbol || '')
 			const narrator = this.narrator
-			const ok = speakPinyinSymbol(text, narrator)
-			if (!ok) {
-				uni.showToast({ title: `${getAudioNarratorLabel(narrator)}：${text}`, icon: 'none' })
+			const asNeutral = !!(opts && opts.asNeutral)
+			const t0 = Date.now()
+			let ok = false
+			let blend = false
+			if (this.activeTab === '音调') {
+				ok = await playToneGridCell(text, { asNeutral, narrator })
+			} else {
+				const useTone1Fb = this.activeTab === '整体认读' || this.activeTab === '拼读练习'
+				blend = this.activeTab === '拼读练习'
+				ok = await speakBlendedPinyinSyllable(text, {
+					narrator,
+					useTone1Fb,
+					blend,
+					showFailToast: true
+				})
+			}
+			let delayMs = 380
+			if (blend && ok) {
+				delayMs = Math.max(520, Date.now() - t0 + 280)
+			} else if (ok) {
+				delayMs = 520
 			}
 			if (this.autoRead) {
-				const arr = this.activeSymbols
-				const idx = arr.indexOf(text)
-				const next = idx >= 0 && idx < arr.length - 1 ? arr[idx + 1] : ''
-				if (next) {
+				const queue = this.autoReadQueue
+				const idx = queue.findIndex((q) => q.symbol === text && !!q.asNeutral === asNeutral)
+				const nextSlot = idx >= 0 && idx < queue.length - 1 ? queue[idx + 1] : null
+				if (nextSlot) {
 					setTimeout(() => {
-						if (!speakPinyinSymbol(next, narrator)) {
-							uni.showToast({ title: `下一项：${next}`, icon: 'none' })
-						}
-					}, ok ? 520 : 380)
+						this.speakSymbol(nextSlot.symbol, { asNeutral: nextSlot.asNeutral })
+					}, delayMs)
 				}
 			}
 			if (this.followReadScore) {
@@ -210,7 +395,7 @@ export default {
 .page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
 .tabs { display: flex; flex-direction: row; align-items: stretch; margin-bottom: 16rpx; }
 .tab-item + .tab-item { margin-left: 10rpx; }
-.tab-item { flex: 1; min-width: 0; text-align: center; background: #fff; border-radius: 10rpx; padding: 14rpx 6rpx; font-size: 24rpx; color: #555; }
+.tab-item { flex: 1; min-width: 0; text-align: center; background: #fff; border-radius: 10rpx; padding: 12rpx 4rpx; font-size: 22rpx; color: #555; }
 .tab-item-active { background: #ffe2b8; color: #2c2419; font-weight: 600; }
 .panel { background: #fff; border-radius: 14rpx; padding: 22rpx; }
 .title { display: block; font-size: 30rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
@@ -251,6 +436,82 @@ export default {
 	color: #3e3830;
 	line-height: 1.3;
 }
+.vowel-block {
+	margin-bottom: 28rpx;
+}
+.vowel-block:last-of-type {
+	margin-bottom: 16rpx;
+}
+.vowel-block-title {
+	display: block;
+	font-size: 26rpx;
+	font-weight: 700;
+	color: #4a433a;
+	margin-bottom: 12rpx;
+	padding-left: 12rpx;
+	border-left: 6rpx solid #e8cfa8;
+}
+.whole-block-desc {
+	display: block;
+	font-size: 24rpx;
+	line-height: 1.55;
+	color: #5c554c;
+	margin-bottom: 14rpx;
+	padding: 0 6rpx 0 18rpx;
+}
+.tone-wrap {
+	margin-bottom: 0;
+}
+.tone-header-row,
+.tone-data-row {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	width: 100%;
+	box-sizing: border-box;
+}
+.tone-header-row {
+	margin-bottom: 10rpx;
+	padding: 0 2rpx;
+}
+.tone-head-cell {
+	flex: 1;
+	min-width: 0;
+	text-align: center;
+	font-size: 22rpx;
+	font-weight: 600;
+	color: #6b6560;
+	padding: 8rpx 4rpx;
+	box-sizing: border-box;
+	line-height: 1.25;
+}
+.tone-data-row {
+	margin-bottom: 12rpx;
+}
+.tone-data-row:last-child {
+	margin-bottom: 0;
+}
+.tone-cell {
+	flex: 1;
+	min-width: 0;
+	max-width: none;
+	width: auto;
+	margin-right: 8rpx;
+	margin-bottom: 0;
+	min-height: 88rpx;
+	padding: 16rpx 4rpx;
+}
+.tone-cell:last-child {
+	margin-right: 0;
+}
+.tone-cell-disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+.tone-cell-text {
+	font-size: 34rpx;
+	line-height: 1.15;
+}
 .symbol-grid {
 	display: flex;
 	flex-direction: row;
@@ -258,6 +519,7 @@ export default {
 	margin-bottom: 16rpx;
 }
 .symbol-item {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -279,6 +541,20 @@ export default {
 	margin-right: 0;
 }
 .symbol-text { font-size: 44rpx; color: #2c2419; font-weight: 700; }
+.symbol-speaker {
+	position: absolute;
+	right: 6rpx;
+	bottom: 4rpx;
+	width: 28rpx;
+	height: 28rpx;
+	pointer-events: none;
+	opacity: 0.92;
+}
+.symbol-speaker-img {
+	width: 28rpx;
+	height: 28rpx;
+	display: block;
+}
 .actions {
 	display: flex;
 	flex-direction: row;

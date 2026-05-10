@@ -1,4 +1,8 @@
 import './utils/cnchar-setup.js'
+import { installDebugConsoleHook } from '@/utils/debug-console-hook.js'
+
+installDebugConsoleHook()
+
 import App from './App'
 
 // #ifndef VUE3

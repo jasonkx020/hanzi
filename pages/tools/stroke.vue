@@ -73,8 +73,8 @@ const STROKE_DRAW_LENGTH = 180
 export default {
 	data() {
 		return {
-			word: '银行行长',
-			inputWord: '银行行长',
+			word: '银',
+			inputWord: '银',
 			pinyinText: '',
 			strokeReady: false,
 			drawWriter: null,

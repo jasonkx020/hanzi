@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page tab-root-page" :style="tabPageStyle">
 		<view class="vip-strip" @click="goVip">
 			<text class="vip-strip-icon">◇</text>
 			<text class="vip-strip-text">{{ vipActive ? '会员已开通' : '家长专区 · 开通会员' }}</text>
@@ -49,8 +49,10 @@ import { isVipActive } from '@/utils/vip.js'
 import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
 import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
+import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
+	mixins: [tabMain],
 	data() {
 		return {
 			summary: '',
@@ -59,6 +61,7 @@ export default {
 		}
 	},
 	onShow() {
+		this.setTabBarIndex(0)
 		this.refresh()
 	},
 	methods: {

@@ -1,14 +1,14 @@
 <template>
 	<view class="page">
 		<view class="card">
-			<text class="big-char" @click="onBigCharTap">{{ hanzi || '—' }}</text>
+			<text class="big-char" @click="speakCurrentPinyin">{{ hanzi || '—' }}</text>
 			<text class="title">拼音：{{ pinyin || '-' }}</text>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
 			<view v-if="ext.tradForm" class="trad-banner">
 				<text class="trad-b-label">繁体</text>
 				<text class="trad-b-val">{{ ext.tradForm }}</text>
 			</view>
-			<view class="meta-grid">
+			<view class="meta-grid" @click="speakCurrentPinyin">
 				<view class="meta-item">
 					<text class="meta-label">部首2</text>
 					<text class="meta-value">{{ ext.radical }}</text>
@@ -20,6 +20,9 @@
 				<view class="meta-item">
 					<text class="meta-label">笔画</text>
 					<text class="meta-value">{{ ext.strokes }}</text>
+				</view>
+				<view class="meta-grid-speak" @click.stop="speakCurrentPinyin">
+					<image class="meta-grid-speak-img" :src="dictSpeakerIconSrc" mode="aspectFit" />
 				</view>
 			</view>
 			<view v-if="ext.strokeShapes || ext.strokeNames" class="stroke-panel">
@@ -50,7 +53,12 @@
 	</view>
 </template>
 <script>
-import { speakHanzi } from '@/utils/speak-hanzi.js'
+import { getAudioNarrator } from '@/utils/audio-settings.js'
+import {
+	speakDictionaryEntryPinyin,
+	DICTIONARY_LOCAL_PINYIN_OPTS
+} from '@/utils/dictionary-pinyin-speak.js'
+import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
@@ -58,6 +66,13 @@ import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/diction
 export default {
 	data() {
 		return {
+			dictSpeakerIconSrc:
+				'data:image/svg+xml,' +
+				encodeURIComponent(
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#9a9289"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
+				),
+			narrator: 'kid',
+			dictPinyinPlaying: false,
 			hanzi: '',
 			pinyin: '',
 			lessonHint: '',
@@ -101,10 +116,26 @@ export default {
 		this.sameLesson = related.sameLesson || []
 		this.similarChars = related.similar || []
 	},
+	onShow() {
+		this.narrator = getAudioNarrator()
+	},
+	onHide() {
+		stopLocalPinyinAudio()
+	},
 	methods: {
-		onBigCharTap() {
-			if (!this.hanzi || this.hanzi === '—') return
-			speakHanzi(this.hanzi)
+		async speakCurrentPinyin() {
+			if (!this.hanzi || this.hanzi === '—' || this.dictPinyinPlaying) return
+			this.dictPinyinPlaying = true
+			try {
+				await speakDictionaryEntryPinyin({
+					hanzi: this.hanzi,
+					fallbackPinyin: this.pinyin,
+					narrator: this.narrator,
+					...DICTIONARY_LOCAL_PINYIN_OPTS
+				})
+			} finally {
+				this.dictPinyinPlaying = false
+			}
 		},
 		goStroke() {
 			uni.navigateTo({ url: `/pages/tools/stroke?hanzi=${encodeURIComponent(this.hanzi)}&mode=animation` })
@@ -119,10 +150,24 @@ export default {
 			recordCharWrong(this.hanzi, 1, getCurriculumPrefs())
 			uni.showToast({ title: '已加入易错字', icon: 'none' })
 		},
-		goOther(ch) {
-			speakHanzi(ch)
+		async goOther(ch) {
+			const c = String(ch || '').trim().charAt(0)
+			if (!c) return
+			if (!this.dictPinyinPlaying) {
+				this.dictPinyinPlaying = true
+				try {
+					await speakDictionaryEntryPinyin({
+						hanzi: c,
+						fallbackPinyin: '',
+						narrator: this.narrator,
+						...DICTIONARY_LOCAL_PINYIN_OPTS
+					})
+				} finally {
+					this.dictPinyinPlaying = false
+				}
+			}
 			uni.redirectTo({
-				url: `/pages/dictionary/result?hanzi=${encodeURIComponent(ch)}&lesson=${encodeURIComponent(this.lessonHint)}`
+				url: `/pages/dictionary/result?hanzi=${encodeURIComponent(c)}&lesson=${encodeURIComponent(this.lessonHint)}`
 			})
 		}
 	}
@@ -134,7 +179,15 @@ export default {
 .big-char { display: block; font-size: 140rpx; line-height: 1; color: #2c2419; text-align: center; margin-bottom: 14rpx; }
 .title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; margin-bottom: 16rpx; }
-.meta-grid { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 12rpx; }
+.meta-grid {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	margin-bottom: 12rpx;
+	padding-bottom: 34rpx;
+	box-sizing: border-box;
+}
 .meta-item {
 	flex: 0 0 31%;
 	width: 31%;
@@ -148,6 +201,21 @@ export default {
 	text-align: center;
 }
 .meta-item:nth-child(3n) { margin-right: 0; }
+.meta-grid-speak {
+	position: absolute;
+	right: 8rpx;
+	bottom: 4rpx;
+	width: 36rpx;
+	height: 36rpx;
+	padding: 4rpx;
+	box-sizing: border-box;
+	opacity: 0.92;
+}
+.meta-grid-speak-img {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
 .trad-banner {
 	display: flex;
 	flex-direction: row;

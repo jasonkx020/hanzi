@@ -1,14 +1,5 @@
 <template>
-	<view class="page">
-		<!-- 顶栏：品牌 + 快捷入口（对齐线框图） -->
-		<view class="top-bar">
-			<text class="top-brand">萌萌识字</text>
-			<view class="top-actions">
-				<text class="top-icon" @click="onBell">🔔</text>
-				<text class="top-icon" @click="goSettings">⚙️</text>
-			</view>
-		</view>
-
+	<view class="page tab-root-page" :style="tabPageStyle">
 		<!-- 汉字搜索 -->
 		<view class="search-row">
 			<text class="search-glyph">🔍</text>
@@ -21,6 +12,7 @@
 				confirm-type="search"
 				@confirm="runHanziLookup"
 			/>
+			<text class="search-tool" @click="goSettings">⚙️</text>
 		</view>
 		<view class="quick-row">
 			<button class="quick-btn" type="default" @click="openHandwritePad">
@@ -68,7 +60,7 @@
 		<view v-else-if="activeEntry" class="hero-card">
 			<!-- 左：田字格动画；右：拼音与部首等（并排省纵向空间，便于一屏看完） -->
 			<view class="hero-top-row">
-				<view class="hero-top-left">
+				<view class="hero-top-left" @click="playActiveDictionaryPinyin">
 					<view class="tianzi-wrap-cnchar" :style="dictStrokeWrapStyle">
 						<canvas
 							v-if="dictStrokeReady && !dictAnimFallback"
@@ -81,11 +73,9 @@
 						<text v-else-if="dictStrokeReady && dictAnimFallback" class="hero-char-fallback">{{ displayHanzi }}</text>
 						<text v-else class="hero-char-fallback">{{ displayHanzi }}</text>
 					</view>
-					<!-- <text class="tap-speak-tip" @click="onHeroCharTap">听读音</text>
-					<text class="stroke-anim-caption">笔顺动画</text> -->
 				</view>
 				<view class="hero-top-right">
-					<view class="meta-compact">
+					<view class="meta-compact" @click="playActiveDictionaryPinyin">
 						<view class="meta-compact-row">
 							<text class="meta-compact-k">拼音</text>
 							<text class="meta-compact-v">{{ pinyinDisplay }}</text>
@@ -106,6 +96,9 @@
 							<text class="meta-compact-k">繁体</text>
 							<text class="meta-compact-v">{{ activeEntry.tradForm }}</text>
 						</view>
+						<!-- <view class="meta-compact-speak" @click.stop="playActiveDictionaryPinyin">
+							<image class="meta-compact-speak-img" :src="dictSpeakerIconSrc" mode="aspectFit" />
+						</view> -->
 					</view>
 				</view>
 			</view>
@@ -181,11 +174,14 @@
 import cnchar from '@/utils/cnchar-setup.js'
 import drawNative from '@/utils/draw-native.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
-import { speakHanzi } from '@/utils/speak-hanzi.js'
+import { getAudioNarrator } from '@/utils/audio-settings.js'
+import { speakDictionaryEntryPinyin, DICTIONARY_LOCAL_PINYIN_OPTS } from '@/utils/dictionary-pinyin-speak.js'
+import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getDictionaryEntry, getRadicalLabel } from '@/repositories/dictionary-repository.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
+import tabMain from '@/mixins/tab-main-page.js'
 
 const DETECTIVES = [
 	{ clue: '猜一猜「艹 + 明」是什么字？', answer: '萌' },
@@ -200,6 +196,7 @@ const DETECTIVES = [
 const DICTIONARY_STROKE_LENGTH = 148
 
 export default {
+	mixins: [tabMain],
 	data() {
 		return {
 			dictStrokeReady: false,
@@ -219,7 +216,15 @@ export default {
 			radicalFilter: '',
 			radicalOptions: [],
 			showPinyinTools: false,
-			detectiveIndex: 0
+			detectiveIndex: 0,
+			narrator: 'kid',
+			dictPinyinPlaying: false,
+			/** 属性区右下角喇叭：按当前条目拼音播本地 opus（与拼音页一致） */
+			dictSpeakerIconSrc:
+				'data:image/svg+xml,' +
+				encodeURIComponent(
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#9a9289"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>'
+				)
 		}
 	},
 	computed: {
@@ -280,10 +285,16 @@ export default {
 		}
 	},
 	onShow() {
+		this.setTabBarIndex(2)
+		this.narrator = getAudioNarrator()
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.reloadDb()
 	},
+	onHide() {
+		stopLocalPinyinAudio()
+	},
 	onUnload() {
+		stopLocalPinyinAudio()
 		this.teardownDictStroke()
 	},
 	methods: {
@@ -457,14 +468,38 @@ export default {
 				this.loadingEntry = false
 			}
 		},
-		onHeroCharTap() {
-			if (!this.activeEntry?.hanzi) return
-			speakHanzi(this.activeEntry.hanzi)
+		async playActiveDictionaryPinyin() {
+			if (!this.activeEntry?.hanzi || this.dictPinyinPlaying) return
+			this.dictPinyinPlaying = true
+			try {
+				await speakDictionaryEntryPinyin({
+					hanzi: this.activeEntry.hanzi,
+					// fallbackPinyin: this.pinyinDisplay,
+					narrator: this.narrator,
+					...DICTIONARY_LOCAL_PINYIN_OPTS
+				})
+			} finally {
+				this.dictPinyinPlaying = false
+			}
 		},
-		selectGridChar(hanzi) {
+		async selectGridChar(hanzi) {
 			const c = String(hanzi || '').trim().charAt(0)
 			if (!c) return
-			speakHanzi(c)
+			const row = this.chars.find((r) => String(r.hanzi || '').trim() === c)
+			const fp = row?.pinyin ? String(row.pinyin).replace(/\s+/g, ' ').trim() : ''
+			if (!this.dictPinyinPlaying) {
+				this.dictPinyinPlaying = true
+				try {
+					await speakDictionaryEntryPinyin({
+						hanzi: c,
+						fallbackPinyin: fp,
+						narrator: this.narrator,
+						...DICTIONARY_LOCAL_PINYIN_OPTS
+					})
+				} finally {
+					this.dictPinyinPlaying = false
+				}
+			}
 			this.hanziInput = c
 			this.loadEntryForChar(c)
 		},
@@ -493,9 +528,6 @@ export default {
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
 		},
-		onBell() {
-			uni.showToast({ title: '学习提醒即将上线', icon: 'none' })
-		},
 		playDetective() {
 			const d = DETECTIVES[this.detectiveIndex % DETECTIVES.length]
 			this.detectiveIndex++
@@ -514,30 +546,11 @@ export default {
 	box-sizing: border-box;
 }
 
-.top-bar {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	padding: 12rpx 8rpx 20rpx;
-}
-
-.top-brand {
+.search-tool {
 	font-size: 34rpx;
-	font-weight: 700;
-	color: #4e4e4e;
-}
-
-.top-actions {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.top-icon {
-	font-size: 36rpx;
-	padding: 8rpx 16rpx;
-	margin-left: 4rpx;
+	padding: 8rpx 12rpx;
+	margin-left: 8rpx;
+	opacity: 0.9;
 }
 
 .search-row {
@@ -723,11 +736,29 @@ export default {
 }
 
 .meta-compact {
+	position: relative;
 	background: #fffaf2;
 	border-radius: 12rpx;
 	border: 1rpx solid #fce8c8;
-	padding: 12rpx 14rpx;
+	padding: 12rpx 40rpx 36rpx 14rpx;
 	box-sizing: border-box;
+}
+
+.meta-compact-speak {
+	position: absolute;
+	right: 6rpx;
+	bottom: 6rpx;
+	width: 36rpx;
+	height: 36rpx;
+	padding: 4rpx;
+	box-sizing: border-box;
+	opacity: 0.92;
+}
+
+.meta-compact-speak-img {
+	width: 100%;
+	height: 100%;
+	display: block;
 }
 
 .meta-compact-row {

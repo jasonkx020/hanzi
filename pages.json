@@ -3,19 +3,22 @@
 		{
 			"path": "pages/home/home",
 			"style": {
-				"navigationBarTitleText": "识字"
+				"navigationBarTitleText": "识字",
+				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/pinyin/index",
 			"style": {
-				"navigationBarTitleText": "拼音"
+				"navigationBarTitleText": "拼音",
+				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/dictionary/index",
 			"style": {
-				"navigationBarTitleText": "查字"
+				"navigationBarTitleText": "查字",
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -27,7 +30,8 @@
 		{
 			"path": "pages/me/me",
 			"style": {
-				"navigationBarTitleText": "我的"
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -125,6 +129,14 @@
 			"style": {
 				"navigationBarTitleText": "家长管理"
 			}
+		},
+		{
+			"path": "pages/debug/console",
+			"style": {
+				"navigationBarTitleText": "调试日志",
+				"navigationBarBackgroundColor": "#252526",
+				"navigationBarTextStyle": "white"
+			}
 		}
 	],
 	"globalStyle": {
@@ -155,6 +167,7 @@
 		}
 	},
 	"tabBar": {
+		"custom": true,
 		"color": "#7A7E83",
 		"selectedColor": "#3d6b4a",
 		"borderStyle": "white",
