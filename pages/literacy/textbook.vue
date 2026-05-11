@@ -6,9 +6,14 @@
 			<view class="hero-body">
 				<view class="hero-row">
 					<text class="hero-title">课本同步学</text>
-					<button class="hero-refresh" type="default" @click.stop="reload">
+					<view class="hero-actions">
+						<button class="hero-action-btn" type="default" @click.stop="openCurriculumPicker">
+							<text class="hero-action-icon">📚</text>
+						</button>
+						<button class="hero-action-btn" type="default" @click.stop="reload">
 						<text class="hero-refresh-icon">🔄</text>
 					</button>
+					</view>
 				</view>
 				<text class="hero-sub">{{ summary }}</text>
 			</view>
@@ -17,6 +22,22 @@
 		<!-- 体量感知 -->
 		<view v-if="lessons.length" class="stat-pill">
 			<text class="stat-txt">共 <text class="stat-num">{{ lessons.length }}</text> 课 · <text class="stat-num">{{ chars.length }}</text> 个生字</text>
+		</view>
+
+		<view v-if="textbookTexts.length" class="textbook-panel">
+			<view class="textbook-panel-head">
+				<text class="textbook-panel-title">人教版（部编）课文原文</text>
+				<text class="textbook-panel-sub">当前册别共 {{ textbookTexts.length }} 篇，点标题可阅读</text>
+			</view>
+			<view
+				v-for="(item, idx) in textbookTexts.slice(0, 12)"
+				:key="`${idx}-${item.title}`"
+				class="text-row"
+				@click="openText(item, idx)"
+			>
+				<text class="text-row-title">{{ item.title || `第${idx + 1}篇` }}</text>
+				<text class="text-row-arrow">›</text>
+			</view>
 		</view>
 
 		<!-- 课次列表：大卡片，好点 -->
@@ -49,14 +70,79 @@
 
 		<view class="foot-tip">
 			<text class="foot-icon">🐼</text>
-			<text class="foot-msg">小朋友看点字卡听读音；换教材请到底部「识字」首页的「调整教材与进度」。</text>
+			<text class="foot-msg">小朋友看点字卡听读音；也可以点右上角教材按钮直接切换版本与课本。</text>
+		</view>
+
+		<view v-if="showCurriculumPicker" class="picker-mask" @click="closeCurriculumPicker">
+			<view class="picker-panel" @click.stop>
+				<view class="picker-head">
+					<text class="picker-title">选择教材</text>
+					<text class="picker-close" @click="closeCurriculumPicker">×</text>
+				</view>
+
+				<view class="version-row">
+					<view
+						v-for="v in versionOptions"
+						:key="v.value"
+						class="version-chip"
+						:class="{ 'version-chip-on': modalVersion === v.value }"
+						@click="chooseVersion(v.value)"
+					>
+						<image class="version-icon" :src="v.icon" mode="aspectFill" />
+						<text class="version-label">{{ v.label }}</text>
+					</view>
+				</view>
+
+				<scroll-view scroll-y class="book-scroll">
+					<view class="book-columns-head">
+						<text class="book-col-title">上册</text>
+						<text class="book-col-title">下册</text>
+					</view>
+					<view
+						v-for="row in currentBookRows"
+						:key="`grade-${row.grade}`"
+						class="book-row"
+					>
+						<view
+							v-for="book in [row.up, row.down]"
+							:key="book.key"
+							class="book-card"
+							@click="selectBook(book)"
+						>
+							<image class="book-cover" :src="book.cover" mode="aspectFill" />
+							<text class="book-label">{{ book.label }}</text>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
+import { getCurriculumPrefs, setCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
+import { loadRenjiaoTextbookTexts } from '@/utils/renjiao-textbook-loader.js'
+
+const COVER_BOOKS = [
+	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
+	{ grade: 1, semester: '下', cover: '/static/images/yuwen0102.jpg' },
+	{ grade: 2, semester: '上', cover: '/static/images/yuwen0201.jpg' },
+	{ grade: 2, semester: '下', cover: '/static/images/yuwen0202.jpg' },
+	{ grade: 3, semester: '上', cover: '/static/images/yuwen0301.jpg' },
+	{ grade: 3, semester: '下', cover: '/static/images/yuwen0302.jpg' },
+	{ grade: 4, semester: '上', cover: '/static/images/yuwen0401.jpg' },
+	{ grade: 4, semester: '下', cover: '/static/images/yuwen0402.jpg' },
+	{ grade: 5, semester: '上', cover: '/static/images/yuwen0501.jpg' },
+	{ grade: 5, semester: '下', cover: '/static/images/yuwen0502.jpg' },
+	{ grade: 6, semester: '上', cover: '/static/images/yuwen0601.jpg' },
+	{ grade: 6, semester: '下', cover: '/static/images/yuwen0602.jpg' }
+]
+
+const VERSION_OPTIONS = [
+	{ label: '人教版', value: 'tongbian-rj', icon: '/static/images/yuwen0101.jpg' },
+	{ label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0102.jpg' }
+]
 
 export default {
 	data() {
@@ -64,7 +150,27 @@ export default {
 			summary: '',
 			chars: [],
 			lessons: [],
-			loading: false
+			loading: false,
+			textbookTexts: [],
+			showCurriculumPicker: false,
+			modalVersion: 'tongbian-rj',
+			versionOptions: VERSION_OPTIONS
+		}
+	},
+	computed: {
+		currentBookRows() {
+			const map = {}
+			COVER_BOOKS.forEach((b) => {
+				const book = {
+				...b,
+				key: `${this.modalVersion}-${b.grade}-${b.semester}`,
+				label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
+				}
+				if (!map[b.grade]) map[b.grade] = { grade: b.grade, up: null, down: null }
+				if (b.semester === '下') map[b.grade].down = book
+				else map[b.grade].up = book
+			})
+			return Object.values(map).sort((a, b) => a.grade - b.grade)
 		}
 	},
 	onShow() {
@@ -75,8 +181,9 @@ export default {
 			if (this.loading) return
 			this.loading = true
 			try {
-				this.summary = formatCurriculumSummary(getCurriculumPrefs())
-				this.chars = await queryCurriculumChars(getCurriculumPrefs())
+				const prefs = getCurriculumPrefs()
+				this.summary = formatCurriculumSummary(prefs)
+				this.chars = await queryCurriculumChars(prefs)
 				const map = Object.create(null)
 				this.chars.forEach((row) => {
 					const hint = String(row.lesson_hint || '未分课次')
@@ -86,12 +193,50 @@ export default {
 				this.lessons = Object.values(map).sort((a, b) =>
 					String(a.hint).localeCompare(String(b.hint), 'zh-Hans-CN')
 				)
+				this.textbookTexts = []
+				if (prefs.textbook_version_id === 'tongbian-rj') {
+					this.textbookTexts = await loadRenjiaoTextbookTexts({
+						grade: prefs.grade,
+						semester: prefs.semester
+					})
+				}
 			} catch (e) {
 				console.warn('[textbook] reload', e)
 				uni.showToast({ title: '加载失败，请重试', icon: 'none' })
 			} finally {
 				this.loading = false
 			}
+		},
+		openCurriculumPicker() {
+			const p = getCurriculumPrefs()
+			this.modalVersion = p.textbook_version_id || 'tongbian-rj'
+			this.showCurriculumPicker = true
+		},
+		closeCurriculumPicker() {
+			this.showCurriculumPicker = false
+		},
+		chooseVersion(versionId) {
+			this.modalVersion = versionId
+		},
+		async selectBook(book) {
+			setCurriculumPrefs({
+				textbook_version_id: this.modalVersion,
+				grade: book.grade,
+				semester: book.semester
+			})
+			this.closeCurriculumPicker()
+			await this.reload()
+			uni.showToast({ title: `已切换到${book.label}`, icon: 'success' })
+		},
+		openText(item, idx) {
+			const title = item && item.title ? item.title : `第${idx + 1}篇`
+			const raw = item && item.content ? String(item.content).trim() : ''
+			uni.showModal({
+				title,
+				content: raw.length > 900 ? `${raw.slice(0, 900)}\n\n（内容较长，已截断）` : raw || '暂无内容',
+				showCancel: false,
+				confirmText: '关闭'
+			})
 		},
 		goHome() {
 			uni.switchTab({ url: '/pages/home/home' })
@@ -152,7 +297,13 @@ export default {
 	line-height: 1.25;
 }
 
-.hero-refresh {
+.hero-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.hero-action-btn {
 	flex-shrink: 0;
 	display: flex !important;
 	align-items: center;
@@ -169,12 +320,21 @@ export default {
 	box-sizing: border-box;
 }
 
-.hero-refresh::after {
+.hero-action-btn + .hero-action-btn {
+	margin-left: 10rpx !important;
+}
+
+.hero-action-btn::after {
 	border: none !important;
 }
 
 .hero-refresh-icon {
 	font-size: 32rpx;
+	line-height: 1;
+}
+
+.hero-action-icon {
+	font-size: 30rpx;
 	line-height: 1;
 }
 
@@ -203,6 +363,54 @@ export default {
 .stat-num {
 	font-weight: 700;
 	color: #33691e;
+}
+
+.textbook-panel {
+	margin-bottom: 20rpx;
+	background: #fff;
+	border-radius: 18rpx;
+	padding: 18rpx 20rpx;
+	border: 1rpx solid #f0e6d4;
+}
+
+.textbook-panel-head {
+	margin-bottom: 8rpx;
+}
+
+.textbook-panel-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #2c2419;
+}
+
+.textbook-panel-sub {
+	display: block;
+	margin-top: 4rpx;
+	font-size: 22rpx;
+	color: #8a8279;
+}
+
+.text-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14rpx 4rpx;
+	border-top: 1rpx solid #f5eee3;
+}
+
+.text-row-title {
+	flex: 1;
+	font-size: 25rpx;
+	color: #5a534c;
+	line-height: 1.45;
+}
+
+.text-row-arrow {
+	font-size: 34rpx;
+	color: #cfd8dc;
+	margin-left: 12rpx;
 }
 
 .section-head {
@@ -339,5 +547,129 @@ export default {
 	font-size: 22rpx;
 	color: #6b6560;
 	line-height: 1.5;
+}
+
+.picker-mask {
+	position: fixed;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.38);
+	display: flex;
+	align-items: flex-end;
+	z-index: 999;
+}
+
+.picker-panel {
+	width: 100%;
+	max-height: 78vh;
+	background: #fffdf7;
+	border-radius: 26rpx 26rpx 0 0;
+	padding: 24rpx;
+	box-sizing: border-box;
+}
+
+.picker-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20rpx;
+}
+
+.picker-title {
+	font-size: 32rpx;
+	font-weight: 700;
+	color: #2c2419;
+}
+
+.picker-close {
+	font-size: 44rpx;
+	line-height: 1;
+	color: #8a8279;
+	padding: 4rpx 8rpx;
+}
+
+.version-row {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 18rpx;
+}
+
+.version-chip {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	background: #fff;
+	border: 1rpx solid #eadfcd;
+	border-radius: 14rpx;
+	padding: 12rpx;
+	box-sizing: border-box;
+}
+
+.version-chip + .version-chip {
+	margin-left: 12rpx;
+}
+
+.version-chip-on {
+	background: #fff3df;
+	border-color: #ffb74d;
+}
+
+.version-icon {
+	width: 46rpx;
+	height: 62rpx;
+	border-radius: 6rpx;
+	margin-right: 10rpx;
+}
+
+.version-label {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: #5a534c;
+}
+
+.book-scroll {
+	max-height: 56vh;
+}
+
+.book-columns-head {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 10rpx;
+}
+
+.book-col-title {
+	flex: 1;
+	text-align: center;
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #7a746e;
+}
+
+.book-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	margin-bottom: 18rpx;
+}
+
+.book-card {
+	width: 48%;
+}
+
+.book-cover {
+	width: 100%;
+	height: 180rpx;
+	border-radius: 12rpx;
+	background: #f3ebe0;
+}
+
+.book-label {
+	display: block;
+	text-align: center;
+	margin-top: 8rpx;
+	font-size: 23rpx;
+	color: #5a534c;
 }
 </style>
