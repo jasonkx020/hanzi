@@ -1,5 +1,6 @@
--- hanzi SQLite DDL（与 constants/curriculum-schema.js 保持一致）
--- 用法：sqlite3 hanzi.db < docs/sqlite/ddl.sql
+-- 参考用 DDL：当前 App 使用内嵌 JSON（constants/hanzi_curriculum_seed.json）与 uni.storage，不再打包 SQLite。
+-- 若需本地 sqlite3 实验：sqlite3 hanzi.db < docs/sqlite/ddl.sql
+-- 字段含义与 constants/curriculum-schema.js 一致。
 
 PRAGMA foreign_keys = OFF;
 

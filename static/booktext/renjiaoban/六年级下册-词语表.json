@@ -1,0 +1,712 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 6,
+    "semester": "下",
+    "list_type": "词语表",
+    "note": "按六年级下册教材附录「词语表」附图录入。课次含 1、2、5、8、9、11、12、15、16（未列第3、4、6、7、10、13、14等课）。本文件逐条全录162个词；若脚注或印次不同请以纸书为准。多音词语（间断jiàn duàn、分外fèn wài、搅和jiǎo huo、罢了bà le、不禁bù jīn、剥削bō xuē、单调dān diào、重见天日chóng jiàn tiān rì、万象更新gēng xīn、死得其所、摆摊儿、赤裸裸、骆驼luò tuo、含糊hán hu等）已按课文常用义标注。",
+    "total": 162,
+    "groups": [
+        {
+            "section": "阅读",
+            "lesson": "1",
+            "chars": [
+                {
+                    "hanzi": "热情",
+                    "pinyin": "rè qíng"
+                },
+                {
+                    "hanzi": "风筝",
+                    "pinyin": "fēng zhēng"
+                },
+                {
+                    "hanzi": "万象更新",
+                    "pinyin": "wàn xiàng gēng xīn"
+                },
+                {
+                    "hanzi": "鞭炮",
+                    "pinyin": "biān pào"
+                },
+                {
+                    "hanzi": "眨眼",
+                    "pinyin": "zhǎ yǎn"
+                },
+                {
+                    "hanzi": "通宵",
+                    "pinyin": "tòng xiāo"
+                },
+                {
+                    "hanzi": "间断",
+                    "pinyin": "jiàn duàn"
+                },
+                {
+                    "hanzi": "万不得已",
+                    "pinyin": "wàn bù de yǐ"
+                },
+                {
+                    "hanzi": "截然",
+                    "pinyin": "jié rán"
+                },
+                {
+                    "hanzi": "燃放",
+                    "pinyin": "rán fàng"
+                },
+                {
+                    "hanzi": "亲戚",
+                    "pinyin": "qīn qī"
+                },
+                {
+                    "hanzi": "小贩",
+                    "pinyin": "xiǎo fàn"
+                },
+                {
+                    "hanzi": "摆摊儿",
+                    "pinyin": "bǎi tānr"
+                },
+                {
+                    "hanzi": "彼此",
+                    "pinyin": "bǐ cǐ"
+                },
+                {
+                    "hanzi": "贺年",
+                    "pinyin": "hè nián"
+                },
+                {
+                    "hanzi": "骆驼",
+                    "pinyin": "luò tuo"
+                },
+                {
+                    "hanzi": "恰好",
+                    "pinyin": "qià hǎo"
+                },
+                {
+                    "hanzi": "一律",
+                    "pinyin": "yī lǜ"
+                },
+                {
+                    "hanzi": "彩绘",
+                    "pinyin": "cǎi huì"
+                },
+                {
+                    "hanzi": "分外",
+                    "pinyin": "fèn wài"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "2",
+            "chars": [
+                {
+                    "hanzi": "腊八粥",
+                    "pinyin": "là bā zhōu"
+                },
+                {
+                    "hanzi": "感觉",
+                    "pinyin": "gǎn jiào"
+                },
+                {
+                    "hanzi": "沸腾",
+                    "pinyin": "fèi téng"
+                },
+                {
+                    "hanzi": "何况",
+                    "pinyin": "hé kuàng"
+                },
+                {
+                    "hanzi": "搅和",
+                    "pinyin": "jiǎo huo"
+                },
+                {
+                    "hanzi": "资格",
+                    "pinyin": "zī gé"
+                },
+                {
+                    "hanzi": "可靠",
+                    "pinyin": "kě kào"
+                },
+                {
+                    "hanzi": "罢了",
+                    "pinyin": "bà le"
+                },
+                {
+                    "hanzi": "要不然",
+                    "pinyin": "yào bù rán"
+                },
+                {
+                    "hanzi": "猜想",
+                    "pinyin": "cāi xiǎng"
+                },
+                {
+                    "hanzi": "肿胀",
+                    "pinyin": "zhǒng zhàng"
+                },
+                {
+                    "hanzi": "惊异",
+                    "pinyin": "jīng yì"
+                },
+                {
+                    "hanzi": "总之",
+                    "pinyin": "zǒng zhī"
+                },
+                {
+                    "hanzi": "染缸",
+                    "pinyin": "rǎn gāng"
+                },
+                {
+                    "hanzi": "解释",
+                    "pinyin": "jiè shì"
+                },
+                {
+                    "hanzi": "筷子",
+                    "pinyin": "kuài zi"
+                },
+                {
+                    "hanzi": "浪漫",
+                    "pinyin": "làng màn"
+                },
+                {
+                    "hanzi": "奈何",
+                    "pinyin": "nài hé"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "5",
+            "chars": [
+                {
+                    "hanzi": "流落",
+                    "pinyin": "liú luò"
+                },
+                {
+                    "hanzi": "凄凉",
+                    "pinyin": "qī liáng"
+                },
+                {
+                    "hanzi": "防御",
+                    "pinyin": "fáng yù"
+                },
+                {
+                    "hanzi": "寂寞",
+                    "pinyin": "jì mò"
+                },
+                {
+                    "hanzi": "宴会",
+                    "pinyin": "yàn huì"
+                },
+                {
+                    "hanzi": "恐惧",
+                    "pinyin": "kǒng jù"
+                },
+                {
+                    "hanzi": "倒霉",
+                    "pinyin": "dǎo méi"
+                },
+                {
+                    "hanzi": "忧伤",
+                    "pinyin": "yōu shāng"
+                },
+                {
+                    "hanzi": "书籍",
+                    "pinyin": "shū jí"
+                },
+                {
+                    "hanzi": "缺乏",
+                    "pinyin": "quē fá"
+                },
+                {
+                    "hanzi": "处境",
+                    "pinyin": "chǔ jìng"
+                },
+                {
+                    "hanzi": "理智",
+                    "pinyin": "lǐ zhì"
+                },
+                {
+                    "hanzi": "控制",
+                    "pinyin": "kòng zhì"
+                },
+                {
+                    "hanzi": "心平气和",
+                    "pinyin": "xīn píng qì hé"
+                },
+                {
+                    "hanzi": "抛弃",
+                    "pinyin": "pāo qì"
+                },
+                {
+                    "hanzi": "重见天日",
+                    "pinyin": "chóng jiàn tiān rì"
+                },
+                {
+                    "hanzi": "抵抗",
+                    "pinyin": "dǐ kàng"
+                },
+                {
+                    "hanzi": "侵袭",
+                    "pinyin": "qīn xí"
+                },
+                {
+                    "hanzi": "倾覆",
+                    "pinyin": "qīng fù"
+                },
+                {
+                    "hanzi": "宽慰",
+                    "pinyin": "kuān wèi"
+                },
+                {
+                    "hanzi": "深重",
+                    "pinyin": "shēn zhòng"
+                },
+                {
+                    "hanzi": "困境",
+                    "pinyin": "kùn jìng"
+                },
+                {
+                    "hanzi": "焉知非福",
+                    "pinyin": "yān zhī fēi fú"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "8",
+            "chars": [
+                {
+                    "hanzi": "确乎",
+                    "pinyin": "què hū"
+                },
+                {
+                    "hanzi": "空虚",
+                    "pinyin": "kōng xū"
+                },
+                {
+                    "hanzi": "不禁",
+                    "pinyin": "bù jīn"
+                },
+                {
+                    "hanzi": "挪移",
+                    "pinyin": "nuó yí"
+                },
+                {
+                    "hanzi": "觉察",
+                    "pinyin": "jiào chá"
+                },
+                {
+                    "hanzi": "叹息",
+                    "pinyin": "tàn xī"
+                },
+                {
+                    "hanzi": "徘徊",
+                    "pinyin": "pái huái"
+                },
+                {
+                    "hanzi": "微风",
+                    "pinyin": "wēi fēng"
+                },
+                {
+                    "hanzi": "何曾",
+                    "pinyin": "hé céng"
+                },
+                {
+                    "hanzi": "游丝",
+                    "pinyin": "yóu sī"
+                },
+                {
+                    "hanzi": "赤裸裸",
+                    "pinyin": "chì luǒ luǒ"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "9",
+            "chars": [
+                {
+                    "hanzi": "明媚",
+                    "pinyin": "míng mèi"
+                },
+                {
+                    "hanzi": "时光",
+                    "pinyin": "shí guāng"
+                },
+                {
+                    "hanzi": "拨弄",
+                    "pinyin": "bō nòng"
+                },
+                {
+                    "hanzi": "草丛",
+                    "pinyin": "cǎo cóng"
+                },
+                {
+                    "hanzi": "画报",
+                    "pinyin": "huà bào"
+                },
+                {
+                    "hanzi": "翻箱倒柜",
+                    "pinyin": "fān xiāng dǎo guì"
+                },
+                {
+                    "hanzi": "念念叨叨",
+                    "pinyin": "niàn niàn dāo dāo"
+                },
+                {
+                    "hanzi": "停顿",
+                    "pinyin": "tíng dùn"
+                },
+                {
+                    "hanzi": "晃动",
+                    "pinyin": "huàng dòng"
+                },
+                {
+                    "hanzi": "耽搁",
+                    "pinyin": "dān gé"
+                },
+                {
+                    "hanzi": "泡沫",
+                    "pinyin": "pào mò"
+                },
+                {
+                    "hanzi": "沉郁",
+                    "pinyin": "chén yù"
+                },
+                {
+                    "hanzi": "漫长",
+                    "pinyin": "màn cháng"
+                },
+                {
+                    "hanzi": "休止",
+                    "pinyin": "xiū zhǐ"
+                },
+                {
+                    "hanzi": "惊惶",
+                    "pinyin": "jīng huáng"
+                },
+                {
+                    "hanzi": "亲吻",
+                    "pinyin": "qīn wěn"
+                },
+                {
+                    "hanzi": "依偎",
+                    "pinyin": "yǐ wēi"
+                },
+                {
+                    "hanzi": "挽回",
+                    "pinyin": "wǎn huí"
+                },
+                {
+                    "hanzi": "荒凉",
+                    "pinyin": "huāng liáng"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "11",
+            "chars": [
+                {
+                    "hanzi": "埋头",
+                    "pinyin": "mái tou"
+                },
+                {
+                    "hanzi": "幼稚",
+                    "pinyin": "yòu zhì"
+                },
+                {
+                    "hanzi": "含糊",
+                    "pinyin": "hán hu"
+                },
+                {
+                    "hanzi": "避免",
+                    "pinyin": "bì miǎn"
+                },
+                {
+                    "hanzi": "局势",
+                    "pinyin": "jú shì"
+                },
+                {
+                    "hanzi": "严峻",
+                    "pinyin": "yán jùn"
+                },
+                {
+                    "hanzi": "轻易",
+                    "pinyin": "qīng yì"
+                },
+                {
+                    "hanzi": "尖锐",
+                    "pinyin": "jiān ruì"
+                },
+                {
+                    "hanzi": "僻静",
+                    "pinyin": "pì jìng"
+                },
+                {
+                    "hanzi": "魔鬼",
+                    "pinyin": "mó guǐ"
+                },
+                {
+                    "hanzi": "苦刑",
+                    "pinyin": "kǔ xíng"
+                },
+                {
+                    "hanzi": "冷笑",
+                    "pinyin": "lěng xiào"
+                },
+                {
+                    "hanzi": "残暴",
+                    "pinyin": "cán bào"
+                },
+                {
+                    "hanzi": "匪徒",
+                    "pinyin": "fěi tú"
+                },
+                {
+                    "hanzi": "法庭",
+                    "pinyin": "fǎ tíng"
+                },
+                {
+                    "hanzi": "安定",
+                    "pinyin": "ān dìng"
+                },
+                {
+                    "hanzi": "占据",
+                    "pinyin": "zhàn jù"
+                },
+                {
+                    "hanzi": "会意",
+                    "pinyin": "huì yì"
+                },
+                {
+                    "hanzi": "执行",
+                    "pinyin": "zhí xíng"
+                },
+                {
+                    "hanzi": "过度",
+                    "pinyin": "guò dù"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "12",
+            "chars": [
+                {
+                    "hanzi": "革命",
+                    "pinyin": "jí mìng"
+                },
+                {
+                    "hanzi": "解放",
+                    "pinyin": "jiè fàng"
+                },
+                {
+                    "hanzi": "彻底",
+                    "pinyin": "chè dǐ"
+                },
+                {
+                    "hanzi": "利益",
+                    "pinyin": "lì yì"
+                },
+                {
+                    "hanzi": "意义",
+                    "pinyin": "yì yí"
+                },
+                {
+                    "hanzi": "剥削",
+                    "pinyin": "bō xuē"
+                },
+                {
+                    "hanzi": "压迫",
+                    "pinyin": "yā pò"
+                },
+                {
+                    "hanzi": "批评",
+                    "pinyin": "pī píng"
+                },
+                {
+                    "hanzi": "兴旺",
+                    "pinyin": "xìng wàng"
+                },
+                {
+                    "hanzi": "五湖四海",
+                    "pinyin": "wǔ hú sì hǎi"
+                },
+                {
+                    "hanzi": "目标",
+                    "pinyin": "mù biāo"
+                },
+                {
+                    "hanzi": "责任",
+                    "pinyin": "zé rèn"
+                },
+                {
+                    "hanzi": "牺牲",
+                    "pinyin": "xī shēng"
+                },
+                {
+                    "hanzi": "死得其所",
+                    "pinyin": "sǐ dé qí suǒ"
+                },
+                {
+                    "hanzi": "制度",
+                    "pinyin": "zhì dù"
+                },
+                {
+                    "hanzi": "寄托",
+                    "pinyin": "jì tuō"
+                },
+                {
+                    "hanzi": "哀思",
+                    "pinyin": "āi sī"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "15",
+            "chars": [
+                {
+                    "hanzi": "真理",
+                    "pinyin": "zhēn lǐ"
+                },
+                {
+                    "hanzi": "领域",
+                    "pinyin": "lǐng yù"
+                },
+                {
+                    "hanzi": "建树",
+                    "pinyin": "jiàn shù"
+                },
+                {
+                    "hanzi": "司空见惯",
+                    "pinyin": "sī kōng jiàn guàn"
+                },
+                {
+                    "hanzi": "疑问",
+                    "pinyin": "yí wèn"
+                },
+                {
+                    "hanzi": "敏锐",
+                    "pinyin": "mǐn ruì"
+                },
+                {
+                    "hanzi": "提取",
+                    "pinyin": "tí qǔ"
+                },
+                {
+                    "hanzi": "明显",
+                    "pinyin": "míng xiǎn"
+                },
+                {
+                    "hanzi": "无聊",
+                    "pinyin": "wú liáo"
+                },
+                {
+                    "hanzi": "不可思议",
+                    "pinyin": "bù kě sī yì"
+                },
+                {
+                    "hanzi": "吻合",
+                    "pinyin": "wěn hé"
+                },
+                {
+                    "hanzi": "偶然",
+                    "pinyin": "ǒu rán"
+                },
+                {
+                    "hanzi": "文献",
+                    "pinyin": "wén xiàn"
+                },
+                {
+                    "hanzi": "证据",
+                    "pinyin": "zhèng jù"
+                },
+                {
+                    "hanzi": "系统",
+                    "pinyin": "xì tǒng"
+                },
+                {
+                    "hanzi": "整理",
+                    "pinyin": "zhěng lǐ"
+                },
+                {
+                    "hanzi": "见微知著",
+                    "pinyin": "jiàn wēi zhī zhù"
+                },
+                {
+                    "hanzi": "灵感",
+                    "pinyin": "líng gǎn"
+                },
+                {
+                    "hanzi": "机遇",
+                    "pinyin": "jī yù"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "16",
+            "chars": [
+                {
+                    "hanzi": "机器",
+                    "pinyin": "jī qì"
+                },
+                {
+                    "hanzi": "钟楼",
+                    "pinyin": "zhōng lóu"
+                },
+                {
+                    "hanzi": "洪亮",
+                    "pinyin": "hóng liàng"
+                },
+                {
+                    "hanzi": "街心",
+                    "pinyin": "jiē xīn"
+                },
+                {
+                    "hanzi": "盲人",
+                    "pinyin": "máng rén"
+                },
+                {
+                    "hanzi": "坚硬",
+                    "pinyin": "jiān yìng"
+                },
+                {
+                    "hanzi": "清脆",
+                    "pinyin": "qīng cuì"
+                },
+                {
+                    "hanzi": "单调",
+                    "pinyin": "dān diào"
+                },
+                {
+                    "hanzi": "请求",
+                    "pinyin": "qǐng qiú"
+                },
+                {
+                    "hanzi": "加速",
+                    "pinyin": "jiā sù"
+                },
+                {
+                    "hanzi": "齿轮",
+                    "pinyin": "chǐ lún"
+                },
+                {
+                    "hanzi": "唯恐",
+                    "pinyin": "wéi kǒng"
+                },
+                {
+                    "hanzi": "丑恶",
+                    "pinyin": "chǒuÈ"
+                },
+                {
+                    "hanzi": "证实",
+                    "pinyin": "zhèng shí"
+                },
+                {
+                    "hanzi": "蟋蟀",
+                    "pinyin": "xī shuài"
+                }
+            ]
+        }
+    ]
+}

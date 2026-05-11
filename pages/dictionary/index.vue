@@ -113,7 +113,7 @@
 				<text class="explain-body">{{ activeEntry.explainText }}</text>
 			</view>
 			<view class="words-box">
-				<text class="words-title">📖 组词（cnchar-words + 本地）</text>
+				<text class="words-title">📖 组词 </text>
 				<view class="words-wrap">
 					<text v-for="(w, idx) in activeEntry.words" :key="`${w}-${idx}`" class="word-chip">{{ w }}</text>
 				</view>

@@ -55,6 +55,7 @@ import { isVipActive } from '@/utils/vip.js'
 import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
 import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
+import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import tabMain from '@/mixins/tab-main-page.js'
 
@@ -66,10 +67,34 @@ export default {
 			vipActive: false,
 			encourageText: '',
 			curriculumTabs: [
-				{ key: 'preschool', label: '幼升小', grade: 1, semester: '上' },
-				{ key: '1-shang', label: '一上', grade: 1, semester: '上' },
-				{ key: '1-xia', label: '一下', grade: 1, semester: '下' },
-				{ key: '2-shang', label: '二上', grade: 2, semester: '上' }
+				{
+					key: 'preschool',
+					label: '幼升小',
+					grade: 0,
+					semester: '上',
+					textbook_version_id: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300
+				},
+				{
+					key: '1-shang',
+					label: '一上',
+					grade: 1,
+					semester: '上',
+					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
+				},
+				{
+					key: '1-xia',
+					label: '一下',
+					grade: 1,
+					semester: '下',
+					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
+				},
+				{
+					key: '2-shang',
+					label: '二上',
+					grade: 2,
+					semester: '上',
+					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
+				}
 			]
 		}
 	},
@@ -85,10 +110,14 @@ export default {
 		},
 		isCurrentTab(item) {
 			const p = getCurriculumPrefs()
-			return Number(p.grade) === Number(item.grade) && p.semester === item.semester
+			const tv = item.textbook_version_id
+			const tvOk = tv == null || p.textbook_version_id === tv
+			return tvOk && Number(p.grade) === Number(item.grade) && p.semester === item.semester
 		},
 		pickCurriculum(item) {
-			setCurriculumPrefs({ grade: item.grade, semester: item.semester })
+			const patch = { grade: item.grade, semester: item.semester }
+			if (item.textbook_version_id) patch.textbook_version_id = item.textbook_version_id
+			setCurriculumPrefs(patch)
 			this.refresh()
 		},
 		goVip() {

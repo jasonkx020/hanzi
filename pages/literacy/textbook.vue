@@ -104,7 +104,7 @@
 						class="book-row"
 					>
 						<view
-							v-for="book in [row.up, row.down]"
+							v-for="book in [row.up, row.down].filter(Boolean)"
 							:key="book.key"
 							class="book-card"
 							@click="selectBook(book)"
@@ -120,6 +120,7 @@
 </template>
 
 <script>
+import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { loadRenjiaoTextbookTexts } from '@/utils/renjiao-textbook-loader.js'
@@ -140,8 +141,13 @@ const COVER_BOOKS = [
 ]
 
 const VERSION_OPTIONS = [
-	{ label: '人教版', value: 'tongbian-rj', icon: '/static/images/yuwen0101.jpg' },
-	{ label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0102.jpg' }
+	{ label: '人教版', value: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ, icon: '/static/images/yuwen0101.jpg' },
+	{
+		label: '幼小衔接',
+		value: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
+		icon: '/static/images/yuwen0102.jpg'
+	},
+	{ label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
 ]
 
 export default {
@@ -153,18 +159,28 @@ export default {
 			loading: false,
 			textbookTexts: [],
 			showCurriculumPicker: false,
-			modalVersion: 'tongbian-rj',
+			modalVersion: '统编(人教版)',
 			versionOptions: VERSION_OPTIONS
 		}
 	},
 	computed: {
 		currentBookRows() {
+			if (this.modalVersion === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
+				const book = {
+					grade: 0,
+					semester: '上',
+					key: `${this.modalVersion}-0-上`,
+					label: '课标300基本字',
+					cover: '/static/images/yuwen0102.jpg'
+				}
+				return [{ grade: 0, up: book, down: null }]
+			}
 			const map = {}
 			COVER_BOOKS.forEach((b) => {
 				const book = {
-				...b,
-				key: `${this.modalVersion}-${b.grade}-${b.semester}`,
-				label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
+					...b,
+					key: `${this.modalVersion}-${b.grade}-${b.semester}`,
+					label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
 				}
 				if (!map[b.grade]) map[b.grade] = { grade: b.grade, up: null, down: null }
 				if (b.semester === '下') map[b.grade].down = book
@@ -194,7 +210,7 @@ export default {
 					String(a.hint).localeCompare(String(b.hint), 'zh-Hans-CN')
 				)
 				this.textbookTexts = []
-				if (prefs.textbook_version_id === 'tongbian-rj') {
+				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
 					this.textbookTexts = await loadRenjiaoTextbookTexts({
 						grade: prefs.grade,
 						semester: prefs.semester
@@ -209,7 +225,7 @@ export default {
 		},
 		openCurriculumPicker() {
 			const p = getCurriculumPrefs()
-			this.modalVersion = p.textbook_version_id || 'tongbian-rj'
+			this.modalVersion = p.textbook_version_id || TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
 			this.showCurriculumPicker = true
 		},
 		closeCurriculumPicker() {

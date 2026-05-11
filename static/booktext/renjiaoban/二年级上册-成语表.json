@@ -1,0 +1,70 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 2,
+    "semester": "上",
+    "list_type": "成语表",
+    "note": "由二年级上册教材附录「词语表」中四字成语摘录（阅读第3、10、11、13、14、16课）。词语表脚注「共239个词」为全部词语计数，非成语条数；若印次增收成语请以纸书为准。",
+    "total": 6,
+    "groups": [
+        {
+            "section": "阅读",
+            "lesson": "3",
+            "chars": [
+                {
+                    "hanzi": "四海为家",
+                    "pinyin": "sì hǎi wéi jiā"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "10",
+            "chars": [
+                {
+                    "hanzi": "五光十色",
+                    "pinyin": "wǔ guāng shí sè"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "11",
+            "chars": [
+                {
+                    "hanzi": "坐井观天",
+                    "pinyin": "zuò jǐng guān tiān"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "13",
+            "chars": [
+                {
+                    "hanzi": "自言自语",
+                    "pinyin": "zì yán zì yǔ"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "14",
+            "chars": [
+                {
+                    "hanzi": "星星之火",
+                    "pinyin": "xīng xīng zhī huǒ"
+                }
+            ]
+        },
+        {
+            "section": "阅读",
+            "lesson": "16",
+            "chars": [
+                {
+                    "hanzi": "四面八方",
+                    "pinyin": "sì miàn bā fāng"
+                }
+            ]
+        }
+    ]
+}

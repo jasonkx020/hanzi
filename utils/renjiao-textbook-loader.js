@@ -1,6 +1,16 @@
 const GRADE_CN = ['', '一', '二', '三', '四', '五', '六']
 const STATIC_BOOKTEXT_ROOT = '/static/booktext/renjiaoban/'
 
+/** 课文 JSON 中与目录对应的可选字段（见 static/booktext/renjiaoban/*.json） */
+const TEXTBOOK_EXTRA_KEYS = [
+	'unit',
+	'unitName',
+	'unitTheme',
+	'kind',
+	'catalogLessonNo',
+	'lessonInUnit'
+]
+
 function buildFileName(grade, semester) {
 	const g = Number(grade)
 	if (!Number.isFinite(g) || g < 1 || g > 6) return ''
@@ -50,11 +60,19 @@ export async function loadRenjiaoTextbookTexts({ grade, semester }) {
 		const arr = JSON.parse(text)
 		if (!Array.isArray(arr)) return []
 		return arr
-			.map((it) => ({
-				title: String(it && it.title ? it.title : ''),
-				content: String(it && it.content ? it.content : '')
-			}))
-			.filter((it) => it.title || it.content)
+			.map((it) => {
+				if (!it || typeof it !== 'object') return null
+				const row = {
+					title: String(it.title != null ? it.title : ''),
+					content: String(it.content != null ? it.content : '')
+				}
+				for (let i = 0; i < TEXTBOOK_EXTRA_KEYS.length; i++) {
+					const k = TEXTBOOK_EXTRA_KEYS[i]
+					if (Object.prototype.hasOwnProperty.call(it, k)) row[k] = it[k]
+				}
+				return row
+			})
+			.filter((it) => it && (it.title || it.content))
 	} catch (e) {
 		console.warn('[renjiao-textbook-loader] load failed', fileName, e)
 		return []

@@ -1,6 +1,6 @@
 /**
  * 本地 curriculum 偏好存储（uni.storage）
- * 字段名与 constants/curriculum-schema.js / SQLite 列名对齐。
+ * 字段名与 constants/curriculum-schema.js、生字 seed 字段对齐。
  */
 
 import {
@@ -18,7 +18,7 @@ function normalizePrefs(raw) {
 			typeof raw.textbook_version_id === 'string'
 				? raw.textbook_version_id
 				: d.textbook_version_id,
-		grade: Number.isFinite(g) && g >= 1 && g <= 6 ? g : d.grade,
+		grade: Number.isFinite(g) && g >= 0 && g <= 6 ? g : d.grade,
 		semester: raw.semester === '下' ? '下' : '上',
 		list_type_preference:
 			typeof raw.list_type_preference === 'string'
@@ -51,11 +51,11 @@ export function setCurriculumPrefs(patch) {
 }
 
 /** 年级中文数字（1–6） */
-const GRADE_CN = ['', '一', '二', '三', '四', '五', '六']
+const GRADE_CN = ['一', '二', '三', '四', '五', '六']
 
-/** 教材设置等：一年级上册 … 六年级下册 */
+/** 教材设置等：幼小衔接 … 六年级下册 */
 export function listGradeSemesterPickerOptions() {
-	const out = []
+	const out = [{ label: '幼小衔接（课标300基本字）', grade: 0, semester: '上' }]
 	for (let g = 1; g <= 6; g++) {
 		out.push({ label: `${GRADE_CN[g]}年级上册`, grade: g, semester: '上' })
 		out.push({ label: `${GRADE_CN[g]}年级下册`, grade: g, semester: '下' })
@@ -70,8 +70,10 @@ export function listGradeSemesterPickerOptions() {
 export function formatGradeSemesterLabel(prefs) {
 	const p = prefs || getCurriculumPrefs()
 	const g = Number(p.grade)
-	const gradePart =
-		Number.isFinite(g) && g >= 1 && g <= 6 ? `${GRADE_CN[g]}年级` : `${p.grade ?? ''}年级`
+	if (g === 0) return '幼小衔接（课标300基本字）'
+	let gradePart
+	if (Number.isFinite(g) && g >= 1 && g <= 6) gradePart = `${GRADE_CN[g - 1]}年级`
+	else gradePart = `${p.grade ?? ''}年级`
 	const semPart = p.semester === '下' || p.semester === '下册' ? '下册' : '上册'
 	return `${gradePart}${semPart}`
 }
@@ -87,7 +89,7 @@ export function formatCurriculumSummary(prefs) {
 }
 
 /**
- * 生成与 hanzi_curriculum 查询条件对应的片段（供后续 plus.sqlite 绑定参数）
+ * 生成与 hanzi_curriculum 筛选条件对应的片段（便于调试展示）
  * 返回 { whereSql, params }
  */
 export function buildCurriculumWhere(prefs) {

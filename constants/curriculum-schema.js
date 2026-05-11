@@ -1,24 +1,19 @@
 /**
- * 与 SQLite 字库表字段一一对应（命名保持一致，便于 ORM / 手写 SQL）
+ * 教材生字 / 用户进度字段约定（与生字 seed JSON、本地 Storage 一致）
  */
 
-/** App 端 SQLite：openDatabase 的 name / 可写路径 / 包内预置库（见 scripts/build-db.mjs） */
-export const SQLITE_APP = {
-	DB_NAME: 'hanzi_curriculum',
-	DOC_PATH: '_doc/hanzi_curriculum.db',
-	BUNDLED_RELATIVE_WWW: '_www/static/db/hanzi_curriculum.db'
-}
-
-/** 本地 Storage 键（非 SQLite） */
+/** 本地 Storage 键 */
 export const STORAGE_KEYS = {
 	CURRICULUM_PREFS: 'curriculum_prefs_v1',
 	/** 与 TABLE_USER_CHAR_PROGRESS 字段一致的对象映射 JSON */
 	USER_CHAR_PROGRESS: 'user_char_progress_v1'
 }
 
-/** 教材版本标识 — 对应表字段 textbook_version_id */
+/** 教材版本标识 — 对应字段 textbook_version_id */
 export const TEXTBOOK_VERSION_IDS = {
-	TONGBIAN_RJ: 'tongbian-rj'
+	TONGBIAN_RJ: '统编(人教版)',
+	/** 《义务教育语文课程标准》附录4「识字、写字教学基本字表」（300字），幼小衔接常用官方依据 */
+	MOE_JIBENZIBIAO_300: '教育部·识字写字基本字表（300字）'
 }
 
 /** 学期 — 对应 semester */
@@ -34,7 +29,9 @@ export const SEMESTER = {
 export const LIST_TYPE = {
 	SHIZI: '识字表',
 	XIEZI: '写字表',
-	HUIZONG: '生字汇总'
+	HUIZONG: '生字汇总',
+	/** 课标附录4：识字、写字教学基本字表 */
+	JIBENZIBIAO: '识字写字基本字表'
 }
 
 /**
@@ -46,7 +43,7 @@ export const LIST_TYPE_PREFERENCE = {
 	...LIST_TYPE
 }
 
-/** 默认本地偏好（插入 DB 前筛选条件） */
+/** 默认本地偏好 */
 export const DEFAULT_CURRICULUM_PREFS = {
 	textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ,
 	grade: 1,
@@ -54,11 +51,7 @@ export const DEFAULT_CURRICULUM_PREFS = {
 	list_type_preference: LIST_TYPE_PREFERENCE.ALL
 }
 
-/**
- * 表：hanzi_curriculum — 与后续 SQLite 一致
- * 列：id, textbook_version_id, grade, semester, list_type, hanzi, pinyin,
- *     sort_order, lesson_hint, source_url
- */
+/** 逻辑集合名：教材生字（数据来自 hanzi_curriculum_seed.json） */
 export const TABLE_HANZI_CURRICULUM = 'hanzi_curriculum'
 
 export const COL = {
@@ -74,29 +67,7 @@ export const COL = {
 	source_url: 'source_url'
 }
 
-/** 建表 SQL（App 内首次打开 DB 时执行） */
-export const SQL_CREATE_HANZI_CURRICULUM = `
-CREATE TABLE IF NOT EXISTS ${TABLE_HANZI_CURRICULUM} (
-  ${COL.id} INTEGER PRIMARY KEY AUTOINCREMENT,
-  ${COL.textbook_version_id} TEXT NOT NULL,
-  ${COL.grade} INTEGER NOT NULL,
-  ${COL.semester} TEXT NOT NULL,
-  ${COL.list_type} TEXT NOT NULL,
-  ${COL.hanzi} TEXT NOT NULL,
-  ${COL.pinyin} TEXT,
-  ${COL.sort_order} INTEGER NOT NULL DEFAULT 0,
-  ${COL.lesson_hint} TEXT,
-  ${COL.source_url} TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_hanzi_curriculum_lookup
-  ON ${TABLE_HANZI_CURRICULUM} (${COL.textbook_version_id}, ${COL.grade}, ${COL.semester}, ${COL.list_type});
-CREATE INDEX IF NOT EXISTS idx_hanzi_curriculum_char
-  ON ${TABLE_HANZI_CURRICULUM} (${COL.hanzi});
-`.trim()
-
-/**
- * 可选：用户掌握进度（本地可先 Storage，后续同步 SQLite）
- */
+/** 用户掌握进度（本地 uni.storage，见 user-progress-storage.js） */
 export const TABLE_USER_CHAR_PROGRESS = 'user_char_progress'
 
 export const COL_PROGRESS = {
@@ -112,20 +83,3 @@ export const COL_PROGRESS = {
 	wrong_count: 'wrong_count',
 	updated_at_ms: 'updated_at_ms'
 }
-
-export const SQL_CREATE_USER_CHAR_PROGRESS = `
-CREATE TABLE IF NOT EXISTS ${TABLE_USER_CHAR_PROGRESS} (
-  ${COL_PROGRESS.id} INTEGER PRIMARY KEY AUTOINCREMENT,
-  ${COL_PROGRESS.textbook_version_id} TEXT NOT NULL,
-  ${COL_PROGRESS.grade} INTEGER NOT NULL,
-  ${COL_PROGRESS.semester} TEXT NOT NULL,
-  ${COL_PROGRESS.hanzi} TEXT NOT NULL,
-  ${COL_PROGRESS.learned} INTEGER NOT NULL DEFAULT 0,
-  ${COL_PROGRESS.mastered} INTEGER NOT NULL DEFAULT 0,
-  ${COL_PROGRESS.wrong_count} INTEGER NOT NULL DEFAULT 0,
-  ${COL_PROGRESS.updated_at_ms} INTEGER NOT NULL,
-  UNIQUE(${COL_PROGRESS.textbook_version_id}, ${COL_PROGRESS.grade}, ${COL_PROGRESS.semester}, ${COL_PROGRESS.hanzi})
-);
-CREATE INDEX IF NOT EXISTS idx_user_progress_wrong
-  ON ${TABLE_USER_CHAR_PROGRESS} (${COL_PROGRESS.textbook_version_id}, ${COL_PROGRESS.wrong_count});
-`.trim()

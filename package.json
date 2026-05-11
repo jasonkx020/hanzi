@@ -27,8 +27,5 @@
     "cnchar-voice": "^3.2.6",
     "cnchar-words": "^3.2.6",
     "cnchar-xhy": "^3.2.6"
-  },
-  "devDependencies": {
-    "sql.js": "^1.11.0"
   }
 }

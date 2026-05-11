@@ -2,7 +2,7 @@
 	<view class="page">
 		<view v-if="rows.length === 0" class="empty">
 			<text class="empty-title">暂无易错记录</text>
-			<text class="empty-tip">笔顺练习写错、或在生字页「记录一次出错」会增加计数；按 wrong_count 排序，与 SQLite user_char_progress.wrong_count 对应。</text>
+			<text class="empty-tip">笔顺练习写错、或在生字页「记录一次出错」会增加计数；按 wrong_count 从高到低排序。</text>
 		</view>
 		<view v-else class="list">
 			<view

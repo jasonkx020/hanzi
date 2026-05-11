@@ -87,7 +87,7 @@
 1. `UI 层`（pages + components）
 2. `应用层`（usecases / orchestrators）
 3. `领域层`（entities + rules，如掌握度判定、复习策略）
-4. `数据层`（repositories：SQLite、localStorage、远端 API）
+4. `数据层`（repositories：内嵌生字 JSON、localStorage、远端 API）
 5. `基础设施层`（音频、埋点、权限、动画、TTS）
 
 目录建议：

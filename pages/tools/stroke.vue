@@ -304,9 +304,10 @@ export default {
 		},
 		curriculumDims() {
 			const p = getCurriculumPrefs()
+			const g = Number(p.grade)
 			return {
 				textbook_version_id: p.textbook_version_id,
-				grade: Number(p.grade) || 1,
+				grade: Number.isFinite(g) && g >= 0 ? g : 1,
 				semester: p.semester === '下' ? '下' : '上'
 			}
 		},

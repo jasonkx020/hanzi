@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import { debugSelectSql, queryCurriculumChars } from '@/utils/curriculum-db.js'
+import { debugCurriculumFilter, queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { pickDailyChars } from '@/services/recommend-service.js'
 
@@ -30,9 +30,9 @@ export default {
 	},
 	methods: {
 		async reload() {
-			const { sql, params } = debugSelectSql(getCurriculumPrefs())
+			const dbg = debugCurriculumFilter(getCurriculumPrefs())
 			const weak = pickDailyChars(10)
-			this.debugSql = `${sql}\n-- params: ${JSON.stringify(params)}\n-- weakPool: ${JSON.stringify(weak)}`
+			this.debugSql = `${dbg.description}\n排序: ${dbg.sort}\nparams: ${JSON.stringify(dbg.params)}\nweakPool: ${JSON.stringify(weak)}`
 			const rows = await queryCurriculumChars(getCurriculumPrefs())
 			this.dbCount = rows.length
 		},

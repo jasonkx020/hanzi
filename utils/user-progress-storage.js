@@ -1,5 +1,5 @@
 /**
- * 用户生字进度本地存储（uni.storage），字段与 curriculum-schema COL_PROGRESS / SQLite 一致。
+ * 用户生字进度本地存储（uni.storage），字段与 curriculum-schema COL_PROGRESS 一致。
  */
 
 import { STORAGE_KEYS, COL_PROGRESS } from '@/constants/curriculum-schema.js'

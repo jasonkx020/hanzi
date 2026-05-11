@@ -1,6 +1,6 @@
 <template>
 	<view class="page">
-		<text class="hint">字段与 SQLite hanzi_curriculum 一致：textbook_version_id、年级册别（对应 grade + semester）、list_type（偏好）</text>
+		<text class="hint">与生字库字段一致：版本 ID、年级册别（含幼小衔接 grade=0）、字表偏好。「幼小衔接·课标300基本字」对应教育部《义务教育语文课程标准》附录「识字、写字教学基本字表」。</text>
 
 		<view class="field">
 			<text class="label">教材版本 textbook_version_id</text>
@@ -31,23 +31,28 @@
 </template>
 
 <script>
-import { TEXTBOOK_VERSION_IDS, LIST_TYPE, LIST_TYPE_PREFERENCE } from '@/constants/curriculum-schema.js'
+import {
+	TEXTBOOK_VERSION_IDS,
+	LIST_TYPE,
+	LIST_TYPE_PREFERENCE
+} from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs, listGradeSemesterPickerOptions } from '@/utils/curriculum-storage.js'
 
 export default {
 	data() {
 		return {
-			versionLabels: ['统编（部编）人教', '预留版本 B'],
-			versionValues: [TEXTBOOK_VERSION_IDS.TONGBIAN_RJ, 'reserved-b'],
+			versionLabels: ['统编（部编）人教', '幼小衔接·课标300基本字'],
+			versionValues: [TEXTBOOK_VERSION_IDS.TONGBIAN_RJ, TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300],
 			versionIndex: 0,
 			gradeSemesterOptions: listGradeSemesterPickerOptions(),
 			gradeSemesterIndex: 0,
-			listLabels: ['全部', LIST_TYPE.SHIZI, LIST_TYPE.XIEZI, LIST_TYPE.HUIZONG],
+			listLabels: ['全部', LIST_TYPE.SHIZI, LIST_TYPE.XIEZI, LIST_TYPE.HUIZONG, LIST_TYPE.JIBENZIBIAO],
 			listValues: [
 				LIST_TYPE_PREFERENCE.ALL,
 				LIST_TYPE.SHIZI,
 				LIST_TYPE.XIEZI,
-				LIST_TYPE.HUIZONG
+				LIST_TYPE.HUIZONG,
+				LIST_TYPE.JIBENZIBIAO
 			],
 			listIndex: 0,
 			saved: false

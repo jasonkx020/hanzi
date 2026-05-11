@@ -2,7 +2,7 @@
 	<view class="page">
 		<view v-if="rows.length === 0" class="empty">
 			<text class="empty-title">暂无记录</text>
-			<text class="empty-tip">在生字详情中「标记已学过」后，会出现在这里；数据字段与本地 SQLite user_char_progress 一致。</text>
+			<text class="empty-tip">在生字详情中「标记已学过」后，会出现在这里；进度保存在本机存储。</text>
 		</view>
 		<view v-else class="grid">
 			<view
