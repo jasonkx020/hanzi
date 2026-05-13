@@ -4,7 +4,11 @@
 		<view class="lesson-head">
 			<text class="lesson-grade">{{ gradeSemesterLabel }}</text>
 			<text class="lesson-title">{{ hint }}</text>
-			<text class="lesson-sub">本课共 {{ lessonChars.length }} 字 · 点字进入详解并自动朗读</text>
+			<view v-if="rjContent" class="rj-content-box" @click="onTapSpeakRjContent">
+				<text class="rj-content-label">课文原文 · 点击朗读</text>
+				<text class="rj-content-body">{{ rjContent }}</text>
+			</view>
+			<text class="lesson-sub">本课共 {{ lessonChars.length }} 字 · 点汉字看详解；点拼音按当前字串匹配本地音频</text>
 		</view>
 
 		<view v-if="lessonChars.length" class="card-grid-wrap">
@@ -13,13 +17,15 @@
 				:key="row.id != null ? row.id : i"
 				class="cell"
 				:class="isLearned(row.hanzi) ? 'cell-learned' : ''"
-				@click="openChar(row)"
 			>
-				<text class="cell-char">{{ row.hanzi }}</text>
-				<view class="cell-py-row">
+				<view class="cell-char-hit" @click.stop="openChar(row)">
+					<text class="cell-char">{{ row.hanzi }}</text>
+					<text v-if="isLearned(row.hanzi)" class="cell-badge">已学</text>
+				</view>
+				<view class="cell-py-row" @click.stop="onTapSpeakPinyin(row)">
+					<text class="cell-py-hint">拼音 · 点读</text>
 					<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
 				</view>
-				<text v-if="isLearned(row.hanzi)" class="cell-badge">已学</text>
 			</view>
 		</view>
 
@@ -29,7 +35,7 @@
 
 		<view class="panda-tip">
 			<text class="panda-emoji">🐼</text>
-			<text class="panda-msg">点一点卡片，开始学习吧！</text>
+			<text class="panda-msg">点汉字看详解；点拼音按格内字串播放读音</text>
 		</view>
 
 		<view class="mode-row">
@@ -54,12 +60,19 @@
 </template>
 
 <script>
-import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
+import { COL_PROGRESS, TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
+import {
+	buildLessonCharRowsFromRenjiaoItem,
+	filterRenjiaoTextbookSyncLessons,
+	loadRenjiaoTextbookTexts
+} from '@/utils/renjiao-textbook-loader.js'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
-import { speakHanzi } from '@/utils/speak-hanzi.js'
+import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
+import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
+import { speakChinese } from '@/utils/speak-hanzi.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
@@ -72,7 +85,11 @@ export default {
 			hint: '课次字卡',
 			lessonChars: [],
 			learnedCount: 0,
-			totalChars: 0
+			totalChars: 0,
+			/** 人教 JSON 课次下标，与课本同步学列表一致 */
+			rjLessonIdx: null,
+			/** 人教 JSON 该篇 content */
+			rjContent: ''
 		}
 	},
 	computed: {
@@ -86,10 +103,16 @@ export default {
 		}
 	},
 	async onLoad(query) {
-		this.hint = query.hint ? decodeURIComponent(query.hint) : '课次字卡'
-		const title =
-			this.hint.length > 16 ? `${this.hint.slice(0, 15)}…` : this.hint
-		uni.setNavigationBarTitle({ title })
+		const rjRaw = query.rjLesson
+		if (rjRaw != null && rjRaw !== '') {
+			const n = Number(rjRaw)
+			this.rjLessonIdx = Number.isFinite(n) && n >= 0 ? n : null
+		} else {
+			this.rjLessonIdx = null
+		}
+		if (this.rjLessonIdx == null) {
+			this.hint = query.hint ? decodeURIComponent(query.hint) : '课次字卡'
+		}
 		await this.reloadLesson()
 		this.refreshProgress()
 	},
@@ -105,9 +128,38 @@ export default {
 			return s ? [s] : []
 		},
 		async reloadLesson() {
+			const prefs = getCurriculumPrefs()
+			if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && this.rjLessonIdx != null) {
+				const rows = await loadRenjiaoTextbookTexts({
+					grade: prefs.grade,
+					semester: prefs.semester
+				})
+				const syncLessons = filterRenjiaoTextbookSyncLessons(rows)
+				const item = syncLessons[this.rjLessonIdx]
+				if (!item) {
+					this.lessonChars = []
+					this.totalChars = 0
+					this.rjContent = ''
+					this.hint = '课次字卡'
+					this.setLessonNavTitle()
+					return
+				}
+				this.hint = String(item.title || '课次字卡')
+				this.rjContent = String(item.content != null ? item.content : '').trim()
+				this.lessonChars = buildLessonCharRowsFromRenjiaoItem(item)
+				this.totalChars = this.lessonChars.length
+				this.setLessonNavTitle()
+				return
+			}
+			this.rjContent = ''
 			const rows = await queryCurriculumChars(getCurriculumPrefs())
 			this.lessonChars = rows.filter((r) => String(r.lesson_hint || '未分课次') === this.hint)
 			this.totalChars = this.lessonChars.length
+			this.setLessonNavTitle()
+		},
+		setLessonNavTitle() {
+			const t = this.hint.length > 16 ? `${this.hint.slice(0, 15)}…` : this.hint
+			uni.setNavigationBarTitle({ title: t || '课次字卡' })
 		},
 		refreshProgress() {
 			const prefs = getCurriculumPrefs()
@@ -151,12 +203,28 @@ export default {
 			return s ? s : '-'
 		},
 		openChar(row) {
-			speakHanzi(row.hanzi || '')
 			const p = getCurriculumPrefs()
 			const lesson = encodeURIComponent(this.hint || '')
-			uni.navigateTo({
-				url: `/pages/char/detail?hanzi=${encodeURIComponent(row.hanzi || '')}&grade=${p.grade}&semester=${encodeURIComponent(p.semester)}&lesson=${lesson}`
-			})
+			const py = this.pyShow(row)
+			const pyQ = py && py !== '-' ? `&pinyin=${encodeURIComponent(py)}` : ''
+			const url = `/pages/char/detail?hanzi=${encodeURIComponent(row.hanzi || '')}&grade=${p.grade}&semester=${encodeURIComponent(p.semester)}&lesson=${lesson}${pyQ}`
+			uni.navigateTo({ url })
+		},
+		onTapSpeakRjContent() {
+			if (!this.rjContent) return
+			speakChinese(this.rjContent)
+		},
+		async onTapSpeakPinyin(row) {
+			const py = String(this.pyShow(row) || '').trim()
+			logHanziSpeak('lesson.py_row.tap', { py, hanzi: row && row.hanzi })
+			if (!py || py === '-') {
+				uni.showToast({ title: '暂无拼音', icon: 'none' })
+				return
+			}
+			const ok = await playOpusForDisplayPinyin(py)
+			logHanziSpeak('lesson.py_row.play_done', { py, ok })
+				uni.showToast({ title: '未找到该拼音的本地音频', icon: 'none' })
+			}
 		},
 		goFollowRead() {
 			uni.navigateTo({ url: '/pages/pinyin/index' })
@@ -204,6 +272,34 @@ export default {
 	margin-bottom: 8rpx;
 }
 
+.rj-content-box {
+	margin-bottom: 12rpx;
+	padding: 16rpx 18rpx;
+	background: #fafafa;
+	border-radius: 12rpx;
+	border: 1rpx solid #eee;
+}
+
+.rj-content-box:active {
+	opacity: 0.88;
+}
+
+.rj-content-label {
+	display: block;
+	font-size: 22rpx;
+	color: #9e9e9e;
+	margin-bottom: 8rpx;
+}
+
+.rj-content-body {
+	display: block;
+	font-size: 26rpx;
+	color: #5d4037;
+	line-height: 1.65;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
 .lesson-sub {
 	display: block;
 	font-size: 22rpx;
@@ -242,6 +338,12 @@ export default {
 	background: linear-gradient(180deg, #f9fff4 0%, #fff 100%);
 }
 
+.cell-char-hit {
+	position: relative;
+	padding: 4rpx 0 8rpx;
+	min-height: 56rpx;
+}
+
 .cell-char {
 	display: block;
 	font-size: 44rpx;
@@ -253,15 +355,32 @@ export default {
 .cell-py-row {
 	width: 100%;
 	min-width: 0;
-	margin-top: 10rpx;
-	min-height: 48rpx;
+	margin-top: 4rpx;
+	padding: 10rpx 6rpx 8rpx;
+	min-height: 100rpx;
 	box-sizing: border-box;
+	background: #fffbf5;
+	border-radius: 12rpx;
+	border: 1rpx solid #ffe8cc;
+}
+
+.cell-py-row:active {
+	opacity: 0.92;
+	background: #fff3e0;
+}
+
+.cell-py-hint {
+	display: block;
+	font-size: 18rpx;
+	color: #bf8f68;
+	margin-bottom: 6rpx;
+	line-height: 1.2;
 }
 
 .cell-badge {
 	position: absolute;
-	top: 8rpx;
-	right: 8rpx;
+	top: 0;
+	right: 0;
 	font-size: 18rpx;
 	color: #558b2f;
 	background: #e8f5e9;

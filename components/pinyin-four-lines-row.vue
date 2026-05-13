@@ -10,18 +10,25 @@
 			<view class="pflr-cols">
 				<view
 					v-for="(col, ci) in columns"
-					:key="ci + '-' + col.syl"
+					:key="col.empty ? 'pflr-e-' + ci : ci + '-' + col.syl"
 					class="pflr-cell"
-					:class="{ 'pflr-cell--interactive': interactive }"
-					@click.stop="onCellClick(ci, col)"
+					:class="{
+						'pflr-cell--interactive': interactive && !col.empty,
+						'pflr-cell--empty': col.empty
+					}"
+					@click="onCellClick($event, ci, col)"
 				>
-					<view class="pflr-write-area">
+					<view v-if="col.empty" class="pflr-cell-spacer" />
+					<view v-else class="pflr-write-area">
 						<view class="pflr-glyphs-row">
 							<text
 								v-for="(g, gi) in col.glyphs"
 								:key="gi + '-' + g.ch"
 								class="pflr-glyph"
-								:class="'pflr-glyph--' + g.kind"
+								:class="[
+									'pflr-glyph--' + g.kind,
+									{ 'pflr-glyph--alph-metric': g.alphMetricFix }
+								]"
 							>{{ g.ch }}</text>
 						</view>
 					</view>
@@ -58,31 +65,48 @@ export default {
 	},
 	computed: {
 		list() {
-			const arr = Array.isArray(this.syllables)
-				? this.syllables.map((s) => String(s || '').trim()).filter(Boolean)
-				: []
-			return arr.length ? arr : ['—']
+			const raw = Array.isArray(this.syllables) ? this.syllables : []
+			if (!raw.length) return ['—']
+			const hasReal = raw.some((s) => s != null && String(s).trim())
+			if (!hasReal) return ['—']
+			return raw.map((s) => {
+				if (s == null) return null
+				const t = String(s).trim()
+				return t === '' ? null : t
+			})
 		},
 		columns() {
 			return this.list.map((syl) => {
+				if (syl == null) {
+					return { syl: '', glyphs: [], empty: true }
+				}
 				const raw = String(syl || '').trim()
+				if (!raw) {
+					return { syl: '', glyphs: [], empty: true }
+				}
 				const list = splitPinyinSyllableGlyphs(raw).filter((g) => g.ch)
-				const glyphs = list.length ? list : raw ? [{ ch: raw, kind: 'mid' }] : [{ ch: '—', kind: 'mid' }]
-				return { syl: raw, glyphs }
+				const glyphs = list.length
+					? list
+					: raw
+						? [{ ch: raw, kind: 'mid', alphMetricFix: raw.includes('\u0251') }]
+						: [{ ch: '—', kind: 'mid', alphMetricFix: false }]
+				return { syl: raw, glyphs, empty: false }
 			})
 		}
 	},
 	methods: {
-		onCellClick(ci, col) {
-			if (!this.interactive) return
+		onCellClick(ev, ci, col) {
+			if (!this.interactive || !col || col.empty) return
 			this.$emit('cell-click', { index: ci, syllable: col.syl })
+			// 仅交互模式阻止冒泡；非交互时让事件传到外层（如课次页 cell-py-row 点读）
+			if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation()
 		}
 	}
 }
 </script>
 
 <style scoped>
-/* 与 pinyin-four-lines 一致：整行共用一套四线，列间竖线分隔；字号随 --pfl-cell-h 等比 */
+/* 与 pinyin-four-lines 一致：grid/tone/compact 为学习页放大；md/lg 为查字等保持原尺度 */
 .pflr {
 	--pfl-cell-h: 58rpx;
 	width: 100%;
@@ -99,7 +123,11 @@ export default {
 
 .pflr-lines {
 	position: absolute;
-	inset: 0;
+	/* 勿用 inset：Android 7 等旧 WebView 不支持 */
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
 	pointer-events: none;
 	box-sizing: border-box;
 }
@@ -140,7 +168,10 @@ export default {
 
 .pflr-cols {
 	position: absolute;
-	inset: 0;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
 	display: flex;
 	flex-direction: row;
 	align-items: stretch;
@@ -160,14 +191,26 @@ export default {
 	border-right: none;
 }
 
+.pflr-cell--empty {
+	pointer-events: none;
+}
+
+.pflr-cell-spacer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+}
+
 .pflr-cell--interactive:active {
 	opacity: 0.92;
 }
 
 .pflr-write-area {
 	position: absolute;
-	left: 2rpx;
-	right: 2rpx;
+	left: 4rpx;
+	right: 4rpx;
 	top: 0;
 	height: calc(200% / 3);
 	display: flex;
@@ -191,7 +234,8 @@ export default {
 
 .pflr-glyph {
 	color: #1e3a4c;
-	font-weight: 700;
+	font-weight: normal;
+	font-synthesis: none;
 	line-height: 1;
 	letter-spacing: 0;
 	font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
@@ -203,9 +247,13 @@ export default {
 	position: relative;
 }
 
+.pflr-glyph--alph-metric {
+	font-size: 0.88em;
+}
+
 /* —— 尺寸（与单格 pinyin-four-lines 对齐，比例一致）—— */
 .pflr--compact {
-	--pfl-cell-h: 44rpx;
+	--pfl-cell-h: 88rpx;
 }
 
 .pflr--compact .pflr-sheet {
@@ -218,7 +266,7 @@ export default {
 }
 
 .pflr--grid {
-	--pfl-cell-h: 72rpx;
+	--pfl-cell-h: 144rpx;
 }
 
 .pflr--grid .pflr-sheet {
@@ -231,7 +279,7 @@ export default {
 }
 
 .pflr--tone {
-	--pfl-cell-h: 58rpx;
+	--pfl-cell-h: 116rpx;
 }
 
 .pflr--tone .pflr-sheet {
@@ -254,10 +302,6 @@ export default {
 .pflr--md .pflr-glyphs-row,
 .pflr--md .pflr-glyph {
 	font-size: calc(var(--pfl-cell-h) * 35 / 58);
-}
-
-.pflr--md .pflr-glyph {
-	font-weight: 600;
 }
 
 .pflr--lg {

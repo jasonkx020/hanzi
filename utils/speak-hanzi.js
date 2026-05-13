@@ -53,3 +53,18 @@ export function speakHanzi(text) {
 	if (tryCncharVoice(s)) return
 	uni.showToast({ title: `「${s}」`, icon: 'none' })
 }
+
+/**
+ * 朗读一段中文课文（整段；过长会截断）。
+ * @param {string} text
+ */
+export function speakChinese(text) {
+	let s = String(text || '').trim()
+	if (!s) return
+	if (s.length > 800) s = `${s.slice(0, 800)}……`
+	// #ifdef APP-PLUS
+	if (tryPlusSpeech(s)) return
+	// #endif
+	if (tryCncharVoice(s)) return
+	uni.showToast({ title: '暂无法朗读本段', icon: 'none' })
+}

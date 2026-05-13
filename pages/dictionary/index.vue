@@ -79,14 +79,25 @@
 						<view class="meta-compact-row meta-compact-row-py">
 							<text class="meta-compact-k">拼音</text>
 							<view class="meta-compact-v meta-py-wrap">
-								<view v-if="pinyinSyllableTokens.length" class="meta-py-row">
-									<pinyin-four-lines-row :syllables="pinyinSyllableTokens" size="md" />
+								<view v-if="pinyinSyllableTokens.length" class="meta-py-row meta-py-rows-stack">
+									<view
+										v-for="(tok, ti) in pinyinSyllableTokens"
+										:key="'dict-py-' + ti"
+										class="meta-py-line-row"
+									>
+										<!-- <text v-if="pinyinSyllableTokens.length > 1" class="meta-py-line-label">拼音{{ ti + 1 }}</text> -->
+										<pinyin-four-lines-row
+											class="meta-py-line-core"
+											:syllables="[tok]"
+											size="md"
+										/>
+									</view>
 								</view>
-								<text v-else class="meta-py-fallback font-pinyin">{{ pinyinDisplay }}</text>
+								<text v-else class="meta-py-fallback font-pinyin">{{ pinyinDisplayPlain }}</text>
 							</view>
 						</view>
 						<view class="meta-compact-row">
-							<text class="meta-compact-k">部首1</text>
+							<text class="meta-compact-k">部首</text>
 							<text class="meta-compact-v">{{ activeEntry.radical }}</text>
 						</view>
 						<view class="meta-compact-row">
@@ -238,10 +249,14 @@ export default {
 		}
 	},
 	computed: {
+		pinyinDisplayPlain() {
+			const t = String(this.pinyinDisplay || '').replace(/[()（）]/g, '').trim()
+			return t || '—'
+		},
 		pinyinSyllableTokens() {
 			const tokens = splitPinyinDisplayTokens(this.pinyinDisplay)
 			if (tokens.length) return tokens
-			const s = String(this.pinyinDisplay || '').trim()
+			const s = String(this.pinyinDisplay || '').trim().replace(/[()（）]/g, '').trim()
 			if (s && s !== '—' && s !== '-') return [s]
 			return []
 		},
@@ -822,9 +837,39 @@ export default {
 	box-sizing: border-box;
 }
 
+/* 查字：多读音时每行「拼音1」与四线格同一行；仅一条读音时不显示序号 */
+.meta-py-rows-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+.meta-py-line-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	width: 100%;
+	box-sizing: border-box;
+}
+.meta-py-line-row + .meta-py-line-row {
+	margin-top: 8rpx;
+}
+.meta-py-line-label {
+	flex-shrink: 0;
+	font-size: 22rpx;
+	font-weight: 600;
+	color: #8a8279;
+	margin-right: 10rpx;
+	line-height: 1.2;
+	padding-bottom: 4rpx;
+}
+.meta-py-line-core {
+	flex: 1;
+	min-width: 0;
+}
+
 .meta-py-fallback {
 	font-size: 26rpx;
-	font-weight: 600;
+	font-weight: normal;
 	color: #4e4e4e;
 	line-height: 1.4;
 }

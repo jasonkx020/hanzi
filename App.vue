@@ -5,8 +5,15 @@ import { initAppStores } from '@/store/index.js'
 			console.log('App Launch')
 			initAppStores()
 			// #ifndef H5
-			try {
-				if (typeof uni.loadFontFace === 'function') {
+			// 首帧尚无页面栈时 uni.loadFontFace 会读 $page 报错，延后到首屏就绪再加载
+			const tryLoadPinyinFont = (attempt) => {
+				try {
+					if (typeof uni.loadFontFace !== 'function') return
+					const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+					if (!pages.length && attempt < 25) {
+						setTimeout(() => tryLoadPinyinFont(attempt + 1), 120)
+						return
+					}
 					uni.loadFontFace({
 						family: 'Pinyin Regular',
 						source: 'url("/static/fonts/Pinyin-Regular.ttf")',
@@ -14,10 +21,11 @@ import { initAppStores } from '@/store/index.js'
 						success: () => {},
 						fail: (e) => console.warn('[App] loadFontFace Pinyin Regular', e)
 					})
+				} catch (e) {
+					console.warn('[App] loadPinyinFontFace', e)
 				}
-			} catch (e) {
-				console.warn('[App] loadPinyinFontFace', e)
 			}
+			setTimeout(() => tryLoadPinyinFont(0), 0)
 			// #endif
 			// #ifdef APP-PLUS
 			try {

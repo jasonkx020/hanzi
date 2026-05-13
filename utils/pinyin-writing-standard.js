@@ -40,7 +40,9 @@ export function splitPinyinSyllableGlyphs(syllable) {
 	}
 	return out.map((ch) => ({
 		ch,
-		kind: classifyPinyinGlyph(ch)
+		kind: classifyPinyinGlyph(ch),
+		// 教材 ɑ（U+0251）常走回退字体，字身高于 o/e/i；略缩字号与四线格内其它字母对齐
+		alphMetricFix: ch.includes('\u0251')
 	}))
 }
 

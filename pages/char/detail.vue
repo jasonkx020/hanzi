@@ -1,3 +1,8 @@
+<template>
+	<!-- 本页仅作中转 redirectTo 查字结果；须保留 template，否则运行时报缺少 render -->
+	<view class="detail-redirect" />
+</template>
+
 <script>
 export default {
 	onLoad(query) {
@@ -10,3 +15,9 @@ export default {
 	}
 }
 </script>
+
+<style scoped>
+.detail-redirect {
+	min-height: 20vh;
+}
+</style>

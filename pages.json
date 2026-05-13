@@ -11,7 +11,8 @@
 			"path": "pages/pinyin/index",
 			"style": {
 				"navigationBarTitleText": "拼音",
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"disableScroll": true
 			}
 		},
 		{

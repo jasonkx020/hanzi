@@ -4,6 +4,7 @@
  */
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 
@@ -166,8 +167,9 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback) 
 }
 
 /**
- * 「音调」页：本音走无调+一声替补；四声格用 applyToneToSyllableStem 的精确文件名，失败再 TTS。
- * @param {string} symbol 播放用字符串（本音为无声调形，四声为带调 stem）
+ * 「音调」页：格内为带调 stem，走对应 opus / TTS。
+ * opts.asNeutral 为 true 时走无调+一声替补（保留兼容；当前音调表已不展示本音/轻声列）。
+ * @param {string} symbol 播放用字符串（带调音节）
  * @param {{ asNeutral?: boolean, narrator?: string }} opts
  */
 export async function playToneGridCell(symbol, opts = {}) {
@@ -188,6 +190,71 @@ export async function playToneGridCell(symbol, opts = {}) {
 }
 
 /**
+ * 用户当前看到的拼音串：拆音节后按 `/static/pinyin/{音节}.opus` 查找播放；
+ * 带调文件不存在时再试无声调 + 一声替补，仍失败则 TTS。
+ * @param {string} displayPinyin 与界面展示一致（如 pyShow）
+ * @param {{ gapMs?: number, narrator?: string }} [opts]
+ * @returns {Promise<boolean>} 是否至少有一段成功播放
+ */
+export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
+	const raw = String(displayPinyin || '').trim()
+	if (!raw || raw === '-') return false
+	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
+	let tokens = splitPinyinDisplayTokens(raw)
+	if (!tokens.length) tokens = [raw]
+	const gapMs = opts.gapMs != null ? opts.gapMs : 100
+	let anyOk = false
+	for (let i = 0; i < tokens.length; i++) {
+		const sym = String(tokens[i] || '').trim()
+		if (!sym) continue
+		let played = false
+		const exactSrc = `/static/pinyin/${sym}.opus`
+		try {
+			await playPinyinLocalAudio(exactSrc)
+			played = true
+			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, exactSrc })
+		} catch (e) {
+			logHanziSpeak('lesson.display_pinyin.exact_fail', {
+				sym,
+				exactSrc,
+				err: e && (e.errMsg || e.message || String(e))
+			})
+		}
+		if (!played) {
+			played = await playLocalPinyinNeutralThenTone1(sym, true)
+			if (played) logHanziSpeak('lesson.display_pinyin.fallback_neutral_ok', { sym })
+		}
+		if (!played) {
+			const tts = await speakPinyinSymbolAsync(sym, narrator)
+			played = !!tts
+			logHanziSpeak(played ? 'lesson.display_pinyin.tts_ok' : 'lesson.display_pinyin.tts_fail', { sym })
+		}
+		if (played) anyOk = true
+		if (i < tokens.length - 1 && gapMs > 0) await sleep(gapMs)
+	}
+	return anyOk
+}
+
+/**
+ * App 端打包资源在 /static/...，InnerAudioContext 需转为可读的本地绝对路径。
+ * @param {string} src
+ */
+function resolveLocalAudioSrc(src) {
+	if (!src || typeof src !== 'string') return src
+	// #ifdef APP-PLUS
+	try {
+		if (typeof plus !== 'undefined' && plus.io && typeof plus.io.convertLocalFileSystemURL === 'function') {
+			if (src.startsWith('/static/')) {
+				const rel = `_www${src}`
+				return plus.io.convertLocalFileSystemURL(rel)
+			}
+		}
+	} catch (_) {}
+	// #endif
+	return src
+}
+
+/**
  * @param {string} src 如 /static/pinyin/a.opus
  * @returns {Promise<void>}
  */
@@ -196,7 +263,7 @@ export function playPinyinLocalAudio(src) {
 	stopLocalPinyinAudio()
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
-	inner.src = src
+	inner.src = resolveLocalAudioSrc(src)
 	return new Promise((resolve, reject) => {
 		let settled = false
 		const finish = (fn) => {

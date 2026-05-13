@@ -21,7 +21,7 @@
 
 		<!-- 体量感知 -->
 		<view v-if="lessons.length" class="stat-pill">
-			<text class="stat-txt">共 <text class="stat-num">{{ lessons.length }}</text> 课 · <text class="stat-num">{{ chars.length }}</text> 个生字</text>
+			<text class="stat-txt">共 <text class="stat-num">{{ lessons.length }}</text> 课 · <text class="stat-num">{{ statSlotCount }}</text> 个生字</text>
 		</view>
 
 		<view v-if="textbookTexts.length" class="textbook-panel">
@@ -125,7 +125,11 @@
 import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
-import { loadRenjiaoTextbookTexts } from '@/utils/renjiao-textbook-loader.js'
+import {
+	buildLessonCharRowsFromRenjiaoItem,
+	filterRenjiaoTextbookSyncLessons,
+	loadRenjiaoTextbookTexts
+} from '@/utils/renjiao-textbook-loader.js'
 
 const COVER_BOOKS = [
 	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
@@ -189,6 +193,13 @@ export default {
 				else map[b.grade].up = book
 			})
 			return Object.values(map).sort((a, b) => a.grade - b.grade)
+		},
+		/** 人教版 JSON 课次为识字+写字条数之和；其它版本用生字库行数 */
+		statSlotCount() {
+			if (this.lessons.length && typeof this.lessons[0].rjIdx === 'number') {
+				return this.lessons.reduce((s, l) => s + (Number(l.count) || 0), 0)
+			}
+			return this.chars.length
 		}
 	},
 	onShow() {
@@ -201,22 +212,33 @@ export default {
 			try {
 				const prefs = getCurriculumPrefs()
 				this.summary = formatCurriculumSummary(prefs)
-				this.chars = await queryCurriculumChars(prefs)
-				const map = Object.create(null)
-				this.chars.forEach((row) => {
-					const hint = String(row.lesson_hint || '未分课次')
-					if (!map[hint]) map[hint] = { hint, count: 0 }
-					map[hint].count += 1
-				})
-				this.lessons = Object.values(map).sort((a, b) =>
-					String(a.hint).localeCompare(String(b.hint), 'zh-Hans-CN')
-				)
 				this.textbookTexts = []
 				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
-					this.textbookTexts = await loadRenjiaoTextbookTexts({
+					const raw = await loadRenjiaoTextbookTexts({
 						grade: prefs.grade,
 						semester: prefs.semester
 					})
+					const syncLessons = filterRenjiaoTextbookSyncLessons(raw)
+					this.chars = []
+					this.lessons = syncLessons.map((item, idx) => {
+						const charRows = buildLessonCharRowsFromRenjiaoItem(item)
+						return {
+							hint: String(item.title || `第${idx + 1}课`),
+							count: charRows.length,
+							rjIdx: idx
+						}
+					})
+				} else {
+					this.chars = await queryCurriculumChars(prefs)
+					const map = Object.create(null)
+					this.chars.forEach((row) => {
+						const hint = String(row.lesson_hint || '未分课次')
+						if (!map[hint]) map[hint] = { hint, count: 0 }
+						map[hint].count += 1
+					})
+					this.lessons = Object.values(map).sort((a, b) =>
+						String(a.hint).localeCompare(String(b.hint), 'zh-Hans-CN')
+					)
 				}
 			} catch (e) {
 				console.warn('[textbook] reload', e)
@@ -260,6 +282,12 @@ export default {
 			uni.switchTab({ url: '/pages/home/home' })
 		},
 		openLesson(lesson) {
+			if (typeof lesson.rjIdx === 'number') {
+				uni.navigateTo({
+					url: `/pages/literacy/lesson?rjLesson=${lesson.rjIdx}`
+				})
+				return
+			}
 			uni.navigateTo({
 				url: `/pages/literacy/lesson?hint=${encodeURIComponent(lesson.hint)}`
 			})

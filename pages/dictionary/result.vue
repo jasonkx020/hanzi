@@ -4,14 +4,21 @@
 			<text class="big-char" @click="speakCurrentPinyin">{{ hanzi || '—' }}</text>
 			<view class="title-py-block">
 				<text class="title-py-label">拼音：</text>
-				<view class="title-py-cells">
-					<pinyin-four-lines-row
-						v-if="pinyinSyllableTokens.length"
-						:syllables="pinyinSyllableTokens"
-						size="lg"
-					/>
-					<text v-else class="title-py-plain font-pinyin">{{ pinyin || '-' }}</text>
+				<view v-if="pinyinSyllableTokens.length" class="title-py-cells title-py-rows-stack">
+					<view
+						v-for="(tok, ti) in pinyinSyllableTokens"
+						:key="'res-py-' + ti"
+						class="title-py-line-row"
+					>
+						<text v-if="pinyinSyllableTokens.length > 1" class="title-py-line-label">拼音{{ ti + 1 }}</text>
+						<pinyin-four-lines-row
+							class="title-py-line-core"
+							:syllables="[tok]"
+							size="lg"
+						/>
+					</view>
 				</view>
+				<text v-else class="title-py-plain font-pinyin title-py-cells-fallback">{{ pinyinPlain }}</text>
 			</view>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
 			<view v-if="ext.tradForm" class="trad-banner">
@@ -106,10 +113,14 @@ export default {
 		}
 	},
 	computed: {
+		pinyinPlain() {
+			const t = String(this.pinyin || '').replace(/[()（）]/g, '').trim()
+			return t || '-'
+		},
 		pinyinSyllableTokens() {
 			const tokens = splitPinyinDisplayTokens(this.pinyin)
 			if (tokens.length) return tokens
-			const s = String(this.pinyin || '').trim()
+			const s = String(this.pinyin || '').trim().replace(/[()（）]/g, '').trim()
 			if (s && s !== '—' && s !== '-') return [s]
 			return []
 		}
@@ -151,12 +162,15 @@ export default {
 			if (!this.hanzi || this.hanzi === '—' || this.dictPinyinPlaying) return
 			this.dictPinyinPlaying = true
 			try {
-				await speakDictionaryEntryPinyin({
+				const ok = await speakDictionaryEntryPinyin({
 					hanzi: this.hanzi,
 					fallbackPinyin: this.pinyin,
 					narrator: this.narrator,
 					...DICTIONARY_LOCAL_PINYIN_OPTS
 				})
+				if (!ok) {
+					uni.showToast({ title: '未播放成功，请检查静音或重试', icon: 'none' })
+				}
 			} finally {
 				this.dictPinyinPlaying = false
 			}
@@ -224,9 +238,42 @@ export default {
 	flex: 1;
 	min-width: 0;
 }
+/* 多读音：每行一个音节 */
+.title-py-rows-stack {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+}
+.title-py-line-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	width: 100%;
+	box-sizing: border-box;
+}
+.title-py-line-row + .title-py-line-row {
+	margin-top: 10rpx;
+}
+.title-py-line-label {
+	flex-shrink: 0;
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #8a8279;
+	margin-right: 12rpx;
+	line-height: 1.2;
+	padding-bottom: 4rpx;
+}
+.title-py-line-core {
+	flex: 1;
+	min-width: 0;
+}
+.title-py-cells-fallback {
+	flex: 1;
+	min-width: 0;
+}
 .title-py-plain {
 	font-size: 30rpx;
-	font-weight: 600;
+	font-weight: normal;
 	color: #4e4e4e;
 	line-height: 1.3;
 }

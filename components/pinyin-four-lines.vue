@@ -14,7 +14,10 @@
 						v-for="(g, gi) in glyphs"
 						:key="gi + '-' + g.ch"
 						class="pfl-glyph"
-						:class="'pfl-glyph--' + g.kind"
+						:class="[
+							'pfl-glyph--' + g.kind,
+							{ 'pfl-glyph--alph-metric': g.alphMetricFix }
+						]"
 					>{{ g.ch }}</text>
 				</view>
 			</view>
@@ -47,7 +50,9 @@ export default {
 			const raw = this.display
 			if (!raw) return []
 			const list = splitPinyinSyllableGlyphs(raw).filter((g) => g.ch)
-			return list.length ? list : [{ ch: raw, kind: 'mid' }]
+			return list.length
+				? list
+				: [{ ch: raw, kind: 'mid', alphMetricFix: raw.includes('\u0251') }]
 		},
 		rootClass() {
 			const s = this.size
@@ -61,13 +66,13 @@ export default {
 <style scoped>
 /*
  * 排版说明（rpx vs em）：
- * - 格子高度、边距、线宽：用 rpx，随 uni 750 设计宽缩放，布局稳定。
- * - 拼音字号：用 calc(var(--pfl-cell-h) * n/d)，与格子高度同一基准，等比例随屏缩放。
- * - .pfl-glyphs-row 与 .pfl-glyph 同字号，基线对齐由书写区 flex 与基准线布局决定。
+ * - grid / tone / compact：--pfl-cell-h 约 2×，便于拼音学习页阅读。
+ * - md / lg：保持原尺度，供查字、字卡摘要等页面使用。
+ * - 拼音字号：calc(var(--pfl-cell-h) * n/d)，与格子高度同一基准。
  */
 /* 四线三格：上 / 中 / 下三等分，线位在 1/3 与 2/3 高度处 */
 .pfl {
-	--pfl-cell-h: 72rpx;
+	--pfl-cell-h: 144rpx;
 	display: inline-flex;
 	vertical-align: bottom;
 	flex-shrink: 0;
@@ -84,7 +89,11 @@ export default {
 
 .pfl-lines {
 	position: absolute;
-	inset: 0;
+	/* 勿用 inset：Android 7 等旧 WebView 不支持，四线层无法铺满导致格线错位 */
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
 	pointer-events: none;
 	box-sizing: border-box;
 }
@@ -126,8 +135,8 @@ export default {
 /* 书写区至基准线（高度的 2/3），字母基线对齐中格底 = 与基准实线重合 */
 .pfl-write-area {
 	position: absolute;
-	left: 2rpx;
-	right: 2rpx;
+	left: 4rpx;
+	right: 4rpx;
 	top: 0;
 	height: calc(200% / 3);
 	display: flex;
@@ -151,7 +160,8 @@ export default {
 
 .pfl-glyph {
 	color: #1e3a4c;
-	font-weight: 700;
+	font-weight: normal;
+	font-synthesis: none;
 	line-height: 1;
 	letter-spacing: 0;
 	font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
@@ -164,15 +174,20 @@ export default {
 	position: relative;
 }
 
+/* ɑ（U+0251）回退字体字身偏高，略缩以与中格韵母视觉一致 */
+.pfl-glyph--alph-metric {
+	font-size: 0.88em;
+}
+
 /* 尺寸：--pfl-cell-h 为格子高度，字号 = 高度 × 固定比例 */
 .pfl--compact {
-	--pfl-cell-h: 44rpx;
+	--pfl-cell-h: 88rpx;
 }
 
 .pfl--compact .pfl-sheet {
 	height: var(--pfl-cell-h);
-	min-width: 30rpx;
-	padding: 0 2rpx;
+	min-width: 60rpx;
+	padding: 0 4rpx;
 }
 
 .pfl--compact .pfl-glyphs-row,
@@ -181,13 +196,13 @@ export default {
 }
 
 .pfl--grid {
-	--pfl-cell-h: 72rpx;
+	--pfl-cell-h: 144rpx;
 }
 
 .pfl--grid .pfl-sheet {
 	height: var(--pfl-cell-h);
-	min-width: 48rpx;
-	padding: 0 4rpx;
+	min-width: 96rpx;
+	padding: 0 8rpx;
 }
 
 .pfl--grid .pfl-glyphs-row,
@@ -196,13 +211,13 @@ export default {
 }
 
 .pfl--tone {
-	--pfl-cell-h: 58rpx;
+	--pfl-cell-h: 116rpx;
 }
 
 .pfl--tone .pfl-sheet {
 	height: var(--pfl-cell-h);
-	min-width: 40rpx;
-	padding: 0 4rpx;
+	min-width: 80rpx;
+	padding: 0 8rpx;
 }
 
 .pfl--tone .pfl-glyphs-row,
@@ -223,10 +238,6 @@ export default {
 .pfl--md .pfl-glyphs-row,
 .pfl--md .pfl-glyph {
 	font-size: calc(var(--pfl-cell-h) * 35 / 58);
-}
-
-.pfl--md .pfl-glyph {
-	font-weight: 600;
 }
 
 .pfl--lg {
