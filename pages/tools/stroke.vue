@@ -19,7 +19,12 @@
 			/>
 			<button size="mini" type="primary" @click="applyInputWord">应用</button>
 		</view>
-		<text class="pinyin">拼音：{{ pinyinText }}</text>
+		<view class="pinyin-strip">
+			<text class="pinyin-label">拼音：</text>
+			<view class="pinyin-cells">
+				<pinyin-four-lines-row :syllables="pinyinStrokeTokens" size="lg" />
+			</view>
+		</view>
 		<view class="control-row">
 			<button size="mini" @click="runDraw('normal')">normal</button>
 			<button size="mini" @click="runDraw('animation')">animation</button>
@@ -66,11 +71,16 @@ import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { isVipActive } from '@/utils/vip.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 /** 与 utils/draw-native.js 中 canvasSize = length + 30 保持一致 */
 const STROKE_DRAW_LENGTH = 180
 
 export default {
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			word: '银',
@@ -90,6 +100,12 @@ export default {
 		}
 	},
 	computed: {
+		pinyinStrokeTokens() {
+			const tokens = splitPinyinDisplayTokens(this.pinyinText)
+			if (tokens.length) return tokens
+			const s = String(this.pinyinText || '').trim()
+			return s ? [s] : []
+		},
 		strokeCanvasInlineStyle() {
 			const px = STROKE_DRAW_LENGTH + 30
 			return {
@@ -417,10 +433,34 @@ export default {
 	font-weight: 600;
 }
 
-.pinyin {
-	font-size: 34rpx;
-	color: #57606a;
+.pinyin-strip {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	flex-wrap: wrap;
 	margin-bottom: 20rpx;
+	gap: 10rpx 14rpx;
+}
+.pinyin-label {
+	font-size: 28rpx;
+	color: #57606a;
+	flex-shrink: 0;
+	line-height: 1.25;
+	font-weight: 600;
+}
+.pinyin-cells {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10rpx;
+	flex: 1;
+	min-width: 0;
+}
+.pinyin-empty {
+	font-size: 30rpx;
+	color: #57606a;
+	line-height: 1.35;
 }
 
 .input-row {

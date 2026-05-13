@@ -94,10 +94,10 @@
 				</view>
 
 				<scroll-view scroll-y class="book-scroll">
-					<view class="book-columns-head">
+					<!-- <view class="book-columns-head">
 						<text class="book-col-title">上册</text>
 						<text class="book-col-title">下册</text>
-					</view>
+					</view> -->
 					<view
 						v-for="row in currentBookRows"
 						:key="`grade-${row.grade}`"
@@ -109,7 +109,9 @@
 							class="book-card"
 							@click="selectBook(book)"
 						>
-							<image class="book-cover" :src="book.cover" mode="aspectFill" />
+							<view class="book-cover-wrap">
+								<image class="book-cover" :src="book.cover" mode="aspectFit" />
+							</view>
 							<text class="book-label">{{ book.label }}</text>
 						</view>
 					</view>
@@ -145,9 +147,9 @@ const VERSION_OPTIONS = [
 	{
 		label: '幼小衔接',
 		value: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
-		icon: '/static/images/yuwen0102.jpg'
-	},
-	{ label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
+		icon: '/static/images/yuwen_youxiao.jpg'
+	}//,
+	// { label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
 ]
 
 export default {
@@ -171,7 +173,7 @@ export default {
 					semester: '上',
 					key: `${this.modalVersion}-0-上`,
 					label: '课标300基本字',
-					cover: '/static/images/yuwen0102.jpg'
+					cover: '/static/images/yuwen_youxiao.jpg'
 				}
 				return [{ grade: 0, up: book, down: null }]
 			}
@@ -674,11 +676,21 @@ export default {
 	width: 48%;
 }
 
-.book-cover {
+/* 竖版课本封面：等比例完整显示，不裁切 */
+.book-cover-wrap {
 	width: 100%;
-	height: 180rpx;
+	aspect-ratio: 3 / 4;
 	border-radius: 12rpx;
 	background: #f3ebe0;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.book-cover {
+	width: 100%;
+	height: 100%;
 }
 
 .book-label {

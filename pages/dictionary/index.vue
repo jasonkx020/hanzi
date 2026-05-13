@@ -76,9 +76,14 @@
 				</view>
 				<view class="hero-top-right">
 					<view class="meta-compact" @click="playActiveDictionaryPinyin">
-						<view class="meta-compact-row">
+						<view class="meta-compact-row meta-compact-row-py">
 							<text class="meta-compact-k">拼音</text>
-							<text class="meta-compact-v">{{ pinyinDisplay }}</text>
+							<view class="meta-compact-v meta-py-wrap">
+								<view v-if="pinyinSyllableTokens.length" class="meta-py-row">
+									<pinyin-four-lines-row :syllables="pinyinSyllableTokens" size="md" />
+								</view>
+								<text v-else class="meta-py-fallback font-pinyin">{{ pinyinDisplay }}</text>
+							</view>
 						</view>
 						<view class="meta-compact-row">
 							<text class="meta-compact-k">部首1</text>
@@ -182,6 +187,8 @@ import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getDictionaryEntry, getRadicalLabel } from '@/repositories/dictionary-repository.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 const DETECTIVES = [
 	{ clue: '猜一猜「艹 + 明」是什么字？', answer: '萌' },
@@ -197,6 +204,9 @@ const DICTIONARY_STROKE_LENGTH = 148
 
 export default {
 	mixins: [tabMain],
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			dictStrokeReady: false,
@@ -228,6 +238,13 @@ export default {
 		}
 	},
 	computed: {
+		pinyinSyllableTokens() {
+			const tokens = splitPinyinDisplayTokens(this.pinyinDisplay)
+			if (tokens.length) return tokens
+			const s = String(this.pinyinDisplay || '').trim()
+			if (s && s !== '—' && s !== '-') return [s]
+			return []
+		},
 		filteredChars() {
 			const kw = this.normalizePinyin(this.pinyinKeyword)
 			if (!kw) return this.chars
@@ -793,6 +810,23 @@ export default {
 	color: #4e4e4e;
 	line-height: 1.4;
 	word-break: break-all;
+}
+
+.meta-compact-row-py {
+	align-items: flex-end;
+}
+
+.meta-py-row {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+.meta-py-fallback {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: #4e4e4e;
+	line-height: 1.4;
 }
 
 /* 外包框尺寸与画布一致（由内联 dictStrokeWrapStyle 控制），田字线由 draw-native 绘制 */

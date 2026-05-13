@@ -4,6 +4,21 @@ import { initAppStores } from '@/store/index.js'
 		onLaunch: function() {
 			console.log('App Launch')
 			initAppStores()
+			// #ifndef H5
+			try {
+				if (typeof uni.loadFontFace === 'function') {
+					uni.loadFontFace({
+						family: 'Pinyin Regular',
+						source: 'url("/static/fonts/Pinyin-Regular.ttf")',
+						global: true,
+						success: () => {},
+						fail: (e) => console.warn('[App] loadFontFace Pinyin Regular', e)
+					})
+				}
+			} catch (e) {
+				console.warn('[App] loadPinyinFontFace', e)
+			}
+			// #endif
 			// #ifdef APP-PLUS
 			try {
 				const bg = '#F4F1EA'
@@ -41,6 +56,7 @@ import { initAppStores } from '@/store/index.js'
 </script>
 
 <style>
+@import './static/styles/pinyin-font.css';
 	/* 页面底色与 App 回弹露底同色 */
 	page {
 		background-color: #f4f1ea;

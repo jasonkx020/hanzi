@@ -27,17 +27,33 @@
 				<view v-for="sec in initialSections" :key="sec.title" class="vowel-block">
 					<text class="vowel-block-title">{{ sec.title }}</text>
 					<text class="whole-block-desc">{{ sec.desc }}</text>
-					<view class="symbol-grid">
+					<view class="pinyin-homework-strip">
 						<view
-							v-for="entry in entriesForInitial(sec.symbols)"
-							:key="sec.title + '-' + entry.symbol"
-							class="symbol-item"
-							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
-							@click="speakSymbol(entry.symbol)"
+							v-for="(chunk, ri) in chunkHomeworkSymbols(sec.symbols)"
+							:key="sec.title + '-hw-' + ri"
+							class="pinyin-homework-wrap symbol-item"
+							:style="homeworkStripStyle(entriesForInitial(chunk))"
 						>
-							<text class="symbol-text">{{ entry.symbol }}</text>
-							<view class="symbol-speaker" aria-hidden="true">
-								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							<view class="pinyin-homework-inner">
+								<view class="pinyin-homework-main">
+									<pinyin-four-lines-row
+										size="grid"
+										interactive
+										:syllables="chunk"
+										@cell-click="onHomeworkCellSpeak"
+									/>
+								</view>
+								<view
+									class="pinyin-homework-end-speaker"
+									aria-label="连读本行"
+									@click.stop="speakHomeworkRowSequential(chunk)"
+								>
+									<image
+										class="symbol-speaker-img pinyin-homework-end-speaker-img"
+										:src="pinyinSpeakerIconSrc"
+										mode="aspectFit"
+									/>
+								</view>
 							</view>
 						</view>
 					</view>
@@ -47,17 +63,33 @@
 			<template v-else-if="activeTab === '韵母'">
 				<view v-for="sec in vowelSections" :key="sec.title" class="vowel-block">
 					<text class="vowel-block-title">{{ sec.title }}</text>
-					<view class="symbol-grid">
+					<view class="pinyin-homework-strip">
 						<view
-							v-for="entry in entriesForSymbols(sec.symbols)"
-							:key="sec.title + '-' + entry.symbol"
-							class="symbol-item"
-							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
-							@click="speakSymbol(entry.symbol)"
+							v-for="(chunk, ri) in chunkHomeworkSymbols(sec.symbols)"
+							:key="sec.title + '-hw-' + ri"
+							class="pinyin-homework-wrap symbol-item"
+							:style="homeworkStripStyle(entriesForSymbols(chunk))"
 						>
-							<text class="symbol-text">{{ entry.symbol }}</text>
-							<view class="symbol-speaker" aria-hidden="true">
-								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							<view class="pinyin-homework-inner">
+								<view class="pinyin-homework-main">
+									<pinyin-four-lines-row
+										size="grid"
+										interactive
+										:syllables="chunk"
+										@cell-click="onHomeworkCellSpeak"
+									/>
+								</view>
+								<view
+									class="pinyin-homework-end-speaker"
+									aria-label="连读本行"
+									@click.stop="speakHomeworkRowSequential(chunk)"
+								>
+									<image
+										class="symbol-speaker-img pinyin-homework-end-speaker-img"
+										:src="pinyinSpeakerIconSrc"
+										mode="aspectFit"
+									/>
+								</view>
 							</view>
 						</view>
 					</view>
@@ -77,16 +109,29 @@
 							class="tone-data-row"
 						>
 							<view
-								v-for="(cell, ci) in row.cells"
-								:key="'c-' + ci"
-								class="tone-cell symbol-item"
-								:class="{ 'tone-cell-disabled': cell.disabled }"
+								class="pinyin-homework-wrap symbol-item tone-homework-row"
 								:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
-								@click="!cell.disabled && speakSymbol(cell.play, { asNeutral: cell.asNeutral })"
 							>
-								<text class="symbol-text tone-cell-text">{{ cell.display }}</text>
-								<view class="symbol-speaker" aria-hidden="true">
-									<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+								<view class="pinyin-homework-inner">
+									<view class="pinyin-homework-main">
+										<pinyin-four-lines-row
+											size="tone"
+											interactive
+											:syllables="toneRowDisplays(row)"
+											@cell-click="onToneHomeworkCell(row, $event)"
+										/>
+									</view>
+									<view
+										class="pinyin-homework-end-speaker"
+										aria-label="连读本行"
+										@click.stop="speakToneRowSequential(row)"
+									>
+										<image
+											class="symbol-speaker-img pinyin-homework-end-speaker-img"
+											:src="pinyinSpeakerIconSrc"
+											mode="aspectFit"
+										/>
+									</view>
 								</view>
 							</view>
 						</view>
@@ -98,33 +143,65 @@
 				<view v-for="sec in wholeReadingSections" :key="sec.title" class="vowel-block">
 					<text class="vowel-block-title">{{ sec.title }}</text>
 					<text class="whole-block-desc">{{ sec.desc }}</text>
-					<view class="symbol-grid">
+					<view class="pinyin-homework-strip">
 						<view
-							v-for="entry in entriesForWholeReading(sec.symbols)"
-							:key="sec.title + '-' + entry.symbol"
-							class="symbol-item"
-							:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
-							@click="speakSymbol(entry.symbol)"
+							v-for="(chunk, ri) in chunkHomeworkSymbols(sec.symbols)"
+							:key="sec.title + '-hw-' + ri"
+							class="pinyin-homework-wrap symbol-item"
+							:style="homeworkStripStyle(entriesForWholeReading(chunk))"
 						>
-							<text class="symbol-text">{{ entry.symbol }}</text>
-							<view class="symbol-speaker" aria-hidden="true">
-								<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+							<view class="pinyin-homework-inner">
+								<view class="pinyin-homework-main">
+									<pinyin-four-lines-row
+										size="grid"
+										interactive
+										:syllables="chunk"
+										@cell-click="onHomeworkCellSpeak"
+									/>
+								</view>
+								<view
+									class="pinyin-homework-end-speaker"
+									aria-label="连读本行"
+									@click.stop="speakHomeworkRowSequential(chunk)"
+								>
+									<image
+										class="symbol-speaker-img pinyin-homework-end-speaker-img"
+										:src="pinyinSpeakerIconSrc"
+										mode="aspectFit"
+									/>
+								</view>
 							</view>
 						</view>
 					</view>
 				</view>
 			</template>
-			<view v-else class="symbol-grid">
+			<view class="pinyin-homework-strip">
 				<view
-					v-for="entry in activeSymbolEntries"
-					:key="entry.symbol"
-					class="symbol-item"
-					:style="{ backgroundColor: entry.bg, borderColor: entry.bd }"
-					@click="speakSymbol(entry.symbol)"
+					v-for="(chunk, ri) in chunkHomeworkSymbols(symbolMap[activeTab] || [])"
+					:key="'drill-hw-' + ri"
+					class="pinyin-homework-wrap symbol-item"
+					:style="homeworkStripStyle(entriesForSymbols(chunk))"
 				>
-					<text class="symbol-text">{{ entry.symbol }}</text>
-					<view class="symbol-speaker" aria-hidden="true">
-						<image class="symbol-speaker-img" :src="pinyinSpeakerIconSrc" mode="aspectFit" />
+					<view class="pinyin-homework-inner">
+						<view class="pinyin-homework-main">
+							<pinyin-four-lines-row
+								size="grid"
+								interactive
+								:syllables="chunk"
+								@cell-click="onHomeworkCellSpeak"
+							/>
+						</view>
+						<view
+							class="pinyin-homework-end-speaker"
+							aria-label="连读本行"
+							@click.stop="speakHomeworkRowSequential(chunk)"
+						>
+							<image
+								class="symbol-speaker-img pinyin-homework-end-speaker-img"
+								:src="pinyinSpeakerIconSrc"
+								mode="aspectFit"
+							/>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -233,10 +310,14 @@ const WHOLE_READING_SECTIONS = [
 import { applyToneToSyllableStem, playToneGridCell, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
 	mixins: [tabMain],
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			/** 右下角小喇叭（SVG data URL，不依赖静态资源文件） */
@@ -324,6 +405,53 @@ export default {
 		stopLocalPinyinAudio()
 	},
 	methods: {
+		/** 作业本行：每行最多音节数（与表头「本音+四声」列数一致） */
+		chunkHomeworkSymbols(symbols, maxPerRow = 5) {
+			const arr = Array.isArray(symbols) ? symbols.map((s) => String(s || '').trim()).filter(Boolean) : []
+			const m = Math.min(Math.max(1, Math.floor(Number(maxPerRow)) || 5), 99)
+			const out = []
+			for (let i = 0; i < arr.length; i += m) {
+				out.push(arr.slice(i, i + m))
+			}
+			return out
+		},
+		homeworkStripStyle(entries) {
+			const e = Array.isArray(entries) && entries.length ? entries[0] : null
+			if (!e) return {}
+			return { backgroundColor: e.bg, borderColor: e.bd }
+		},
+		toneRowDisplays(row) {
+			return (row && row.cells ? row.cells : []).map((c) => c.display)
+		},
+		onHomeworkCellSpeak(payload) {
+			if (!payload || payload.syllable == null || payload.syllable === '') return
+			this.speakSymbol(String(payload.syllable))
+		},
+		onToneHomeworkCell(row, payload) {
+			const idx = payload && typeof payload.index === 'number' ? payload.index : -1
+			const cell = row && row.cells && idx >= 0 ? row.cells[idx] : null
+			if (!cell || cell.disabled) return
+			this.speakSymbol(cell.play, { asNeutral: cell.asNeutral })
+		},
+		async speakRowSlots(slots) {
+			const list = (slots || []).filter((s) => s && s.symbol)
+			if (!list.length) return
+			const gap = 520
+			for (let i = 0; i < list.length; i++) {
+				if (i > 0) await new Promise((r) => setTimeout(r, gap))
+				await this.speakSymbol(list[i].symbol, { asNeutral: !!list[i].asNeutral })
+			}
+		},
+		async speakHomeworkRowSequential(symbols) {
+			const arr = (symbols || []).map((s) => String(s || '').trim()).filter(Boolean)
+			await this.speakRowSlots(arr.map((symbol) => ({ symbol, asNeutral: false })))
+		},
+		async speakToneRowSequential(row) {
+			const slots = (row && row.cells ? row.cells : [])
+				.filter((c) => c && !c.disabled && c.play)
+				.map((c) => ({ symbol: c.play, asNeutral: !!c.asNeutral }))
+			await this.speakRowSlots(slots)
+		},
 		buildToneRows(symbols, categoryTab) {
 			return (symbols || []).map((sym) => {
 				const bare = stripPinyinToneMarks(String(sym).trim().toLowerCase())
@@ -567,26 +695,54 @@ export default {
 .tone-data-row:last-child {
 	margin-bottom: 0;
 }
-.tone-cell {
+/* 作业本式：整块共用一行四线三格 */
+.pinyin-homework-strip {
+	width: 100%;
+	box-sizing: border-box;
+}
+.pinyin-homework-strip .pinyin-homework-wrap.symbol-item + .pinyin-homework-wrap.symbol-item {
+	margin-top: 4rpx;
+}
+.pinyin-homework-wrap.symbol-item {
+	flex: 0 0 100%;
+	width: 100%;
+	max-width: 100%;
+	margin-right: 0;
+	margin-bottom: 16rpx;
+	padding: 16rpx 12rpx 12rpx;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+.pinyin-homework-inner {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	width: 100%;
+	box-sizing: border-box;
+}
+.pinyin-homework-main {
 	flex: 1;
 	min-width: 0;
-	max-width: none;
-	width: auto;
-	margin-right: 8rpx;
-	margin-bottom: 0;
+}
+.pinyin-homework-end-speaker {
+	flex-shrink: 0;
+	width: 44rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4rpx 0 6rpx 10rpx;
+	box-sizing: border-box;
+	opacity: 0.92;
+}
+.pinyin-homework-end-speaker-img {
+	width: 32rpx;
+	height: 32rpx;
+	display: block;
+}
+.tone-homework-row {
 	min-height: 88rpx;
-	padding: 16rpx 4rpx;
-}
-.tone-cell:last-child {
-	margin-right: 0;
-}
-.tone-cell-disabled {
-	opacity: 0.4;
-	pointer-events: none;
-}
-.tone-cell-text {
-	font-size: 34rpx;
-	line-height: 1.15;
 }
 .symbol-grid {
 	display: flex;
@@ -616,7 +772,6 @@ export default {
 .symbol-item:nth-child(5n) {
 	margin-right: 0;
 }
-.symbol-text { font-size: 44rpx; color: #2c2419; font-weight: 700; }
 .symbol-speaker {
 	position: absolute;
 	right: 6rpx;

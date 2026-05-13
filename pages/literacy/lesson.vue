@@ -16,7 +16,9 @@
 				@click="openChar(row)"
 			>
 				<text class="cell-char">{{ row.hanzi }}</text>
-				<text class="cell-py">{{ pyShow(row) }}</text>
+				<view class="cell-py-row">
+					<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
+				</view>
 				<text v-if="isLearned(row.hanzi)" class="cell-badge">已学</text>
 			</view>
 		</view>
@@ -58,8 +60,13 @@ import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 import { speakHanzi } from '@/utils/speak-hanzi.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 export default {
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			hint: '课次字卡',
@@ -91,6 +98,12 @@ export default {
 		this.refreshProgress()
 	},
 	methods: {
+		pyTokens(row) {
+			const s = String(this.pyShow(row) || '').trim()
+			const tokens = splitPinyinDisplayTokens(s)
+			if (tokens.length) return tokens
+			return s ? [s] : []
+		},
 		async reloadLesson() {
 			const rows = await queryCurriculumChars(getCurriculumPrefs())
 			this.lessonChars = rows.filter((r) => String(r.lesson_hint || '未分课次') === this.hint)
@@ -237,13 +250,12 @@ export default {
 	line-height: 1.1;
 }
 
-.cell-py {
-	display: block;
+.cell-py-row {
+	width: 100%;
+	min-width: 0;
 	margin-top: 10rpx;
-	font-size: 22rpx;
-	color: #42a5f5;
-	font-weight: 500;
-	word-break: break-all;
+	min-height: 48rpx;
+	box-sizing: border-box;
 }
 
 .cell-badge {

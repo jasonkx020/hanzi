@@ -2,7 +2,17 @@
 	<view class="page">
 		<view class="card">
 			<text class="big-char" @click="speakCurrentPinyin">{{ hanzi || '—' }}</text>
-			<text class="title">拼音：{{ pinyin || '-' }}</text>
+			<view class="title-py-block">
+				<text class="title-py-label">拼音：</text>
+				<view class="title-py-cells">
+					<pinyin-four-lines-row
+						v-if="pinyinSyllableTokens.length"
+						:syllables="pinyinSyllableTokens"
+						size="lg"
+					/>
+					<text v-else class="title-py-plain font-pinyin">{{ pinyin || '-' }}</text>
+				</view>
+			</view>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
 			<view v-if="ext.tradForm" class="trad-banner">
 				<text class="trad-b-label">繁体</text>
@@ -62,8 +72,13 @@ import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 export default {
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			dictSpeakerIconSrc:
@@ -88,6 +103,15 @@ export default {
 			},
 			sameLesson: [],
 			similarChars: []
+		}
+	},
+	computed: {
+		pinyinSyllableTokens() {
+			const tokens = splitPinyinDisplayTokens(this.pinyin)
+			if (tokens.length) return tokens
+			const s = String(this.pinyin || '').trim()
+			if (s && s !== '—' && s !== '-') return [s]
+			return []
 		}
 	},
 	async onLoad(query) {
@@ -177,7 +201,35 @@ export default {
 .page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; }
 .big-char { display: block; font-size: 140rpx; line-height: 1; color: #2c2419; text-align: center; margin-bottom: 14rpx; }
-.title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
+.title-py-block {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	margin-bottom: 12rpx;
+	gap: 10rpx 14rpx;
+}
+.title-py-label {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #2c2419;
+	flex-shrink: 0;
+}
+.title-py-cells {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10rpx;
+	flex: 1;
+	min-width: 0;
+}
+.title-py-plain {
+	font-size: 30rpx;
+	font-weight: 600;
+	color: #4e4e4e;
+	line-height: 1.3;
+}
 .desc { display: block; font-size: 25rpx; color: #6b6560; margin-bottom: 16rpx; }
 .meta-grid {
 	position: relative;

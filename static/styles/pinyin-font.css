@@ -1,0 +1,15 @@
+/**
+ * 汉语拼音常规体：jaywcjlove/pinyin-font（docs/pinyin-regular.ttf）
+ * 授权见 static/fonts/Pinyin-Regular-LICENSE.txt（SIL Open Font License 1.1）
+ */
+@font-face {
+	font-family: 'Pinyin Regular';
+	src: url('/static/fonts/Pinyin-Regular.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+
+.font-pinyin {
+	font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}

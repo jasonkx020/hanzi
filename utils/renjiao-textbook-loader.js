@@ -8,7 +8,13 @@ const TEXTBOOK_EXTRA_KEYS = [
 	'unitTheme',
 	'kind',
 	'catalogLessonNo',
-	'lessonInUnit'
+	'lessonInUnit',
+	/** 与同册识字表该课组对齐的 { hanzi, pinyin }[] */
+	'literacy_chars',
+	/** 与同册写字表该课组对齐 */
+	'writing_chars',
+	/** 与同册词语表该课组对齐（hanzi 可为多字词） */
+	'word_terms'
 ]
 
 function buildFileName(grade, semester) {
