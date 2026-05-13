@@ -41,12 +41,11 @@ export function splitPinyinSyllableGlyphs(syllable) {
 	return out.map((ch) => ({
 		ch,
 		kind: classifyPinyinGlyph(ch),
-		// 教材 ɑ（U+0251）常走回退字体，字身高于 o/e/i；略缩字号与四线格内其它字母对齐
-		alphMetricFix: ch.includes('\u0251')
+		alphMetricFix: false
 	}))
 }
 
-/** 取下缀拉丁字母（含 ɑ）用于分类 */
+/** 取下缀拉丁字母用于分类 */
 function baseLatinLower(cluster) {
 	const flat = cluster.normalize('NFC')
 	const parts = [...flat]
@@ -73,6 +72,6 @@ export function classifyPinyinGlyph(cluster) {
 	if ('gpqy'.includes(c)) return 'desc'
 	if (c === 'j') return 'desc'
 
-	// 其余主体在中格：a o e i u ü ɑ 等
+	// 其余主体在中格：a o e i u ü 等
 	return 'mid'
 }

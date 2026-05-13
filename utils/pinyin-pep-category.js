@@ -72,10 +72,10 @@ const INITIAL_DEFS = [
 	}
 ]
 
-/** 韵母结构：单韵母 / 复韵母 / er / 前鼻韵母 / 后鼻韵母 */
-const FINAL_SIMPLE = ['ɑ', 'o', 'e', 'i', 'u', 'ü']
-/** 与拼音页网格一致：教材 ɑ 形（ɑi / ɑo） */
-const FINAL_COMPOUND = ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe']
+/** 韵母结构：单韵母 / 复韵母 / er / 前鼻韵母 / 后鼻韵母（字母统一为拉丁 a） */
+const FINAL_SIMPLE = ['a', 'o', 'e', 'i', 'u', 'ü']
+/** 与拼音页网格一致 */
+const FINAL_COMPOUND = ['ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe']
 
 const FINAL_DEFS = [
 	{
@@ -101,24 +101,24 @@ const FINAL_DEFS = [
 	},
 	{
 		key: 'nasal_front',
-		label: '前鼻韵母 ɑn en in un ün',
+		label: '前鼻韵母 an en in un ün',
 		bg: '#fff4e8',
 		bd: '#e8c4a0',
-		symbols: new Set(['ɑn', 'en', 'in', 'un', 'ün'])
+		symbols: new Set(['an', 'en', 'in', 'un', 'ün'])
 	},
 	{
 		key: 'nasal_back',
-		label: '后鼻韵母 ɑng eng ing ong',
+		label: '后鼻韵母 ang eng ing ong',
 		bg: '#e8ffe8',
 		bd: '#98d098',
-		symbols: new Set(['ɑng', 'eng', 'ing', 'ong'])
+		symbols: new Set(['ang', 'eng', 'ing', 'ong'])
 	}
 ]
 
 /** 整体认读音节常见二分：翘舌一组、其余一组（教材常对比呈现） */
 const WHOLE_zhishi = ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si']
 
-const WHOLE_OTHER = ['yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying']
+const WHOLE_OTHER = ['yi', 'wu', 'yu', 'ye', 'yue', 'yuan', 'yin', 'yun', 'ying']
 
 const WHOLE_DEFS = [
 	{
@@ -130,7 +130,7 @@ const WHOLE_DEFS = [
 	},
 	{
 		key: 'whole_other',
-		label: 'yi wu yu ye yue yuɑn yin yun ying',
+		label: 'yi wu yu ye yue yuan yin yun ying',
 		bg: '#e8eeff',
 		bd: '#a8b4e8',
 		symbols: new Set(WHOLE_OTHER)
@@ -152,7 +152,7 @@ export function isPinyinWholeReadingSyllable(symbol) {
 }
 
 /** 拼读练习：区分两拼音节 / 含 üe 或撮口呼 / 三拼音节示例 */
-const DRILL_TRI = ['huɑ']
+const DRILL_TRI = ['hua']
 const DRILL_UE_FAMILY = ['xue']
 
 function pickInitial(sym) {

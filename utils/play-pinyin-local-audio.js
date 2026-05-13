@@ -8,8 +8,6 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 
-/** 教材 ɑ（LATIN SMALL LETTER ALPHA） */
-const U_ALPH = '\u0251'
 /** ü */
 const U_UML = '\u00fc'
 /** 一声–四声：ə 类预组合（ü 用 ü 的四声形式） */
@@ -21,8 +19,6 @@ const TONE_VOWELS = {
 	u: ['\u016b', '\u00fa', '\u01d4', '\u00f9'],
 	"\u00fc": ['\u01d6', '\u01d8', '\u01da', '\u01dc']
 }
-/** ɑ 上一声–四声：仅用组合调号，不做 NFC，避免异常合成 */
-const ALPH_WITH_TONE = ['\u0251\u0304', '\u0251\u0301', '\u0251\u030c', '\u0251\u0300']
 
 function normTone(syll) {
 	return String(syll || '')
@@ -32,7 +28,7 @@ function normTone(syll) {
 }
 
 /**
- * 标调位置：a/ɑ > o > e；iu→u；ui→i；否则最后一个 i/u/ü（与 PinYinSound 转换脚本一致）。
+ * 标调位置：a > o > e；iu→u；ui→i；否则最后一个 i/u/ü（与 PinYinSound 转换脚本一致）。
  * @returns {[number, string]|null} [index, vowelKey]
  */
 function vowelMarkIndex(syll) {
@@ -40,7 +36,7 @@ function vowelMarkIndex(syll) {
 	if (!s) return null
 	for (let i = 0; i < s.length; i++) {
 		const c = s[i]
-		if (c === 'a' || c === U_ALPH) return [i, 'a']
+		if (c === 'a') return [i, 'a']
 	}
 	const io = s.indexOf('o')
 	if (io >= 0) return [io, 'o']
@@ -64,7 +60,7 @@ function vowelMarkIndex(syll) {
 }
 
 /**
- * 无声调音节 → 带指定声调的文件名片段；与 convert_mp3_to_opus.py 一致：标调处及剩余拉丁 a 均为 ɑ。
+ * 无声调音节 → 带指定声调的文件名片段（拉丁 a 用 ā á ǎ à）。
  * 先去掉已有声调再标调；不使用 NFC。
  * @param {number} tone 1–4
  */
@@ -73,19 +69,18 @@ export function applyToneToSyllableStem(symbol, tone) {
 	const raw = stripPinyinToneMarks(normTone(symbol))
 	const pos = vowelMarkIndex(raw)
 	if (!pos) {
-		return raw.replace(/a/g, U_ALPH)
+		return raw
 	}
 	const [idx, v] = pos
 	let marked
 	if (v === 'a') {
-		marked = ALPH_WITH_TONE[tone - 1]
+		const reps = TONE_VOWELS.a
+		marked = reps ? reps[tone - 1] : 'a'
 	} else {
 		const reps = TONE_VOWELS[v]
 		marked = reps ? reps[tone - 1] : v
 	}
-	let core = raw.slice(0, idx) + marked + raw.slice(idx + 1)
-	core = core.replace(/a/g, U_ALPH)
-	return core
+	return raw.slice(0, idx) + marked + raw.slice(idx + 1)
 }
 
 let _inner = null
@@ -102,9 +97,10 @@ export function stopLocalPinyinAudio() {
 }
 
 
-/** 演示读音：/static/pinyin/{stem}.opus */
+/** 演示读音：/static/pinyin/{stem}.opus（文件名与界面一致，使用拉丁 a / 带调 a） */
 export function getLocalPinyinAudioPath(symbol) {
-	return `/static/pinyin/${symbol}.opus`
+	const stem = String(symbol || '').trim()
+	return `/static/pinyin/${stem}.opus`
 }
 
 /** 一声版文件名（带调字母），用于整体认读 / 拼读练习在无调 opus 缺失时的替补 */
@@ -179,9 +175,9 @@ export async function playToneGridCell(symbol, opts = {}) {
 	if (opts.asNeutral) {
 		return playLocalPinyinNeutralThenTone1(sym, true)
 	}
-	const src = `/static/pinyin/${sym}.opus`
+	const path = getLocalPinyinAudioPath(sym)
 	try {
-		await playPinyinLocalAudio(src)
+		await playPinyinLocalAudio(path)
 		return true
 	} catch (_) {
 		const ok = await speakPinyinSymbolAsync(sym, narrator)
@@ -208,15 +204,15 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 		const sym = String(tokens[i] || '').trim()
 		if (!sym) continue
 		let played = false
-		const exactSrc = `/static/pinyin/${sym}.opus`
+		const path = getLocalPinyinAudioPath(sym)
 		try {
-			await playPinyinLocalAudio(exactSrc)
+			await playPinyinLocalAudio(path)
 			played = true
-			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, exactSrc })
+			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path })
 		} catch (e) {
 			logHanziSpeak('lesson.display_pinyin.exact_fail', {
 				sym,
-				exactSrc,
+				path,
 				err: e && (e.errMsg || e.message || String(e))
 			})
 		}

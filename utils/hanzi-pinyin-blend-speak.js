@@ -53,7 +53,7 @@ export function resolveHanziPinyinReadings(hanzi, fallbackPinyinDisplay) {
 
 /**
  * 播放一个带调音节：先按无声调形拆分拼读，再播完整带调音节。
- * @param {string} tonedSyllable 如 zhāng、bɑ（可无调）
+ * @param {string} tonedSyllable 如 zhāng、ba（可无调）
  * @param {object} [opts]
  * @param {string} [opts.narrator]
  * @param {boolean} [opts.useTone1Fb=true]

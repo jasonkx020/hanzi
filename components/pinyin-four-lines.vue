@@ -52,7 +52,7 @@ export default {
 			const list = splitPinyinSyllableGlyphs(raw).filter((g) => g.ch)
 			return list.length
 				? list
-				: [{ ch: raw, kind: 'mid', alphMetricFix: raw.includes('\u0251') }]
+				: [{ ch: raw, kind: 'mid', alphMetricFix: false }]
 		},
 		rootClass() {
 			const s = this.size
@@ -174,7 +174,7 @@ export default {
 	position: relative;
 }
 
-/* ɑ（U+0251）回退字体字身偏高，略缩以与中格韵母视觉一致 */
+/* 可选：个别字母略缩字号与中格对齐 */
 .pfl-glyph--alph-metric {
 	font-size: 0.88em;
 }

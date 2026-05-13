@@ -169,11 +169,11 @@ import { getPinyinSymbolCategory, legendForTab } from '@/utils/pinyin-pep-catego
 
 /** 韵母分块（顺序与教材常见层级一致，自上而下） */
 const VOWEL_SECTIONS = [
-	{ title: '单韵母(6个)', symbols: ['ɑ', 'o', 'e', 'i', 'u', 'ü'] },
-	{ title: '复韵母(8个)', symbols: ['ɑi', 'ei', 'ui', 'ɑo', 'ou', 'iu', 'ie', 'üe'] },
+	{ title: '单韵母(6个)', symbols: ['a', 'o', 'e', 'i', 'u', 'ü'] },
+	{ title: '复韵母(8个)', symbols: ['ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe'] },
 	{ title: '特殊韵母(1个)', symbols: ['er'] },
-	{ title: '前鼻韵母(5个)', symbols: ['ɑn', 'en', 'in', 'un', 'ün'] },
-	{ title: '后鼻韵母(4个)', symbols: ['ɑng', 'eng', 'ing', 'ong'] }
+	{ title: '前鼻韵母(5个)', symbols: ['an', 'en', 'in', 'un', 'ün'] },
+	{ title: '后鼻韵母(4个)', symbols: ['ang', 'eng', 'ing', 'ong'] }
 ]
 
 /**
@@ -234,8 +234,8 @@ const WHOLE_READING_SECTIONS = [
 	{
 		title: '第二类(9个)',
 		desc:
-			'（yi、wu、yu、ye、yue、yuɑn、yin、yun、ying）它们按照拼写规则变化而来（如增加 y 或 w，或省略 ü 上两点等）。为不加重拼写规则负担，就作为整体来认读。',
-		symbols: ['yi', 'wu', 'yu', 'ye', 'yue', 'yuɑn', 'yin', 'yun', 'ying']
+			'（yi、wu、yu、ye、yue、yuan、yin、yun、ying）它们按照拼写规则变化而来（如增加 y 或 w，或省略 ü 上两点等）。为不加重拼写规则负担，就作为整体来认读。',
+		symbols: ['yi', 'wu', 'yu', 'ye', 'yue', 'yuan', 'yin', 'yun', 'ying']
 	}
 ]
 import { applyToneToSyllableStem, playToneGridCell, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
@@ -258,7 +258,7 @@ export default {
 				声母: INITIAL_SECTIONS.flatMap((s) => s.symbols),
 				韵母: VOWEL_SECTIONS.flatMap((s) => s.symbols),
 				整体认读: WHOLE_READING_SECTIONS.flatMap((s) => s.symbols),
-				拼读练习: ['bɑ', 'bo', 'mɑ', 'de', 'du', 'ge', 'huɑ', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
+				拼读练习: ['ba', 'bo', 'ma', 'de', 'du', 'ge', 'hua', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
 			},
 			narrator: 'kid',
 			autoRead: false,

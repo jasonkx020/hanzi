@@ -194,12 +194,14 @@ export default {
 		},
 		pyShow(row) {
 			let s = String(row.pinyin || '').replace(/\s+/g, ' ').trim()
+			// uni.showToast({ title: s+'1', icon: 'none' })
 			if (!s && row.hanzi) {
 				try {
 					const c = String(row.hanzi).trim().charAt(0)
 					if (c) s = spellDisplayString(c, 'tone', 'poly', 'low') || ''
 				} catch (_) {}
 			}
+			
 			return s ? s : '-'
 		},
 		openChar(row) {
@@ -221,10 +223,10 @@ export default {
 				uni.showToast({ title: '暂无拼音', icon: 'none' })
 				return
 			}
+			// uni.showToast({ title: py, icon: 'none' })
 			const ok = await playOpusForDisplayPinyin(py)
 			logHanziSpeak('lesson.py_row.play_done', { py, ok })
-				uni.showToast({ title: '未找到该拼音的本地音频', icon: 'none' })
-			}
+			// uni.showToast({ title: '未找到该拼音的本地音频', icon: 'none' })
 		},
 		goFollowRead() {
 			uni.navigateTo({ url: '/pages/pinyin/index' })

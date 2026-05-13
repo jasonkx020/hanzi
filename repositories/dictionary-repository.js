@@ -13,7 +13,7 @@ import { getCachedDictionaryDetail, setCachedDictionaryDetail } from '@/utils/di
 const STROKE_CACHE = Object.create(null)
 const HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
 
-/** 拼音文案：折叠空白 trim，不做 ɑ ↔ a 改写 */
+/** 拼音文案：折叠空白 trim */
 function trimPinyinText(s) {
 	if (s == null || s === '') return ''
 	return String(s).replace(/\s+/g, ' ').trim()

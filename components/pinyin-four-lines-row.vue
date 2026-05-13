@@ -88,7 +88,7 @@ export default {
 				const glyphs = list.length
 					? list
 					: raw
-						? [{ ch: raw, kind: 'mid', alphMetricFix: raw.includes('\u0251') }]
+						? [{ ch: raw, kind: 'mid', alphMetricFix: false }]
 						: [{ ch: '—', kind: 'mid', alphMetricFix: false }]
 				return { syl: raw, glyphs, empty: false }
 			})
