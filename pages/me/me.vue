@@ -13,7 +13,7 @@
 		<view class="section-label">学习总览</view>
 		<view class="list">
 			<view class="item" @click="goReport">
-				<text>学习报告</text>
+				<text>家长报告</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goMedals">

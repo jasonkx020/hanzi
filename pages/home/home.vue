@@ -37,8 +37,8 @@
 			</view>
 			<view class="entry-card">
 				<text class="entry-title">⭐ 每日一练</text>
-				<text class="entry-desc">今天已学8个字，再练2个得勋章</text>
-				<button class="entry-btn" size="mini" @click="goDaily">继续练习</button>
+				<text class="entry-desc">{{ dailyDesc }}</text>
+				<button class="entry-btn" size="mini" @click="goDaily">{{ dailyBtnLabel }}</button>
 			</view>
 		</view>
 
@@ -57,6 +57,8 @@ import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-ga
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
 import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
+import { buildDailyTrainingQueue, countWeakInDailyItems } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
@@ -66,6 +68,8 @@ export default {
 			summary: '',
 			vipActive: false,
 			encourageText: '',
+			dailyDesc: '加载今日练习…',
+			dailyBtnLabel: '开始练习',
 			curriculumTabs: [
 				{
 					key: 'preschool',
@@ -103,9 +107,27 @@ export default {
 		this.refresh()
 	},
 	methods: {
-		refresh() {
+		async refresh() {
 			this.summary = getCurriculumSummary()
 			this.vipActive = isVipActive()
+			const p = getCurriculumPrefs()
+			const learned = countLearnedCharsForCurriculumPrefs(p)
+			try {
+				const plan = await buildDailyTrainingQueue(p, { limit: 10 })
+				const weakIn = countWeakInDailyItems(plan.items)
+				if (!plan.poolSize) {
+					this.dailyDesc = '当前字表下暂无生字，可先切换年级或去课本同步学选课。'
+					this.dailyBtnLabel = '去设置'
+				} else {
+					this.dailyBtnLabel = '开始练习'
+					const tail = weakIn ? `今日推荐含 ${weakIn} 个易错复习。` : '今日推荐已按易错优先排好。'
+					this.dailyDesc = `本字表已学 ${learned} 字 · 今日练 ${plan.items.length} 字。${tail}`
+				}
+			} catch (e) {
+				console.warn('[home] daily plan', e)
+				this.dailyDesc = '今日练习加载失败，请稍后重试。'
+				this.dailyBtnLabel = '重试'
+			}
 			this.encourageText = buildEncourageText({ remain: 5 })
 		},
 		isCurrentTab(item) {
@@ -133,6 +155,10 @@ export default {
 			startLiteracyGame()
 		},
 		goDaily() {
+			if (this.dailyBtnLabel === '去设置') {
+				uni.navigateTo({ url: '/pages/settings/curriculum' })
+				return
+			}
 			startDailyTraining()
 		}
 	}

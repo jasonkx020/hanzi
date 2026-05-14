@@ -127,3 +127,53 @@ export function listWrongOftenChars() {
 			return (b[COL_PROGRESS.updated_at_ms] || 0) - (a[COL_PROGRESS.updated_at_ms] || 0)
 		})
 }
+
+function recordMatchesCurriculumPrefs(rec, prefs) {
+	const p = prefs || getCurriculumPrefs()
+	const sem = semesterNorm(p.semester)
+	return (
+		String(rec[COL_PROGRESS.textbook_version_id] || '') === String(p.textbook_version_id || '') &&
+		Number(rec[COL_PROGRESS.grade]) === Number(p.grade) &&
+		semesterNorm(rec[COL_PROGRESS.semester]) === sem
+	)
+}
+
+/** 当前教材维度下「已学」字数（与字卡星星口径一致） */
+export function countLearnedCharsForCurriculumPrefs(prefs) {
+	const p = prefs || getCurriculumPrefs()
+	let n = 0
+	for (const rec of Object.values(readMap())) {
+		if (!recordMatchesCurriculumPrefs(rec, p)) continue
+		if (Number(rec[COL_PROGRESS.learned]) === 1) n++
+	}
+	return n
+}
+
+/** 当前教材维度下有过错题记录的字数 */
+export function countWrongTrackedCharsForCurriculumPrefs(prefs) {
+	const p = prefs || getCurriculumPrefs()
+	let n = 0
+	for (const rec of Object.values(readMap())) {
+		if (!recordMatchesCurriculumPrefs(rec, p)) continue
+		if ((Number(rec[COL_PROGRESS.wrong_count]) || 0) > 0) n++
+	}
+	return n
+}
+
+/**
+ * 当前教材维度下常错字列表（wrong_count > 0）
+ * @param {object} [prefs] 缺省为 getCurriculumPrefs()
+ * @param {number} [limit]
+ */
+export function listWrongOftenCharsForCurriculumPrefs(prefs, limit = 5) {
+	const p = prefs || getCurriculumPrefs()
+	const lim = Math.max(1, Math.min(50, Number(limit) || 5))
+	return Object.values(readMap())
+		.filter((r) => recordMatchesCurriculumPrefs(r, p) && (Number(r[COL_PROGRESS.wrong_count]) || 0) > 0)
+		.sort((a, b) => {
+			const dw = (Number(b[COL_PROGRESS.wrong_count]) || 0) - (Number(a[COL_PROGRESS.wrong_count]) || 0)
+			if (dw !== 0) return dw
+			return (b[COL_PROGRESS.updated_at_ms] || 0) - (a[COL_PROGRESS.updated_at_ms] || 0)
+		})
+		.slice(0, lim)
+}

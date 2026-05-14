@@ -55,6 +55,7 @@
 				>★</text>
 			</view>
 			<text class="progress-num">已学 {{ learnedCount }}/{{ totalChars }} 字</text>
+			<text v-if="quizPassedForLesson" class="quiz-passed-note">本课小测已通过 · 还可随时再练</text>
 		</view>
 	</view>
 </template>
@@ -70,6 +71,12 @@ import {
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
+import {
+	putLessonQuizTransfer,
+	putLessonFollowTransfer,
+	putLessonDictationTransfer
+} from '@/utils/lesson-mode-session.js'
+import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-progress-storage.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
 import { speakChinese } from '@/utils/speak-hanzi.js'
@@ -89,7 +96,9 @@ export default {
 			/** 人教 JSON 课次下标，与课本同步学列表一致 */
 			rjLessonIdx: null,
 			/** 人教 JSON 该篇 content */
-			rjContent: ''
+			rjContent: '',
+			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
+			quizPassedForLesson: false
 		}
 	},
 	computed: {
@@ -115,10 +124,12 @@ export default {
 		}
 		await this.reloadLesson()
 		this.refreshProgress()
+		this.refreshLessonQuizBadge()
 	},
 	async onShow() {
 		await this.reloadLesson()
 		this.refreshProgress()
+		this.refreshLessonQuizBadge()
 	},
 	methods: {
 		pyTokens(row) {
@@ -179,6 +190,18 @@ export default {
 			}
 			this.learnedCount = n
 		},
+		refreshLessonQuizBadge() {
+			const p = getCurriculumPrefs()
+			const lk = buildStoredLessonKey(this.rjLessonIdx, this.hint)
+			this.quizPassedForLesson = hasLessonQuizPassed(
+				{
+					textbook_version_id: p.textbook_version_id,
+					grade: p.grade,
+					semester: p.semester
+				},
+				lk
+			)
+		},
 		isLearned(hanzi) {
 			const h = String(hanzi || '').trim().charAt(0)
 			if (!h) return false
@@ -229,17 +252,52 @@ export default {
 			// uni.showToast({ title: '未找到该拼音的本地音频', icon: 'none' })
 		},
 		goFollowRead() {
-			uni.navigateTo({ url: '/pages/pinyin/index' })
+			if (!this.lessonChars.length) return
+			const rows = this.lessonChars.map((r) => ({
+				hanzi: String(r.hanzi || '').trim(),
+				pinyin: this.pyShow(r)
+			}))
+			putLessonFollowTransfer({
+				lessonTitle: this.hint,
+				rjLessonIdx: this.rjLessonIdx,
+				rows
+			})
+			let q = ''
+			if (this.rjLessonIdx != null) q = `rjLesson=${encodeURIComponent(String(this.rjLessonIdx))}`
+			else q = `hint=${encodeURIComponent(this.hint || '')}`
+			uni.navigateTo({ url: `/pages/literacy/lesson-follow?${q}` })
 		},
 		onDictation() {
-			uni.showToast({ title: '听写模式开发中：将支持报拼音/笔顺填空', icon: 'none' })
+			if (!this.lessonChars.length) return
+			const rows = this.lessonChars.map((r) => ({
+				hanzi: String(r.hanzi || '').trim(),
+				pinyin: this.pyShow(r)
+			}))
+			putLessonDictationTransfer({
+				lessonTitle: this.hint,
+				rjLessonIdx: this.rjLessonIdx,
+				rows
+			})
+			let q = ''
+			if (this.rjLessonIdx != null) q = `rjLesson=${encodeURIComponent(String(this.rjLessonIdx))}`
+			else q = `hint=${encodeURIComponent(this.hint || '')}`
+			uni.navigateTo({ url: `/pages/literacy/lesson-dictation?${q}` })
 		},
 		onMiniQuiz() {
 			if (!this.lessonChars.length) return
-			const first = this.lessonChars[0]
-			uni.navigateTo({
-				url: `/pages/tools/stroke?hanzi=${encodeURIComponent(first.hanzi || '')}&mode=test`
+			const rows = this.lessonChars.map((r) => ({
+				hanzi: String(r.hanzi || '').trim(),
+				pinyin: this.pyShow(r)
+			}))
+			putLessonQuizTransfer({
+				lessonTitle: this.hint,
+				rjLessonIdx: this.rjLessonIdx,
+				rows
 			})
+			let q = ''
+			if (this.rjLessonIdx != null) q = `rjLesson=${encodeURIComponent(String(this.rjLessonIdx))}`
+			else q = `hint=${encodeURIComponent(this.hint || '')}`
+			uni.navigateTo({ url: `/pages/literacy/lesson-quiz?${q}` })
 		}
 	}
 }
@@ -511,5 +569,14 @@ export default {
 	flex: 1;
 	min-width: 0;
 	text-align: right;
+}
+
+.quiz-passed-note {
+	flex-basis: 100%;
+	width: 100%;
+	margin-top: 10rpx;
+	font-size: 22rpx;
+	color: #558b2f;
+	line-height: 1.4;
 }
 </style>

@@ -84,6 +84,24 @@
 			}
 		},
 		{
+			"path": "pages/literacy/lesson-quiz",
+			"style": {
+				"navigationBarTitleText": "本课小测"
+			}
+		},
+		{
+			"path": "pages/literacy/lesson-follow",
+			"style": {
+				"navigationBarTitleText": "跟读"
+			}
+		},
+		{
+			"path": "pages/literacy/lesson-dictation",
+			"style": {
+				"navigationBarTitleText": "听音找字"
+			}
+		},
+		{
 			"path": "pages/literacy/char",
 			"style": {
 				"navigationBarTitleText": "单字学习"
@@ -98,7 +116,7 @@
 		{
 			"path": "pages/literacy/game",
 			"style": {
-				"navigationBarTitleText": "趣味识字营"
+				"navigationBarTitleText": "萌萌的气球营"
 			}
 		},
 		{
@@ -116,7 +134,7 @@
 		{
 			"path": "pages/me/report",
 			"style": {
-				"navigationBarTitleText": "学习报告"
+				"navigationBarTitleText": "家长报告"
 			}
 		},
 		{

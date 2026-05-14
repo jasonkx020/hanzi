@@ -1,4 +1,5 @@
-const GRADE_CN = ['', '一', '二', '三', '四', '五', '六']
+import { renjiaoTextbookJsonFile } from '@/constants/renjiao-textbook-filenames.js'
+
 const STATIC_BOOKTEXT_ROOT = '/static/booktext/renjiaoban/'
 
 /** 课文 JSON 中与目录对应的可选字段（见 static/booktext/renjiaoban/*.json） */
@@ -18,9 +19,7 @@ const TEXTBOOK_EXTRA_KEYS = [
 ]
 
 function buildFileName(grade, semester) {
-	const g = Number(grade)
-	if (!Number.isFinite(g) || g < 1 || g > 6) return ''
-	return `${GRADE_CN[g]}年级${semester === '下' ? '下册' : '上册'}.json`
+	return renjiaoTextbookJsonFile(grade, semester, 'main')
 }
 
 /**
@@ -147,14 +146,13 @@ export function filterRenjiaoTextbookSyncLessons(rows) {
 }
 
 /**
- * 合并识字表 + 写字表为字卡行（先识字，后写字；与 JSON 顺序一致）
+ * 仅识字表行（不含写字表），用于「识字已学」等统计
  * @param {Record<string, unknown>} item
  * @returns {Array<{ id: string, hanzi: string, pinyin: string }>}
  */
-export function buildLessonCharRowsFromRenjiaoItem(item) {
+export function buildLiteracyOnlyCharRowsFromRenjiaoItem(item) {
 	if (!item || typeof item !== 'object') return []
 	const lit = normalizeCharPairList(item.literacy_chars)
-	const wri = normalizeCharPairList(item.writing_chars)
 	const out = []
 	let i = 0
 	for (const e of lit) {
@@ -167,6 +165,19 @@ export function buildLessonCharRowsFromRenjiaoItem(item) {
 		})
 		i++
 	}
+	return out
+}
+
+/**
+ * 合并识字表 + 写字表为字卡行（先识字，后写字；与 JSON 顺序一致）
+ * @param {Record<string, unknown>} item
+ * @returns {Array<{ id: string, hanzi: string, pinyin: string }>}
+ */
+export function buildLessonCharRowsFromRenjiaoItem(item) {
+	if (!item || typeof item !== 'object') return []
+	const litPart = buildLiteracyOnlyCharRowsFromRenjiaoItem(item)
+	const wri = normalizeCharPairList(item.writing_chars)
+	const out = litPart.slice()
 	let j = 0
 	for (const e of wri) {
 		const hanzi = String(e && e.hanzi != null ? e.hanzi : '').trim()

@@ -1,0 +1,1384 @@
+[
+	{
+		"unit": 1,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 1,
+		"lessonInUnit": 1,
+		"title": "1画（1个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为1画，共1个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "一",
+				"pinyin": "yī"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 2,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 2,
+		"lessonInUnit": 1,
+		"title": "2画（13个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为2画，共13个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "八",
+				"pinyin": "bā"
+			},
+			{
+				"hanzi": "厂",
+				"pinyin": "chǎng"
+			},
+			{
+				"hanzi": "刀",
+				"pinyin": "dāo"
+			},
+			{
+				"hanzi": "儿",
+				"pinyin": "ér"
+			},
+			{
+				"hanzi": "二",
+				"pinyin": "èr"
+			},
+			{
+				"hanzi": "几",
+				"pinyin": "jǐ"
+			},
+			{
+				"hanzi": "九",
+				"pinyin": "jiǔ"
+			},
+			{
+				"hanzi": "了",
+				"pinyin": "le"
+			},
+			{
+				"hanzi": "力",
+				"pinyin": "lì"
+			},
+			{
+				"hanzi": "七",
+				"pinyin": "qī"
+			},
+			{
+				"hanzi": "人",
+				"pinyin": "rén"
+			},
+			{
+				"hanzi": "十",
+				"pinyin": "shí"
+			},
+			{
+				"hanzi": "又",
+				"pinyin": "yòu"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 3,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 3,
+		"lessonInUnit": 1,
+		"title": "3画（25个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为3画，共25个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "才",
+				"pinyin": "cái"
+			},
+			{
+				"hanzi": "大",
+				"pinyin": "dà"
+			},
+			{
+				"hanzi": "飞",
+				"pinyin": "fēi"
+			},
+			{
+				"hanzi": "干",
+				"pinyin": "gàn"
+			},
+			{
+				"hanzi": "个",
+				"pinyin": "gè"
+			},
+			{
+				"hanzi": "工",
+				"pinyin": "gōng"
+			},
+			{
+				"hanzi": "广",
+				"pinyin": "guǎng"
+			},
+			{
+				"hanzi": "己",
+				"pinyin": "jǐ"
+			},
+			{
+				"hanzi": "巾",
+				"pinyin": "jīn"
+			},
+			{
+				"hanzi": "口",
+				"pinyin": "kǒu"
+			},
+			{
+				"hanzi": "马",
+				"pinyin": "mǎ"
+			},
+			{
+				"hanzi": "门",
+				"pinyin": "mén"
+			},
+			{
+				"hanzi": "女",
+				"pinyin": "nǚ"
+			},
+			{
+				"hanzi": "千",
+				"pinyin": "qiān"
+			},
+			{
+				"hanzi": "三",
+				"pinyin": "sān"
+			},
+			{
+				"hanzi": "山",
+				"pinyin": "shān"
+			},
+			{
+				"hanzi": "上",
+				"pinyin": "shàng"
+			},
+			{
+				"hanzi": "土",
+				"pinyin": "tǔ"
+			},
+			{
+				"hanzi": "万",
+				"pinyin": "wàn"
+			},
+			{
+				"hanzi": "卫",
+				"pinyin": "wèi"
+			},
+			{
+				"hanzi": "习",
+				"pinyin": "xí"
+			},
+			{
+				"hanzi": "下",
+				"pinyin": "xià"
+			},
+			{
+				"hanzi": "小",
+				"pinyin": "xiǎo"
+			},
+			{
+				"hanzi": "也",
+				"pinyin": "yě"
+			},
+			{
+				"hanzi": "子",
+				"pinyin": "zǐ"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 4,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 4,
+		"lessonInUnit": 1,
+		"title": "4画（44个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为4画，共44个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "办",
+				"pinyin": "bàn"
+			},
+			{
+				"hanzi": "贝",
+				"pinyin": "bèi"
+			},
+			{
+				"hanzi": "比",
+				"pinyin": "bǐ"
+			},
+			{
+				"hanzi": "不",
+				"pinyin": "bù"
+			},
+			{
+				"hanzi": "车",
+				"pinyin": "chē"
+			},
+			{
+				"hanzi": "尺",
+				"pinyin": "chǐ"
+			},
+			{
+				"hanzi": "从",
+				"pinyin": "cóng"
+			},
+			{
+				"hanzi": "反",
+				"pinyin": "fǎn"
+			},
+			{
+				"hanzi": "方",
+				"pinyin": "fāng"
+			},
+			{
+				"hanzi": "分",
+				"pinyin": "fēn"
+			},
+			{
+				"hanzi": "风",
+				"pinyin": "fēng"
+			},
+			{
+				"hanzi": "公",
+				"pinyin": "gōng"
+			},
+			{
+				"hanzi": "火",
+				"pinyin": "huǒ"
+			},
+			{
+				"hanzi": "见",
+				"pinyin": "jiàn"
+			},
+			{
+				"hanzi": "今",
+				"pinyin": "jīn"
+			},
+			{
+				"hanzi": "开",
+				"pinyin": "kāi"
+			},
+			{
+				"hanzi": "六",
+				"pinyin": "liù"
+			},
+			{
+				"hanzi": "毛",
+				"pinyin": "máo"
+			},
+			{
+				"hanzi": "木",
+				"pinyin": "mù"
+			},
+			{
+				"hanzi": "牛",
+				"pinyin": "niú"
+			},
+			{
+				"hanzi": "片",
+				"pinyin": "piàn"
+			},
+			{
+				"hanzi": "气",
+				"pinyin": "qì"
+			},
+			{
+				"hanzi": "日",
+				"pinyin": "rì"
+			},
+			{
+				"hanzi": "少",
+				"pinyin": "shǎo"
+			},
+			{
+				"hanzi": "什",
+				"pinyin": "shén"
+			},
+			{
+				"hanzi": "手",
+				"pinyin": "shǒu"
+			},
+			{
+				"hanzi": "书",
+				"pinyin": "shū"
+			},
+			{
+				"hanzi": "双",
+				"pinyin": "shuāng"
+			},
+			{
+				"hanzi": "水",
+				"pinyin": "shuǐ"
+			},
+			{
+				"hanzi": "太",
+				"pinyin": "tài"
+			},
+			{
+				"hanzi": "天",
+				"pinyin": "tiān"
+			},
+			{
+				"hanzi": "王",
+				"pinyin": "wáng"
+			},
+			{
+				"hanzi": "为",
+				"pinyin": "wéi"
+			},
+			{
+				"hanzi": "文",
+				"pinyin": "wén"
+			},
+			{
+				"hanzi": "五",
+				"pinyin": "wǔ"
+			},
+			{
+				"hanzi": "午",
+				"pinyin": "wǔ"
+			},
+			{
+				"hanzi": "心",
+				"pinyin": "xīn"
+			},
+			{
+				"hanzi": "牙",
+				"pinyin": "yá"
+			},
+			{
+				"hanzi": "以",
+				"pinyin": "yǐ"
+			},
+			{
+				"hanzi": "元",
+				"pinyin": "yuán"
+			},
+			{
+				"hanzi": "月",
+				"pinyin": "yuè"
+			},
+			{
+				"hanzi": "云",
+				"pinyin": "yún"
+			},
+			{
+				"hanzi": "长",
+				"pinyin": "cháng"
+			},
+			{
+				"hanzi": "中",
+				"pinyin": "zhōng"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 5,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 5,
+		"lessonInUnit": 1,
+		"title": "5画（44个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为5画，共44个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "白",
+				"pinyin": "bái"
+			},
+			{
+				"hanzi": "半",
+				"pinyin": "bàn"
+			},
+			{
+				"hanzi": "包",
+				"pinyin": "bāo"
+			},
+			{
+				"hanzi": "北",
+				"pinyin": "běi"
+			},
+			{
+				"hanzi": "本",
+				"pinyin": "běn"
+			},
+			{
+				"hanzi": "边",
+				"pinyin": "biān"
+			},
+			{
+				"hanzi": "册",
+				"pinyin": "cè"
+			},
+			{
+				"hanzi": "出",
+				"pinyin": "chū"
+			},
+			{
+				"hanzi": "打",
+				"pinyin": "dá"
+			},
+			{
+				"hanzi": "电",
+				"pinyin": "diàn"
+			},
+			{
+				"hanzi": "东",
+				"pinyin": "dōng"
+			},
+			{
+				"hanzi": "冬",
+				"pinyin": "dōng"
+			},
+			{
+				"hanzi": "对",
+				"pinyin": "duì"
+			},
+			{
+				"hanzi": "发",
+				"pinyin": "fā"
+			},
+			{
+				"hanzi": "瓜",
+				"pinyin": "guā"
+			},
+			{
+				"hanzi": "加",
+				"pinyin": "jiā"
+			},
+			{
+				"hanzi": "叫",
+				"pinyin": "jiào"
+			},
+			{
+				"hanzi": "可",
+				"pinyin": "kě"
+			},
+			{
+				"hanzi": "乐",
+				"pinyin": "lè"
+			},
+			{
+				"hanzi": "立",
+				"pinyin": "lì"
+			},
+			{
+				"hanzi": "们",
+				"pinyin": "men"
+			},
+			{
+				"hanzi": "民",
+				"pinyin": "mín"
+			},
+			{
+				"hanzi": "目",
+				"pinyin": "mù"
+			},
+			{
+				"hanzi": "奶",
+				"pinyin": "nǎi"
+			},
+			{
+				"hanzi": "鸟",
+				"pinyin": "niǎo"
+			},
+			{
+				"hanzi": "皮",
+				"pinyin": "pí"
+			},
+			{
+				"hanzi": "平",
+				"pinyin": "píng"
+			},
+			{
+				"hanzi": "去",
+				"pinyin": "qù"
+			},
+			{
+				"hanzi": "让",
+				"pinyin": "ràng"
+			},
+			{
+				"hanzi": "生",
+				"pinyin": "shēng"
+			},
+			{
+				"hanzi": "石",
+				"pinyin": "shí"
+			},
+			{
+				"hanzi": "市",
+				"pinyin": "shì"
+			},
+			{
+				"hanzi": "四",
+				"pinyin": "sì"
+			},
+			{
+				"hanzi": "他",
+				"pinyin": "tā"
+			},
+			{
+				"hanzi": "台",
+				"pinyin": "tái"
+			},
+			{
+				"hanzi": "田",
+				"pinyin": "tián"
+			},
+			{
+				"hanzi": "头",
+				"pinyin": "tou"
+			},
+			{
+				"hanzi": "外",
+				"pinyin": "wài"
+			},
+			{
+				"hanzi": "业",
+				"pinyin": "yè"
+			},
+			{
+				"hanzi": "叶",
+				"pinyin": "yè"
+			},
+			{
+				"hanzi": "用",
+				"pinyin": "yòng"
+			},
+			{
+				"hanzi": "正",
+				"pinyin": "zhèng"
+			},
+			{
+				"hanzi": "只",
+				"pinyin": "zhǐ"
+			},
+			{
+				"hanzi": "主",
+				"pinyin": "zhù"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 6,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 6,
+		"lessonInUnit": 1,
+		"title": "6画（59个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为6画，共59个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "百",
+				"pinyin": "bǎi"
+			},
+			{
+				"hanzi": "成",
+				"pinyin": "chéng"
+			},
+			{
+				"hanzi": "吃",
+				"pinyin": "chī"
+			},
+			{
+				"hanzi": "虫",
+				"pinyin": "chóng"
+			},
+			{
+				"hanzi": "次",
+				"pinyin": "cì"
+			},
+			{
+				"hanzi": "当",
+				"pinyin": "dāng"
+			},
+			{
+				"hanzi": "地",
+				"pinyin": "dì"
+			},
+			{
+				"hanzi": "灯",
+				"pinyin": "dēng"
+			},
+			{
+				"hanzi": "动",
+				"pinyin": "dòng"
+			},
+			{
+				"hanzi": "多",
+				"pinyin": "duō"
+			},
+			{
+				"hanzi": "耳",
+				"pinyin": "ěr"
+			},
+			{
+				"hanzi": "共",
+				"pinyin": "gòng"
+			},
+			{
+				"hanzi": "关",
+				"pinyin": "guān"
+			},
+			{
+				"hanzi": "光",
+				"pinyin": "guāng"
+			},
+			{
+				"hanzi": "过",
+				"pinyin": "guò"
+			},
+			{
+				"hanzi": "好",
+				"pinyin": "hǎo"
+			},
+			{
+				"hanzi": "合",
+				"pinyin": "hé"
+			},
+			{
+				"hanzi": "红",
+				"pinyin": "hóng"
+			},
+			{
+				"hanzi": "后",
+				"pinyin": "hòu"
+			},
+			{
+				"hanzi": "回",
+				"pinyin": "huí"
+			},
+			{
+				"hanzi": "会",
+				"pinyin": "huì"
+			},
+			{
+				"hanzi": "机",
+				"pinyin": "jī"
+			},
+			{
+				"hanzi": "江",
+				"pinyin": "jiāng"
+			},
+			{
+				"hanzi": "交",
+				"pinyin": "jiāo"
+			},
+			{
+				"hanzi": "军",
+				"pinyin": "jūn"
+			},
+			{
+				"hanzi": "老",
+				"pinyin": "lǎo"
+			},
+			{
+				"hanzi": "妈",
+				"pinyin": "mā"
+			},
+			{
+				"hanzi": "米",
+				"pinyin": "mǐ"
+			},
+			{
+				"hanzi": "那",
+				"pinyin": "nà"
+			},
+			{
+				"hanzi": "年",
+				"pinyin": "nián"
+			},
+			{
+				"hanzi": "农",
+				"pinyin": "nóng"
+			},
+			{
+				"hanzi": "全",
+				"pinyin": "quán"
+			},
+			{
+				"hanzi": "舌",
+				"pinyin": "shé"
+			},
+			{
+				"hanzi": "师",
+				"pinyin": "shī"
+			},
+			{
+				"hanzi": "岁",
+				"pinyin": "suì"
+			},
+			{
+				"hanzi": "她",
+				"pinyin": "tā"
+			},
+			{
+				"hanzi": "同",
+				"pinyin": "tóng"
+			},
+			{
+				"hanzi": "网",
+				"pinyin": "wǎng"
+			},
+			{
+				"hanzi": "问",
+				"pinyin": "wèn"
+			},
+			{
+				"hanzi": "西",
+				"pinyin": "xī"
+			},
+			{
+				"hanzi": "先",
+				"pinyin": "xiān"
+			},
+			{
+				"hanzi": "向",
+				"pinyin": "xiàng"
+			},
+			{
+				"hanzi": "行",
+				"pinyin": "xíng"
+			},
+			{
+				"hanzi": "兴",
+				"pinyin": "xìng"
+			},
+			{
+				"hanzi": "羊",
+				"pinyin": "yáng"
+			},
+			{
+				"hanzi": "阳",
+				"pinyin": "yáng"
+			},
+			{
+				"hanzi": "爷",
+				"pinyin": "yé"
+			},
+			{
+				"hanzi": "页",
+				"pinyin": "yè"
+			},
+			{
+				"hanzi": "衣",
+				"pinyin": "yī"
+			},
+			{
+				"hanzi": "因",
+				"pinyin": "yīn"
+			},
+			{
+				"hanzi": "阴",
+				"pinyin": "yīn"
+			},
+			{
+				"hanzi": "有",
+				"pinyin": "yǒu"
+			},
+			{
+				"hanzi": "羽",
+				"pinyin": "yǔ"
+			},
+			{
+				"hanzi": "再",
+				"pinyin": "zài"
+			},
+			{
+				"hanzi": "在",
+				"pinyin": "zài"
+			},
+			{
+				"hanzi": "早",
+				"pinyin": "zǎo"
+			},
+			{
+				"hanzi": "竹",
+				"pinyin": "zhú"
+			},
+			{
+				"hanzi": "字",
+				"pinyin": "zì"
+			},
+			{
+				"hanzi": "自",
+				"pinyin": "zì"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 7,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 7,
+		"lessonInUnit": 1,
+		"title": "7画（31个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为7画，共31个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "把",
+				"pinyin": "bǎ"
+			},
+			{
+				"hanzi": "别",
+				"pinyin": "bié"
+			},
+			{
+				"hanzi": "吵",
+				"pinyin": "chǎo"
+			},
+			{
+				"hanzi": "床",
+				"pinyin": "chuáng"
+			},
+			{
+				"hanzi": "但",
+				"pinyin": "dàn"
+			},
+			{
+				"hanzi": "豆",
+				"pinyin": "dòu"
+			},
+			{
+				"hanzi": "饭",
+				"pinyin": "fàn"
+			},
+			{
+				"hanzi": "更",
+				"pinyin": "gèng"
+			},
+			{
+				"hanzi": "还",
+				"pinyin": "hái"
+			},
+			{
+				"hanzi": "花",
+				"pinyin": "huā"
+			},
+			{
+				"hanzi": "进",
+				"pinyin": "jìn"
+			},
+			{
+				"hanzi": "快",
+				"pinyin": "kuài"
+			},
+			{
+				"hanzi": "来",
+				"pinyin": "lái"
+			},
+			{
+				"hanzi": "里",
+				"pinyin": "lǐ"
+			},
+			{
+				"hanzi": "两",
+				"pinyin": "liǎng"
+			},
+			{
+				"hanzi": "没",
+				"pinyin": "méi"
+			},
+			{
+				"hanzi": "每",
+				"pinyin": "měi"
+			},
+			{
+				"hanzi": "你",
+				"pinyin": "nǐ"
+			},
+			{
+				"hanzi": "身",
+				"pinyin": "shēn"
+			},
+			{
+				"hanzi": "声",
+				"pinyin": "shēng"
+			},
+			{
+				"hanzi": "时",
+				"pinyin": "shí"
+			},
+			{
+				"hanzi": "条",
+				"pinyin": "tiáo"
+			},
+			{
+				"hanzi": "听",
+				"pinyin": "tīng"
+			},
+			{
+				"hanzi": "我",
+				"pinyin": "wǒ"
+			},
+			{
+				"hanzi": "医",
+				"pinyin": "yī"
+			},
+			{
+				"hanzi": "找",
+				"pinyin": "zhǎo"
+			},
+			{
+				"hanzi": "这",
+				"pinyin": "zhè"
+			},
+			{
+				"hanzi": "住",
+				"pinyin": "zhù"
+			},
+			{
+				"hanzi": "走",
+				"pinyin": "zǒu"
+			},
+			{
+				"hanzi": "作",
+				"pinyin": "zuò"
+			},
+			{
+				"hanzi": "坐",
+				"pinyin": "zuò"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 8,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 8,
+		"lessonInUnit": 1,
+		"title": "8画（30个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为8画，共30个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "爸",
+				"pinyin": "bà"
+			},
+			{
+				"hanzi": "饱",
+				"pinyin": "bǎo"
+			},
+			{
+				"hanzi": "到",
+				"pinyin": "dào"
+			},
+			{
+				"hanzi": "的",
+				"pinyin": "de"
+			},
+			{
+				"hanzi": "放",
+				"pinyin": "fàng"
+			},
+			{
+				"hanzi": "狗",
+				"pinyin": "gǒu"
+			},
+			{
+				"hanzi": "国",
+				"pinyin": "guó"
+			},
+			{
+				"hanzi": "果",
+				"pinyin": "guǒ"
+			},
+			{
+				"hanzi": "和",
+				"pinyin": "hé"
+			},
+			{
+				"hanzi": "河",
+				"pinyin": "hé"
+			},
+			{
+				"hanzi": "画",
+				"pinyin": "huà"
+			},
+			{
+				"hanzi": "话",
+				"pinyin": "huà"
+			},
+			{
+				"hanzi": "姐",
+				"pinyin": "jiě"
+			},
+			{
+				"hanzi": "金",
+				"pinyin": "jīn"
+			},
+			{
+				"hanzi": "京",
+				"pinyin": "jīng"
+			},
+			{
+				"hanzi": "经",
+				"pinyin": "jìng"
+			},
+			{
+				"hanzi": "林",
+				"pinyin": "lín"
+			},
+			{
+				"hanzi": "妹",
+				"pinyin": "mèi"
+			},
+			{
+				"hanzi": "明",
+				"pinyin": "míng"
+			},
+			{
+				"hanzi": "朋",
+				"pinyin": "péng"
+			},
+			{
+				"hanzi": "奇",
+				"pinyin": "qí"
+			},
+			{
+				"hanzi": "青",
+				"pinyin": "qīng"
+			},
+			{
+				"hanzi": "玩",
+				"pinyin": "wán"
+			},
+			{
+				"hanzi": "现",
+				"pinyin": "xiàn"
+			},
+			{
+				"hanzi": "些",
+				"pinyin": "xiē"
+			},
+			{
+				"hanzi": "学",
+				"pinyin": "xué"
+			},
+			{
+				"hanzi": "鱼",
+				"pinyin": "yú"
+			},
+			{
+				"hanzi": "雨",
+				"pinyin": "yù"
+			},
+			{
+				"hanzi": "知",
+				"pinyin": "zhī"
+			},
+			{
+				"hanzi": "直",
+				"pinyin": "zhí"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 9,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 9,
+		"lessonInUnit": 1,
+		"title": "9画（22个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为9画，共22个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "草",
+				"pinyin": "cǎo"
+			},
+			{
+				"hanzi": "穿",
+				"pinyin": "chuān"
+			},
+			{
+				"hanzi": "春",
+				"pinyin": "chūn"
+			},
+			{
+				"hanzi": "点",
+				"pinyin": "diǎn"
+			},
+			{
+				"hanzi": "给",
+				"pinyin": "gěi"
+			},
+			{
+				"hanzi": "孩",
+				"pinyin": "hái"
+			},
+			{
+				"hanzi": "很",
+				"pinyin": "hěn"
+			},
+			{
+				"hanzi": "看",
+				"pinyin": "kàn"
+			},
+			{
+				"hanzi": "亮",
+				"pinyin": "liàng"
+			},
+			{
+				"hanzi": "美",
+				"pinyin": "měi"
+			},
+			{
+				"hanzi": "面",
+				"pinyin": "miàn"
+			},
+			{
+				"hanzi": "胖",
+				"pinyin": "pàng"
+			},
+			{
+				"hanzi": "前",
+				"pinyin": "qián"
+			},
+			{
+				"hanzi": "秋",
+				"pinyin": "qiū"
+			},
+			{
+				"hanzi": "是",
+				"pinyin": "shì"
+			},
+			{
+				"hanzi": "树",
+				"pinyin": "shù"
+			},
+			{
+				"hanzi": "说",
+				"pinyin": "shuō"
+			},
+			{
+				"hanzi": "洗",
+				"pinyin": "xǐ"
+			},
+			{
+				"hanzi": "星",
+				"pinyin": "xīng"
+			},
+			{
+				"hanzi": "要",
+				"pinyin": "yào"
+			},
+			{
+				"hanzi": "音",
+				"pinyin": "yīn"
+			},
+			{
+				"hanzi": "语",
+				"pinyin": "yù"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 10,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 10,
+		"lessonInUnit": 1,
+		"title": "10画（17个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为10画，共17个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "班",
+				"pinyin": "bān"
+			},
+			{
+				"hanzi": "被",
+				"pinyin": "bèi"
+			},
+			{
+				"hanzi": "都",
+				"pinyin": "dōu"
+			},
+			{
+				"hanzi": "高",
+				"pinyin": "gāo"
+			},
+			{
+				"hanzi": "哥",
+				"pinyin": "gē"
+			},
+			{
+				"hanzi": "海",
+				"pinyin": "hǎi"
+			},
+			{
+				"hanzi": "家",
+				"pinyin": "jiā"
+			},
+			{
+				"hanzi": "课",
+				"pinyin": "kè"
+			},
+			{
+				"hanzi": "哭",
+				"pinyin": "kū"
+			},
+			{
+				"hanzi": "起",
+				"pinyin": "qǐ"
+			},
+			{
+				"hanzi": "谁",
+				"pinyin": "shuí"
+			},
+			{
+				"hanzi": "校",
+				"pinyin": "xiào"
+			},
+			{
+				"hanzi": "笑",
+				"pinyin": "xiào"
+			},
+			{
+				"hanzi": "样",
+				"pinyin": "yàng"
+			},
+			{
+				"hanzi": "站",
+				"pinyin": "zhàn"
+			},
+			{
+				"hanzi": "真",
+				"pinyin": "zhēn"
+			},
+			{
+				"hanzi": "桌",
+				"pinyin": "zhuō"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 11,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 11,
+		"lessonInUnit": 1,
+		"title": "11画（8个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为11画，共8个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "船",
+				"pinyin": "chuán"
+			},
+			{
+				"hanzi": "脸",
+				"pinyin": "liǎn"
+			},
+			{
+				"hanzi": "猫",
+				"pinyin": "māo"
+			},
+			{
+				"hanzi": "票",
+				"pinyin": "piào"
+			},
+			{
+				"hanzi": "晚",
+				"pinyin": "wǎn"
+			},
+			{
+				"hanzi": "雪",
+				"pinyin": "xuě"
+			},
+			{
+				"hanzi": "着",
+				"pinyin": "zhe"
+			},
+			{
+				"hanzi": "做",
+				"pinyin": "zuò"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 12,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 12,
+		"lessonInUnit": 1,
+		"title": "12画（5个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为12画，共5个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "窗",
+				"pinyin": "chuāng"
+			},
+			{
+				"hanzi": "道",
+				"pinyin": "dào"
+			},
+			{
+				"hanzi": "就",
+				"pinyin": "jiù"
+			},
+			{
+				"hanzi": "跑",
+				"pinyin": "páo"
+			},
+			{
+				"hanzi": "然",
+				"pinyin": "rán"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	},
+	{
+		"unit": 13,
+		"unitName": "教育部·识字写字基本字表（300字）",
+		"unitTheme": "按笔画分类",
+		"kind": "识字",
+		"catalogLessonNo": 13,
+		"lessonInUnit": 1,
+		"title": "13画（1个字）",
+		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为13画，共1个。\n",
+		"literacy_chars": [
+			{
+				"hanzi": "跳",
+				"pinyin": "tiào"
+			}
+		],
+		"writing_chars": [],
+		"word_terms": []
+	}
+]

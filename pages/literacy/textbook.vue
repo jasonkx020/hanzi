@@ -50,7 +50,7 @@
 		<!-- 课次列表：大卡片，好点 -->
 		<view class="section-head">
 			<text class="section-title">选一课，学生字</text>
-			<text class="section-hint">点下面任意一课进入字卡</text>
+			<text class="section-hint">点课进入字卡；该课识字表生字均已标「已学」时显示绿标（无识字表数据时按本课全部生字）</text>
 		</view>
 
 		<view v-if="lessons.length" class="lesson-list">
@@ -62,7 +62,10 @@
 			>
 				<view class="lesson-num">{{ i + 1 }}</view>
 				<view class="lesson-main">
-					<text class="lesson-title">{{ lesson.hint }}</text>
+					<view class="lesson-title-row">
+						<text class="lesson-title">{{ lesson.hint }}</text>
+						<text v-if="lesson.doneBadgeText" class="lesson-done-badge">{{ lesson.doneBadgeText }}</text>
+					</view>
 					<text class="lesson-meta">{{ lesson.count }} 个字 · 去学习</text>
 				</view>
 				<text class="lesson-arrow">›</text>
@@ -134,14 +137,16 @@
 </template>
 
 <script>
-import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
+import { TEXTBOOK_VERSION_IDS, COL_PROGRESS, LIST_TYPE } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
+	buildLiteracyOnlyCharRowsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
+import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 
 const COVER_BOOKS = [
 	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
@@ -281,10 +286,15 @@ export default {
 					this.chars = []
 					this.lessons = syncLessons.map((item, idx) => {
 						const charRows = buildLessonCharRowsFromRenjiaoItem(item)
+						const litRows = buildLiteracyOnlyCharRowsFromRenjiaoItem(item)
+						const learnCheckKeys = this.collectLessonLearnCharKeys(litRows)
 						return {
 							hint: String(item.title || `第${idx + 1}课`),
 							count: charRows.length,
-							rjIdx: idx
+							rjIdx: idx,
+							learnCheckKeys,
+							doneBadgeKind: learnCheckKeys.length ? 'literacy' : '',
+							doneBadgeText: ''
 						}
 					})
 				} else {
@@ -292,18 +302,58 @@ export default {
 					const map = Object.create(null)
 					this.chars.forEach((row) => {
 						const hint = String(row.lesson_hint || '未分课次')
-						if (!map[hint]) map[hint] = { hint, count: 0 }
-						map[hint].count += 1
+						if (!map[hint]) map[hint] = { hint, rows: [] }
+						map[hint].rows.push(row)
 					})
-					this.lessons = Object.values(map).sort((a, b) =>
-						String(a.hint).localeCompare(String(b.hint))
-					)
+					this.lessons = Object.values(map)
+						.sort((a, b) => String(a.hint).localeCompare(String(b.hint)))
+						.map(({ hint, rows }) => {
+							const shizi = rows.filter((r) => r.list_type === LIST_TYPE.SHIZI)
+							const pool = shizi.length ? shizi : rows
+							const learnCheckKeys = this.collectLessonLearnCharKeys(pool)
+							return {
+								hint,
+								count: rows.length,
+								learnCheckKeys,
+								doneBadgeKind: shizi.length ? 'literacy' : 'lesson',
+								doneBadgeText: ''
+							}
+						})
 				}
+				this.patchLessonDoneBadges()
 			} catch (e) {
 				console.warn('[textbook] reload', e)
 				uni.showToast({ title: '加载失败，请重试', icon: 'none' })
 			} finally {
 				this.loading = false
+			}
+		},
+		collectLessonLearnCharKeys(rows) {
+			const set = new Set()
+			for (const r of rows || []) {
+				const c = String(r && r.hanzi != null ? r.hanzi : '')
+					.trim()
+					.charAt(0)
+				const m = c.match(/[\u4e00-\u9fff]/)
+				if (m) set.add(m[0])
+			}
+			return Array.from(set)
+		},
+		patchLessonDoneBadges() {
+			const prefs = getCurriculumPrefs()
+			const map = getUserProgressMap()
+			const learned = (ch) => {
+				const key = makeProgressKey(prefs.textbook_version_id, prefs.grade, prefs.semester, ch)
+				const rec = map[key]
+				return !!(rec && Number(rec[COL_PROGRESS.learned]) === 1)
+			}
+			for (const lesson of this.lessons) {
+				const keys = lesson.learnCheckKeys
+				let text = ''
+				if (keys && keys.length && keys.every((c) => learned(c))) {
+					text = lesson.doneBadgeKind === 'lesson' ? '本课已学' : '识字已学'
+				}
+				this.$set(lesson, 'doneBadgeText', text)
 			}
 		},
 		openCurriculumPicker() {
@@ -601,13 +651,34 @@ export default {
 	min-width: 0;
 }
 
-.lesson-title {
+.lesson-title-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: space-between;
+}
+
+.lesson-title-row .lesson-title {
+	flex: 1;
+	min-width: 0;
 	display: block;
 	font-size: 30rpx;
 	font-weight: 700;
 	color: #2c2419;
 	line-height: 1.35;
 	word-break: break-all;
+}
+
+.lesson-done-badge {
+	flex-shrink: 0;
+	margin-left: 12rpx;
+	padding: 4rpx 14rpx;
+	font-size: 22rpx;
+	font-weight: 600;
+	color: #fff;
+	background: #43a047;
+	border-radius: 999rpx;
+	line-height: 1.3;
 }
 
 .lesson-meta {

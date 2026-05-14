@@ -6,6 +6,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { renjiaoTextbookJsonFile } from '../constants/renjiao-textbook-filenames.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -708,7 +709,7 @@ function main() {
 		groups: groupsJson
 	}
 
-	const outBook = path.join(root, 'static/booktext/renjiaoban/一年级下册-识字表.json')
+	const outBook = path.join(root, 'static', 'booktext', 'renjiaoban', renjiaoTextbookJsonFile(1, '下', 'literacy'))
 	fs.writeFileSync(outBook, JSON.stringify(doc, null, 4) + '\n')
 	console.log('[gen] wrote', outBook)
 

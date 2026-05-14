@@ -6,7 +6,9 @@
 export const STORAGE_KEYS = {
 	CURRICULUM_PREFS: 'curriculum_prefs_v1',
 	/** 与 TABLE_USER_CHAR_PROGRESS 字段一致的对象映射 JSON */
-	USER_CHAR_PROGRESS: 'user_char_progress_v1'
+	USER_CHAR_PROGRESS: 'user_char_progress_v1',
+	/** 课级缓存：小测通过时间、最佳成绩等（见 user-lesson-progress-storage.js） */
+	USER_LESSON_PROGRESS: 'user_lesson_progress_v1'
 }
 
 /** 教材版本标识 — 对应字段 textbook_version_id */
@@ -51,7 +53,7 @@ export const DEFAULT_CURRICULUM_PREFS = {
 	list_type_preference: LIST_TYPE_PREFERENCE.ALL
 }
 
-/** 逻辑集合名：教材生字（数据来自 hanzi_curriculum_seed.json） */
+/** 逻辑集合名：教材生字（统编等来自 hanzi_curriculum_seed.json；课标300来自 static/booktext/renjiaoban/preschool-bridge.json） */
 export const TABLE_HANZI_CURRICULUM = 'hanzi_curriculum'
 
 export const COL = {

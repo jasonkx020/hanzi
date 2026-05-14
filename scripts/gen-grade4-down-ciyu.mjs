@@ -6,6 +6,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { renjiaoTextbookJsonFile } from '../constants/renjiao-textbook-filenames.js'
 import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
@@ -372,7 +373,7 @@ const out = {
 	groups
 }
 
-const outPath = path.join(root, 'static', 'booktext', 'renjiaoban', '四年级下册-词语表.json')
+const outPath = path.join(root, 'static', 'booktext', 'renjiaoban', renjiaoTextbookJsonFile(4, '下', 'words'))
 fs.mkdirSync(path.dirname(outPath), { recursive: true })
 fs.writeFileSync(outPath, JSON.stringify(out, null, 4), 'utf8')
 console.log('[gen] wrote', outPath, 'groups', groups.length, 'entries', total, '(expect 213)')

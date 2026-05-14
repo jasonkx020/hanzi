@@ -1,6 +1,6 @@
 /**
- * 将 static/booktext/renjiaoban/{年级}{册}.json 课文目录
- * 与同册 -识字表.json / -写字表.json / -词语表.json（若存在）合并为「课文 + 识字 + 写字 + 词语」一体结构。
+ * 将 static/booktext/renjiaoban 下课文主 JSON（grade*-{up|down}.json）
+ * 与同册 -literacy.json / -writing.json / -words.json（若存在）合并为「课文 + 识字 + 写字 + 词语」一体结构。
  *
  * 匹配规则（与附录表 `groups[].section` + `groups[].lesson` 对齐）：
  * - section：优先课文条目的 `unitTheme`；入学等无 `unitTheme` 则不挂表；其余缺省按「阅读」。
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const bookDir = path.join(root, 'static', 'booktext', 'renjiaoban')
 
-const MAIN_BOOK_RE = /^([一二三四五六])年级(上|下)册\.json$/
+const MAIN_BOOK_RE = /^grade([1-6])-(up|down)\.json$/
 
 /** 册内「语文园地」仅标题、无序号时的序数 → lesson 字段 */
 const YUAN_DI = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八']
@@ -105,9 +105,9 @@ function mergeOneBook(baseName) {
 		return
 	}
 
-	const shiziPath = path.join(bookDir, `${baseName}-识字表.json`)
-	const xieziPath = path.join(bookDir, `${baseName}-写字表.json`)
-	const ciyuPath = path.join(bookDir, `${baseName}-词语表.json`)
+	const shiziPath = path.join(bookDir, `${baseName}-literacy.json`)
+	const xieziPath = path.join(bookDir, `${baseName}-writing.json`)
+	const ciyuPath = path.join(bookDir, `${baseName}-words.json`)
 
 	const shiziDoc = readJsonSafe(shiziPath)
 	const xieziDoc = readJsonSafe(xieziPath)

@@ -125,31 +125,11 @@ export default {
 			return []
 		}
 	},
-	async onLoad(query) {
-		this.hanzi = query.hanzi ? decodeURIComponent(query.hanzi) : ''
-		this.pinyin = query.pinyin ? decodeURIComponent(query.pinyin) : ''
-		this.lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
-		const entry = await getDictionaryEntry(this.hanzi, this.lessonHint)
-		if (entry) {
-			this.pinyin = String(this.pinyin || entry.pinyin || '').replace(/\s+/g, ' ').trim()
-			this.lessonHint = this.lessonHint || entry.lessonHint || ''
-			this.ext = {
-				radical: entry.radical,
-				structure: entry.structure,
-				strokes: entry.strokes,
-				words: entry.words,
-				explainText: entry.explainText || '',
-				strokeShapes: entry.strokeShapes || '',
-				strokeNames: entry.strokeNames || '',
-				tradForm: entry.tradForm || ''
-			}
-		}
-		if (!entry && this.pinyin) {
-			this.pinyin = String(this.pinyin || '').replace(/\s+/g, ' ').trim()
-		}
-		const related = await getDictionaryRelated(this.hanzi, this.lessonHint)
-		this.sameLesson = related.sameLesson || []
-		this.similarChars = related.similar || []
+	onLoad(query) {
+		const hanzi = query.hanzi ? decodeURIComponent(query.hanzi) : ''
+		const pinyin = query.pinyin ? decodeURIComponent(query.pinyin) : ''
+		const lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
+		this.loadResultPage({ hanzi, pinyin, lessonHint })
 	},
 	onShow() {
 		this.narrator = getAudioNarrator()
@@ -158,6 +138,71 @@ export default {
 		stopLocalPinyinAudio()
 	},
 	methods: {
+		/**
+		 * 同页刷新查字结果（同课推荐 / 相近字推荐点击），避免 redirectTo 整页重载闪烁。
+		 * @param {{ hanzi: string, pinyin?: string, lessonHint?: string }} payload
+		 */
+		async loadResultPage(payload) {
+			const hanzi = String(payload.hanzi || '').trim()
+			let lessonHint = String(payload.lessonHint || '').trim()
+			let pinyin = String(payload.pinyin || '').trim()
+			if (!hanzi || hanzi === '—') {
+				this.hanzi = hanzi || '—'
+				this.pinyin = pinyin
+				this.lessonHint = lessonHint
+				this.ext = {
+					radical: '-',
+					structure: '-',
+					strokes: '-',
+					words: ['暂无组词'],
+					explainText: '',
+					strokeShapes: '',
+					strokeNames: '',
+					tradForm: ''
+				}
+				this.sameLesson = []
+				this.similarChars = []
+				return
+			}
+			const entry = await getDictionaryEntry(hanzi, lessonHint)
+			if (entry) {
+				pinyin = String(pinyin || entry.pinyin || '').replace(/\s+/g, ' ').trim()
+				lessonHint = lessonHint || entry.lessonHint || ''
+			} else if (pinyin) {
+				pinyin = String(pinyin).replace(/\s+/g, ' ').trim()
+			}
+			const related = await getDictionaryRelated(hanzi, lessonHint)
+			const ext = entry
+				? {
+						radical: entry.radical,
+						structure: entry.structure,
+						strokes: entry.strokes,
+						words: entry.words,
+						explainText: entry.explainText || '',
+						strokeShapes: entry.strokeShapes || '',
+						strokeNames: entry.strokeNames || '',
+						tradForm: entry.tradForm || ''
+					}
+				: {
+						radical: '-',
+						structure: '-',
+						strokes: '-',
+						words: ['暂无组词'],
+						explainText: '',
+						strokeShapes: '',
+						strokeNames: '',
+						tradForm: ''
+					}
+			this.hanzi = hanzi
+			this.pinyin = pinyin
+			this.lessonHint = lessonHint
+			this.ext = ext
+			this.sameLesson = related.sameLesson || []
+			this.similarChars = related.similar || []
+			try {
+				uni.pageScrollTo({ scrollTop: 0, duration: 0 })
+			} catch (_) {}
+		},
 		async speakCurrentPinyin() {
 			if (!this.hanzi || this.hanzi === '—' || this.dictPinyinPlaying) return
 			this.dictPinyinPlaying = true
@@ -190,23 +235,17 @@ export default {
 		},
 		async goOther(ch) {
 			const c = String(ch || '').trim().charAt(0)
-			if (!c) return
-			if (!this.dictPinyinPlaying) {
-				this.dictPinyinPlaying = true
-				try {
-					await speakDictionaryEntryPinyin({
-						hanzi: c,
-						fallbackPinyin: '',
-						narrator: this.narrator,
-						...DICTIONARY_LOCAL_PINYIN_OPTS
-					})
-				} finally {
-					this.dictPinyinPlaying = false
-				}
-			}
-			uni.redirectTo({
-				url: `/pages/dictionary/result?hanzi=${encodeURIComponent(c)}&lesson=${encodeURIComponent(this.lessonHint)}`
+			if (!c || c === this.hanzi) return
+			stopLocalPinyinAudio()
+			await this.loadResultPage({
+				hanzi: c,
+				pinyin: '',
+				lessonHint: this.lessonHint
 			})
+			await new Promise((resolve) => {
+				this.$nextTick(() => resolve())
+			})
+			await this.speakCurrentPinyin()
 		}
 	}
 }

@@ -1,13 +1,58 @@
 /**
- * 教材生字：打包内嵌 constants/hanzi_curriculum_seed.json（npm run db:build 生成），
- * 运行时内存筛选。
+ * 教材生字：统编等版本来自打包内嵌 constants/hanzi_curriculum_seed.json（npm run db:build 生成）；
+ * 「幼小衔接·课标300基本字」来自 static/booktext/renjiaoban/preschool-bridge.json，不在 seed 中重复。
  */
 
 import CURRICULUM_ROWS from '@/constants/hanzi_curriculum_seed.json'
-import { COL, LIST_TYPE_PREFERENCE } from '@/constants/curriculum-schema.js'
+import YOU_XIAO_XIANJIE_LESSONS from '../static/booktext/renjiaoban/preschool-bridge.json'
+import {
+	COL,
+	LIST_TYPE,
+	LIST_TYPE_PREFERENCE,
+	TEXTBOOK_VERSION_IDS
+} from '@/constants/curriculum-schema.js'
 import { buildCurriculumWhere, getCurriculumPrefs, orderBySortOrderAsc } from '@/utils/curriculum-storage.js'
 
 const rows = Array.isArray(CURRICULUM_ROWS) ? CURRICULUM_ROWS : []
+
+const MOE_SOURCE_URL =
+	'http://www.moe.gov.cn/srcsite/A26/s8001/202204/t20220420_619921.html'
+
+/**
+ * 将幼小衔接课文 JSON 展平为与 hanzi_curriculum_seed 同结构的生字行（仅 MOE 版本 grade=0 使用）
+ */
+function buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook() {
+	const tv = TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300
+	const listType = LIST_TYPE.JIBENZIBIAO
+	const lessons = Array.isArray(YOU_XIAO_XIANJIE_LESSONS) ? YOU_XIAO_XIANJIE_LESSONS : []
+	const out = []
+	let sortOrder = 0
+	for (const L of lessons) {
+		const lit = Array.isArray(L.literacy_chars) ? L.literacy_chars : []
+		const hint =
+			(typeof L.title === 'string' && L.title.trim()) || `课次 ${L.catalogLessonNo ?? ''}`
+		for (const cell of lit) {
+			const hanzi = typeof cell?.hanzi === 'string' ? cell.hanzi.trim() : ''
+			if (!hanzi) continue
+			sortOrder += 1
+			out.push({
+				id: sortOrder,
+				textbook_version_id: tv,
+				grade: 0,
+				semester: '上',
+				list_type: listType,
+				hanzi,
+				pinyin: cell?.pinyin ?? null,
+				sort_order: sortOrder,
+				lesson_hint: hint,
+				source_url: MOE_SOURCE_URL
+			})
+		}
+	}
+	return out
+}
+
+const moeRowsFromYouxiaoxianjieBook = buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook()
 
 /**
  * 按当前教材偏好筛选生字行
@@ -18,12 +63,18 @@ export async function queryCurriculumChars(prefs) {
 	const tv = p.textbook_version_id
 	const grade = Number(p.grade)
 	const sem = p.semester === '下' ? '下' : '上'
-	let out = rows.filter(
-		(r) =>
-			r.textbook_version_id === tv &&
-			Number(r.grade) === grade &&
-			r.semester === sem
-	)
+
+	const useYouxiaoxianjie =
+		tv === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300 && grade === 0 && sem === '上'
+
+	let out = useYouxiaoxianjie
+		? [...moeRowsFromYouxiaoxianjieBook]
+		: rows.filter(
+				(r) =>
+					r.textbook_version_id === tv &&
+					Number(r.grade) === grade &&
+					r.semester === sem
+			)
 	if (p.list_type_preference && p.list_type_preference !== LIST_TYPE_PREFERENCE.ALL) {
 		out = out.filter((r) => r.list_type === p.list_type_preference)
 	}
