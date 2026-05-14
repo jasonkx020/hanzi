@@ -1,33 +1,54 @@
 <template>
 	<view class="page">
 		<view class="card">
-			<text class="big-char" @click="speakCurrentPinyin">{{ hanzi || '—' }}</text>
-			<view class="title-py-block">
-				<text class="title-py-label">拼音：</text>
-				<view v-if="pinyinSyllableTokens.length" class="title-py-cells title-py-rows-stack">
-					<view
-						v-for="(tok, ti) in pinyinSyllableTokens"
-						:key="'res-py-' + ti"
-						class="title-py-line-row"
-					>
-						<text v-if="pinyinSyllableTokens.length > 1" class="title-py-line-label">拼音{{ ti + 1 }}</text>
-						<pinyin-four-lines-row
-							class="title-py-line-core"
-							:syllables="[tok]"
-							size="lg"
+			<view class="result-hero-row">
+				<view class="result-hero-left">
+					<view class="tianzi-wrap-result" :style="resultStrokeWrapStyle" @click="speakCurrentPinyin">
+						<canvas
+							v-if="resultStrokeReady && !resultAnimFallback"
+							id="result-stroke-box"
+							canvas-id="result-stroke-box"
+							class="result-stroke-canvas"
+							disable-scroll
+							:style="resultStrokeCanvasStyle"
 						/>
+						<text v-else-if="resultStrokeReady && resultAnimFallback" class="result-char-fallback">{{ displayHanzi }}</text>
+						<text v-else class="result-char-fallback">{{ displayHanzi }}</text>
 					</view>
 				</view>
-				<text v-else class="title-py-plain font-pinyin title-py-cells-fallback">{{ pinyinPlain }}</text>
+				<view class="result-hero-right">
+					<text class="hero-py-k">拼音</text>
+					<view class="hero-py-body" @click="speakCurrentPinyin">
+						<view v-if="pinyinSyllableTokens.length" class="title-py-cells title-py-rows-stack">
+							<view
+								v-for="(tok, ti) in pinyinSyllableTokens"
+								:key="'res-py-' + ti"
+								class="title-py-line-row"
+							>
+								<text v-if="pinyinSyllableTokens.length > 1" class="title-py-line-label">读音{{ ti + 1 }}</text>
+								<pinyin-four-lines-row
+									class="title-py-line-core"
+									:syllables="[tok]"
+									size="md"
+								/>
+							</view>
+						</view>
+						<text v-else class="title-py-plain font-pinyin title-py-cells-fallback">{{ pinyinPlain }}</text>
+					</view>
+					<view class="hero-speak" @click.stop="speakCurrentPinyin">
+						<image class="hero-speak-img" :src="dictSpeakerIconSrc" mode="aspectFit" />
+						<text class="hero-speak-label">听读音</text>
+					</view>
+				</view>
 			</view>
 			<text class="desc">课次：{{ lessonHint || '未分课次' }}</text>
 			<view v-if="ext.tradForm" class="trad-banner">
 				<text class="trad-b-label">繁体</text>
 				<text class="trad-b-val">{{ ext.tradForm }}</text>
 			</view>
-			<view class="meta-grid" @click="speakCurrentPinyin">
+			<view class="meta-grid">
 				<view class="meta-item">
-					<text class="meta-label">部首2</text>
+					<text class="meta-label">部首</text>
 					<text class="meta-value">{{ ext.radical }}</text>
 				</view>
 				<view class="meta-item">
@@ -37,9 +58,6 @@
 				<view class="meta-item">
 					<text class="meta-label">笔画</text>
 					<text class="meta-value">{{ ext.strokes }}</text>
-				</view>
-				<view class="meta-grid-speak" @click.stop="speakCurrentPinyin">
-					<image class="meta-grid-speak-img" :src="dictSpeakerIconSrc" mode="aspectFit" />
 				</view>
 			</view>
 			<view v-if="ext.strokeShapes || ext.strokeNames" class="stroke-panel">
@@ -54,7 +72,9 @@
 			<text class="words-title">组词（cnchar-words）</text>
 			<text class="words">{{ ext.words.join(' / ') }}</text>
 			<view class="actions">
-				<button size="mini" type="primary" @click="goStroke">笔顺动画</button>
+				<button size="mini" type="primary" @click="toggleResultStrokeInPlace">
+					{{ resultStrokeAnimating ? '停笔顺' : '笔顺动画' }}
+				</button>
 				<button size="mini" type="default" @click="markLearned">加入已学</button>
 				<button size="mini" type="warn" @click="markWrong">加入易错</button>
 			</view>
@@ -81,6 +101,11 @@ import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repo
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
+import drawNative from '@/utils/draw-native.js'
+import cnchar from '@/utils/cnchar-setup.js'
+
+/** 与查字首页田字格一致：length + 30 为画布逻辑像素边长 */
+const RESULT_STROKE_LENGTH = 148
 
 export default {
 	components: {
@@ -109,10 +134,34 @@ export default {
 				tradForm: ''
 			},
 			sameLesson: [],
-			similarChars: []
+			similarChars: [],
+			resultStrokeReady: false,
+			resultAnimFallback: false,
+			resultDrawWriter: null,
+			resultStrokeMountGen: 0,
+			resultStrokeAttachTimer: null,
+			resultWordNotFoundRegistered: false,
+			/** 田字格内是否正在循环播放笔顺动画（初始为 NORMAL 末帧静态） */
+			resultStrokeAnimating: false
 		}
 	},
 	computed: {
+		displayHanzi() {
+			const c = String(this.hanzi || '').trim().charAt(0)
+			if (!c || c === '—') return this.hanzi || '—'
+			try {
+				if (typeof cnchar.isCnChar === 'function' && !cnchar.isCnChar(c)) return c
+			} catch (_) {}
+			return c
+		},
+		resultStrokeCanvasStyle() {
+			const px = RESULT_STROKE_LENGTH + 30
+			return { width: px + 'px', height: px + 'px', display: 'block' }
+		},
+		resultStrokeWrapStyle() {
+			const px = RESULT_STROKE_LENGTH + 30
+			return { width: px + 'px', height: px + 'px', boxSizing: 'border-box' }
+		},
 		pinyinPlain() {
 			const t = String(this.pinyin || '').replace(/[()（）]/g, '').trim()
 			return t || '-'
@@ -136,8 +185,199 @@ export default {
 	},
 	onHide() {
 		stopLocalPinyinAudio()
+		this.teardownResultStroke()
+	},
+	onUnload() {
+		stopLocalPinyinAudio()
+		this.teardownResultStroke()
 	},
 	methods: {
+		registerResultWordNotFoundOnce() {
+			if (this.resultWordNotFoundRegistered) return
+			drawNative.onWordNotFound(() => {})
+			this.resultWordNotFoundRegistered = true
+		},
+		teardownResultStroke() {
+			if (this.resultStrokeAttachTimer) {
+				clearTimeout(this.resultStrokeAttachTimer)
+				this.resultStrokeAttachTimer = null
+			}
+			this.resultStrokeMountGen++
+			this.resultStrokeReady = false
+			this.resultAnimFallback = false
+			this.resultStrokeAnimating = false
+			if (this.resultDrawWriter && typeof this.resultDrawWriter.destroy === 'function') {
+				this.resultDrawWriter.destroy()
+			}
+			this.resultDrawWriter = null
+		},
+		destroyResultDrawWriterOnly() {
+			if (this.resultDrawWriter && typeof this.resultDrawWriter.destroy === 'function') {
+				this.resultDrawWriter.destroy()
+			}
+			this.resultDrawWriter = null
+		},
+		resultDrawSharedOpts(vm) {
+			return {
+				vm,
+				style: {
+					length: RESULT_STROKE_LENGTH,
+					charInsetRatio: 0.15,
+					strokeColor: '#2c3e50',
+					outlineColor: '#d5d5d5',
+					currentColor: '#e74c3c'
+				},
+				line: {
+					show: true,
+					borderColor: '#d7d7d7',
+					centerColor: '#cfcfcf',
+					diagonalColor: '#e2e2e2'
+				},
+				watermark: {
+					text: 'HanziStroke.com',
+					alpha: 0.22,
+					fontSize: 10,
+					position: 'bottom-right'
+				},
+				test: { onTestStatus: () => {} }
+			}
+		},
+		scheduleResultStrokeMount() {
+			const char = String(this.displayHanzi || '').trim().charAt(0)
+			if (!char || char === '—') {
+				this.resultStrokeReady = true
+				this.resultAnimFallback = false
+				this.destroyResultDrawWriterOnly()
+				return
+			}
+			if (typeof drawNative !== 'function') {
+				this.resultStrokeReady = true
+				this.resultAnimFallback = true
+				this.destroyResultDrawWriterOnly()
+				return
+			}
+			this.registerResultWordNotFoundOnce()
+			this.resultStrokeReady = true
+			this.resultAnimFallback = false
+			this.destroyResultDrawWriterOnly()
+			if (this.resultStrokeAttachTimer) {
+				clearTimeout(this.resultStrokeAttachTimer)
+				this.resultStrokeAttachTimer = null
+			}
+			const token = ++this.resultStrokeMountGen
+			const attach = () => {
+				this.resultStrokeAttachTimer = null
+				if (token !== this.resultStrokeMountGen) return
+				this.mountResultStrokePreviewWriter(char)
+			}
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					this.resultStrokeAttachTimer = setTimeout(attach, 48)
+				})
+			})
+		},
+		/** 静态完整字（等同笔顺动画播完后的末帧） */
+		mountResultStrokePreviewWriter(char) {
+			if (typeof drawNative !== 'function') {
+				this.resultStrokeReady = true
+				this.resultAnimFallback = true
+				return
+			}
+			const vm = this
+			const base = this.resultDrawSharedOpts(vm)
+			try {
+				this.resultDrawWriter = drawNative(char, {
+					...base,
+					el: '#result-stroke-box',
+					type: drawNative.TYPE.NORMAL
+				})
+			} catch (e) {
+				console.warn('[dictionary/result] stroke grid mount failed', e)
+				this.resultDrawWriter = null
+				this.resultStrokeReady = true
+				this.resultAnimFallback = true
+			}
+		},
+		mountResultStrokeAnimationWriter(char) {
+			if (typeof drawNative !== 'function') {
+				this.resultStrokeAnimating = false
+				this.resultAnimFallback = true
+				return
+			}
+			const vm = this
+			const base = this.resultDrawSharedOpts(vm)
+			try {
+				this.resultDrawWriter = drawNative(char, {
+					...base,
+					el: '#result-stroke-box',
+					type: drawNative.TYPE.ANIMATION,
+					animation: {
+						autoAnimate: true,
+						loopAnimate: true,
+						strokeAnimationSpeed: 1.15,
+						delayBetweenStrokes: 400,
+						delayBetweenLoops: 1000
+					}
+				})
+			} catch (e) {
+				console.warn('[dictionary/result] stroke animation mount failed', e)
+				this.resultDrawWriter = null
+				this.resultStrokeAnimating = false
+				this.resultAnimFallback = true
+			}
+		},
+		playResultStrokeInPlace() {
+			const char = String(this.displayHanzi || '').trim().charAt(0)
+			if (!char || char === '—') return
+			if (typeof drawNative !== 'function') {
+				uni.showToast({ title: '当前环境暂不支持笔顺', icon: 'none' })
+				return
+			}
+			if (this.resultAnimFallback || !this.resultStrokeReady) {
+				uni.showToast({ title: '笔顺暂不可用', icon: 'none' })
+				return
+			}
+			this.registerResultWordNotFoundOnce()
+			this.resultStrokeAnimating = true
+			this.resultAnimFallback = false
+			this.destroyResultDrawWriterOnly()
+			if (this.resultStrokeAttachTimer) {
+				clearTimeout(this.resultStrokeAttachTimer)
+				this.resultStrokeAttachTimer = null
+			}
+			const token = ++this.resultStrokeMountGen
+			const attach = () => {
+				this.resultStrokeAttachTimer = null
+				if (token !== this.resultStrokeMountGen) return
+				this.mountResultStrokeAnimationWriter(char)
+			}
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					this.resultStrokeAttachTimer = setTimeout(attach, 48)
+				})
+			})
+		},
+		stopResultStrokeAnimationToPreview() {
+			this.resultStrokeAnimating = false
+			if (this.resultDrawWriter && typeof this.resultDrawWriter.stop === 'function') {
+				this.resultDrawWriter.stop()
+			}
+			this.destroyResultDrawWriterOnly()
+			if (this.resultStrokeAttachTimer) {
+				clearTimeout(this.resultStrokeAttachTimer)
+				this.resultStrokeAttachTimer = null
+			}
+			this.resultStrokeMountGen++
+			this.scheduleResultStrokeMount()
+		},
+		toggleResultStrokeInPlace() {
+			if (!this.hanzi || this.hanzi === '—') return
+			if (this.resultStrokeAnimating) {
+				this.stopResultStrokeAnimationToPreview()
+			} else {
+				this.playResultStrokeInPlace()
+			}
+		},
 		/**
 		 * 同页刷新查字结果（同课推荐 / 相近字推荐点击），避免 redirectTo 整页重载闪烁。
 		 * @param {{ hanzi: string, pinyin?: string, lessonHint?: string }} payload
@@ -146,6 +386,7 @@ export default {
 			const hanzi = String(payload.hanzi || '').trim()
 			let lessonHint = String(payload.lessonHint || '').trim()
 			let pinyin = String(payload.pinyin || '').trim()
+			this.teardownResultStroke()
 			if (!hanzi || hanzi === '—') {
 				this.hanzi = hanzi || '—'
 				this.pinyin = pinyin
@@ -199,6 +440,11 @@ export default {
 			this.ext = ext
 			this.sameLesson = related.sameLesson || []
 			this.similarChars = related.similar || []
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					this.scheduleResultStrokeMount()
+				})
+			})
 			try {
 				uni.pageScrollTo({ scrollTop: 0, duration: 0 })
 			} catch (_) {}
@@ -219,9 +465,6 @@ export default {
 			} finally {
 				this.dictPinyinPlaying = false
 			}
-		},
-		goStroke() {
-			uni.navigateTo({ url: `/pages/tools/stroke?hanzi=${encodeURIComponent(this.hanzi)}&mode=animation` })
 		},
 		markLearned() {
 			if (!this.hanzi) return
@@ -253,20 +496,74 @@ export default {
 <style scoped>
 .page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; }
-.big-char { display: block; font-size: 140rpx; line-height: 1; color: #2c2419; text-align: center; margin-bottom: 14rpx; }
-.title-py-block {
+.result-hero-row {
 	display: flex;
 	flex-direction: row;
-	align-items: flex-end;
-	flex-wrap: wrap;
-	margin-bottom: 12rpx;
-	gap: 10rpx 14rpx;
+	align-items: flex-start;
+	gap: 20rpx;
+	margin-bottom: 16rpx;
 }
-.title-py-label {
-	font-size: 28rpx;
-	font-weight: 700;
-	color: #2c2419;
+.result-hero-left {
 	flex-shrink: 0;
+}
+.result-hero-right {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	padding-top: 4rpx;
+}
+.hero-py-k {
+	display: block;
+	font-size: 22rpx;
+	font-weight: 700;
+	color: #6d4c41;
+	margin-bottom: 6rpx;
+}
+.hero-py-body {
+	width: 100%;
+	min-width: 0;
+}
+.hero-speak {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10rpx;
+	margin-top: 12rpx;
+	padding: 8rpx 12rpx;
+	border-radius: 10rpx;
+	background: #f5f2eb;
+}
+.hero-speak-img {
+	width: 40rpx;
+	height: 40rpx;
+	flex-shrink: 0;
+	display: block;
+}
+.hero-speak-label {
+	font-size: 24rpx;
+	color: #6d4c41;
+}
+.tianzi-wrap-result {
+	position: relative;
+	border-radius: 12rpx;
+	overflow: hidden;
+	background: #faf8f5;
+}
+.result-stroke-canvas {
+	display: block;
+	margin: 0 auto;
+}
+.result-char-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	font-size: 120rpx;
+	font-weight: 600;
+	color: #5d4037;
 }
 .title-py-cells {
 	display: flex;
@@ -274,7 +571,7 @@ export default {
 	flex-wrap: wrap;
 	align-items: flex-end;
 	gap: 10rpx;
-	flex: 1;
+	width: 100%;
 	min-width: 0;
 }
 /* 多读音：每行一个音节 */
@@ -318,12 +615,10 @@ export default {
 }
 .desc { display: block; font-size: 25rpx; color: #6b6560; margin-bottom: 16rpx; }
 .meta-grid {
-	position: relative;
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	margin-bottom: 12rpx;
-	padding-bottom: 34rpx;
 	box-sizing: border-box;
 }
 .meta-item {
@@ -339,21 +634,6 @@ export default {
 	text-align: center;
 }
 .meta-item:nth-child(3n) { margin-right: 0; }
-.meta-grid-speak {
-	position: absolute;
-	right: 8rpx;
-	bottom: 4rpx;
-	width: 36rpx;
-	height: 36rpx;
-	padding: 4rpx;
-	box-sizing: border-box;
-	opacity: 0.92;
-}
-.meta-grid-speak-img {
-	width: 100%;
-	height: 100%;
-	display: block;
-}
 .trad-banner {
 	display: flex;
 	flex-direction: row;

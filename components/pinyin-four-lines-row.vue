@@ -106,7 +106,7 @@ export default {
 </script>
 
 <style scoped>
-/* 与 pinyin-four-lines 一致：grid/tone/compact 为学习页放大；md/lg 为查字等保持原尺度 */
+/* 四线三格多列：各 size 字高；整行 translateY 与格高成比例，底缘对齐基线 */
 .pflr {
 	--pfl-cell-h: 58rpx;
 	width: 100%;
@@ -230,6 +230,8 @@ export default {
 	box-sizing: border-box;
 	line-height: 0;
 	overflow: visible;
+	/* 上移：抵消字号偏大后的下溢，使字母整体落在书写区内 */
+	transform: translateY(calc(var(--pfl-cell-h) * -0.1));
 }
 
 .pflr-glyph {
@@ -251,7 +253,7 @@ export default {
 	font-size: 0.88em;
 }
 
-/* —— 尺寸（与单格 pinyin-four-lines 对齐，比例一致）—— */
+/* —— 尺寸（--pfl-cell-h 为格高，字号与格高成比例）—— */
 .pflr--compact {
 	--pfl-cell-h: 88rpx;
 }
@@ -262,7 +264,7 @@ export default {
 
 .pflr--compact .pflr-glyphs-row,
 .pflr--compact .pflr-glyph {
-	font-size: calc(var(--pfl-cell-h) * 29 / 44);
+	font-size: calc(var(--pfl-cell-h) * 35 / 44);
 }
 
 .pflr--grid {
@@ -275,7 +277,7 @@ export default {
 
 .pflr--grid .pflr-glyphs-row,
 .pflr--grid .pflr-glyph {
-	font-size: calc(var(--pfl-cell-h) * 47 / 72);
+	font-size: calc(var(--pfl-cell-h) * 56 / 72);
 }
 
 .pflr--tone {
@@ -288,7 +290,7 @@ export default {
 
 .pflr--tone .pflr-glyphs-row,
 .pflr--tone .pflr-glyph {
-	font-size: calc(var(--pfl-cell-h) * 39 / 58);
+	font-size: calc(var(--pfl-cell-h) * 46 / 58);
 }
 
 .pflr--md {
@@ -301,7 +303,7 @@ export default {
 
 .pflr--md .pflr-glyphs-row,
 .pflr--md .pflr-glyph {
-	font-size: calc(var(--pfl-cell-h) * 35 / 58);
+	font-size: calc(var(--pfl-cell-h) * 42 / 58);
 }
 
 .pflr--lg {
@@ -314,6 +316,20 @@ export default {
 
 .pflr--lg .pflr-glyphs-row,
 .pflr--lg .pflr-glyph {
-	font-size: calc(var(--pfl-cell-h) * 43 / 80);
+	font-size: calc(var(--pfl-cell-h) * 51 / 80);
+}
+
+/** 约为 md 格高的 2 倍；拼音比例较 md 略放大以占满中格 */
+.pflr--xl {
+	--pfl-cell-h: 116rpx;
+}
+
+.pflr--xl .pflr-sheet {
+	height: var(--pfl-cell-h);
+}
+
+.pflr--xl .pflr-glyphs-row,
+.pflr--xl .pflr-glyph {
+	font-size: calc(var(--pfl-cell-h) * 44 / 58);
 }
 </style>

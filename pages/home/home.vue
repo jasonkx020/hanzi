@@ -26,7 +26,10 @@
 
 		<view class="entry-list">
 			<view class="entry-card">
-				<text class="entry-title">📘 课本同步学</text>
+				<view class="entry-title-row">
+					<text class="entry-title">📘 课本同步学</text>
+					<text class="entry-volume">{{ textbookVolumeLabel }}</text>
+				</view>
 				<text class="entry-desc">跟着课本学生字</text>
 				<button class="entry-btn" size="mini" @click="goTextbook">立即学习</button>
 			</view>
@@ -56,7 +59,7 @@ import { startTextbookLearning } from '@/modules/literacy/usecases/start-textboo
 import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
 import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
-import { getCurriculumPrefs, setCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
 import { buildDailyTrainingQueue, countWeakInDailyItems } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
@@ -70,6 +73,7 @@ export default {
 			encourageText: '',
 			dailyDesc: '加载今日练习…',
 			dailyBtnLabel: '开始练习',
+			textbookVolumeLabel: '',
 			curriculumTabs: [
 				{
 					key: 'preschool',
@@ -109,6 +113,7 @@ export default {
 	methods: {
 		async refresh() {
 			this.summary = getCurriculumSummary()
+			this.textbookVolumeLabel = formatGradeSemesterLabel(getCurriculumPrefs())
 			this.vipActive = isVipActive()
 			const p = getCurriculumPrefs()
 			const learned = countLearnedCharsForCurriculumPrefs(p)
@@ -249,12 +254,37 @@ export default {
 	box-shadow: 0 6rpx 20rpx rgba(44, 36, 25, 0.07);
 }
 
+.entry-title-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12rpx;
+	margin-bottom: 6rpx;
+}
+
 .entry-title {
 	display: block;
 	font-size: 30rpx;
 	font-weight: 600;
 	color: #2c2419;
 	margin-bottom: 6rpx;
+}
+
+.entry-title-row .entry-title {
+	margin-bottom: 0;
+	flex: 1;
+	min-width: 0;
+}
+
+.entry-volume {
+	flex-shrink: 0;
+	max-width: 52%;
+	font-size: 22rpx;
+	color: #7a746e;
+	text-align: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .entry-desc {

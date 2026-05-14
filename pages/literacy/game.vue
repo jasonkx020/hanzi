@@ -5,7 +5,7 @@
 			<text class="lobby-emoji">🐼</text>
 			<text class="lobby-balloon" aria-hidden="true">🎈</text>
 			<text class="lobby-title">萌萌的气球营</text>
-			<text class="lobby-lead">听一听、配一对，帮萌萌收集小星星～</text>
+			<text class="lobby-lead">听一听、把汉字和拼音配一对，帮萌萌收集小星星～</text>
 			<text class="lobby-sub">字都来自你选的课本；下面可以优先带上「常错的字」多练几遍。</text>
 
 			<view class="lobby-switch-row">
@@ -14,7 +14,7 @@
 			</view>
 
 			<button class="lobby-btn" type="default" :loading="starting" @click="startRun('hear')">听一听 · 升气球（3关）</button>
-			<button class="lobby-btn lobby-btn-sec" type="default" :loading="starting" @click="startRun('pair')">星星配对（4对）</button>
+			<button class="lobby-btn lobby-btn-sec" type="default" :loading="starting" @click="startRun('pair')">星星配对 · 汉字配拼音（4对）</button>
 			<button class="lobby-btn lobby-btn-mix" type="default" :loading="starting" @click="startRun('mixed')">轮换闯关（听2+配1）</button>
 			<button class="lobby-ghost" type="default" @click="goHome">回识字首页</button>
 		</view>
@@ -62,13 +62,14 @@
 				<text class="play-mascot">⭐</text>
 				<view class="play-head-text">
 					<text class="play-tag pair-tag">星星配对</text>
-					<text class="play-step">点左边一个字，再点右边相同的字</text>
+					<text class="play-step">先点左边的字，再点右边它对应的拼音</text>
 				</view>
 			</view>
 			<text class="pair-progress">已配好 {{ pairMatched }} / {{ pairTarget }} 对</text>
 
 			<view class="pair-columns">
 				<view class="pair-col">
+					<text class="pair-col-hd">汉字</text>
 					<view
 						v-for="(cell, i) in pairLeft"
 						:key="'L' + i"
@@ -84,22 +85,29 @@
 				</view>
 				<view class="pair-mid" />
 				<view class="pair-col">
+					<text class="pair-col-hd">拼音</text>
 					<view
 						v-for="(cell, i) in pairRight"
 						:key="'R' + i"
-						class="pair-cell"
+						class="pair-cell pair-cell-py"
 						:class="{
 							'pair-cell-done': cell.done,
 							'pair-cell-sel': pickRIdx === i && !cell.done
 						}"
 						@click="onTapPairRight(i)"
 					>
-						<text class="pair-char">{{ cell.done ? '✓' : cell.hanzi }}</text>
+						<text v-if="cell.done" class="pair-char">✓</text>
+						<pinyin-four-lines-row
+							v-else
+							class="pair-pflr"
+							:syllables="pairSyllablesForPinyin(cell.pinyin)"
+							size="compact"
+						/>
 					</view>
 				</view>
 			</view>
 
-			<text class="play-hint">配齐就有小星星奖励哦</text>
+			<text class="play-hint">左右各点一次，把字和它自己的拼音配成一对</text>
 			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
 		</view>
 
@@ -125,6 +133,8 @@ import {
 	addCharWrongCount,
 	listWrongOftenCharsForCurriculumPrefs
 } from '@/utils/user-progress-storage.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
@@ -162,6 +172,9 @@ function uniquePoolRows(rows) {
 }
 
 export default {
+	components: {
+		PinyinFourLinesRow
+	},
 	data() {
 		return {
 			phase: 'lobby',
@@ -203,7 +216,7 @@ export default {
 			return '🎈🎈🎈'
 		},
 		doneScoreLine() {
-			if (this.lastRunMode === 'pair') return `配对了 ${this.score} 对星星字`
+			if (this.lastRunMode === 'pair') return `配对了 ${this.score} 组汉字与拼音`
 			if (this.lastRunMode === 'mixed') {
 				const h = this.mixedHearScore
 				const p = Math.max(0, this.score - h)
@@ -213,9 +226,9 @@ export default {
 		},
 		doneEncourage() {
 			if (this.lastRunMode === 'pair') {
-				if (this.score >= this.pairTarget) return '全配对成功，眼睛真尖！'
+				if (this.score >= this.pairTarget) return '汉字和拼音都对上啦，真棒！'
 				if (this.score >= 2) return '很不错，多玩几次就更快啦～'
-				return '慢慢来，字会越来越熟的～'
+				return '慢慢来，字音会越来越熟的～'
 			}
 			if (this.lastRunMode === 'mixed') {
 				const max = 2 + MIXED_PAIR_PAIRS
@@ -372,15 +385,45 @@ export default {
 				this.startPairRound(seg.pairs || MIXED_PAIR_PAIRS)
 			}
 		},
+		pairPinyinLabel(row) {
+			let s = String(row && row.pinyin != null ? row.pinyin : '')
+				.replace(/\s+/g, ' ')
+				.trim()
+			if (!s || s === '-') {
+				const h = firstHanzi(row && row.hanzi)
+				if (h) {
+					try {
+						s = spellDisplayString(h, 'tone', 'poly', 'low') || ''
+					} catch (_) {
+						s = ''
+					}
+				}
+			}
+			return s || '—'
+		},
+		pairSyllablesForPinyin(py) {
+			const raw = String(py || '').trim()
+			if (!raw || raw === '—') return []
+			const tokens = splitPinyinDisplayTokens(raw)
+			if (tokens.length) return tokens
+			const s = raw.replace(/[()（）]/g, '').trim()
+			if (s && s !== '-') return [s]
+			return [raw]
+		},
 		startPairRound(nPairs) {
 			if (this.runMode === 'pair') this.score = 0
 			const n = Math.min(nPairs, this.pool.length)
 			this.pairTarget = n
-			const chars = shuffle(this.pool.map((r) => r.hanzi)).slice(0, n)
-			const leftOrder = shuffle(chars)
-			const rightOrder = shuffle(chars)
+			const selected = shuffle(this.pool).slice(0, n)
+			const leftOrder = shuffle(selected.map((r) => firstHanzi(r.hanzi)).filter(Boolean))
+			const rightOrder = shuffle(
+				selected.map((r) => {
+					const hanzi = firstHanzi(r.hanzi)
+					return { hanzi, pinyin: this.pairPinyinLabel(r) }
+				})
+			)
 			this.pairLeft = leftOrder.map((hanzi) => ({ hanzi, done: false }))
-			this.pairRight = rightOrder.map((hanzi) => ({ hanzi, done: false }))
+			this.pairRight = rightOrder.map((x) => ({ hanzi: x.hanzi, pinyin: x.pinyin, done: false }))
 			this.pickLIdx = null
 			this.pickRIdx = null
 			this.pairMatched = 0
@@ -413,7 +456,7 @@ export default {
 					this.finishPairPhase()
 				}
 			} else {
-				uni.showToast({ title: '找一对相同的字哦', icon: 'none' })
+				uni.showToast({ title: '这个字和这条拼音不是一对哦', icon: 'none' })
 				this.pickLIdx = null
 				this.pickRIdx = null
 			}
@@ -782,6 +825,29 @@ export default {
 	flex-direction: column;
 	width: 38%;
 	max-width: 280rpx;
+}
+
+.pair-col-hd {
+	display: block;
+	text-align: center;
+	font-size: 22rpx;
+	font-weight: 700;
+	color: #7e57c2;
+	margin-bottom: 10rpx;
+}
+
+.pair-cell-py {
+	padding: 16rpx 6rpx;
+	min-height: 100rpx;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.pair-pflr {
+	width: 100%;
+	min-width: 0;
 }
 
 .pair-mid {
