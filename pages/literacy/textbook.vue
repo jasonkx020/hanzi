@@ -6,17 +6,24 @@
 			<view class="hero-body">
 				<view class="hero-row">
 					<text class="hero-title">课本同步学</text>
-					<view class="hero-actions">
-						<button class="hero-action-btn" type="default" @click.stop="openCurriculumPicker">
-							<text class="hero-action-icon">📚</text>
-						</button>
-						<button class="hero-action-btn" type="default" @click.stop="reload">
-						<text class="hero-refresh-icon">🔄</text>
-					</button>
-					</view>
 				</view>
 				<text class="hero-sub">{{ summary }}</text>
 			</view>
+			<view class="hero-actions">
+						<button class="hero-action-btn hero-action-btn-book" type="default" @click.stop="openCurriculumPicker">
+							<view class="hero-book-thumb">
+								<image
+									class="hero-book-cover-img"
+									:src="heroBookCoverSrc"
+									mode="aspectFit"
+									:lazy-load="false"
+								/>
+							</view>
+						</button>
+						<button class="hero-action-btn" type="default" @click.stop="reload">
+							<text class="hero-refresh-icon">🔄</text>
+						</button>
+					</view>
 		</view>
 
 		<!-- 体量感知 -->
@@ -88,7 +95,7 @@
 						:class="{ 'version-chip-on': modalVersion === v.value }"
 						@click="chooseVersion(v.value)"
 					>
-						<image class="version-icon" :src="v.icon" mode="aspectFill" />
+						<image class="version-icon" :src="resolveAppStaticImg(v.icon)" mode="aspectFill" />
 						<text class="version-label">{{ v.label }}</text>
 					</view>
 				</view>
@@ -110,7 +117,12 @@
 							@click="selectBook(book)"
 						>
 							<view class="book-cover-wrap">
-								<image class="book-cover" :src="book.cover" mode="aspectFit" />
+								<image
+									class="book-cover"
+									:src="book.cover"
+									mode="aspectFit"
+									:lazy-load="false"
+								/>
 							</view>
 							<text class="book-label">{{ book.label }}</text>
 						</view>
@@ -156,6 +168,21 @@ const VERSION_OPTIONS = [
 	// { label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
 ]
 
+/** 与当前教材偏好对应的静态封面路径（再经 resolveAppStaticImg） */
+function rawCoverPathForPrefs(prefs) {
+	const p = prefs || {}
+	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
+		return '/static/images/yuwen_youxiao.jpg'
+	}
+	const g = Number(p.grade)
+	const sem = p.semester === '下' ? '下' : '上'
+	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && g >= 1 && g <= 6) {
+		const hit = COVER_BOOKS.find((b) => b.grade === g && b.semester === sem)
+		if (hit) return hit.cover
+	}
+	return '/static/images/yuwen0101.jpg'
+}
+
 export default {
 	data() {
 		return {
@@ -166,7 +193,9 @@ export default {
 			textbookTexts: [],
 			showCurriculumPicker: false,
 			modalVersion: '统编(人教版)',
-			versionOptions: VERSION_OPTIONS
+			versionOptions: VERSION_OPTIONS,
+			/** 顶部「换教材」按钮：当前册封面（完整显示，aspectFit） */
+			heroBookCoverSrc: ''
 		}
 	},
 	computed: {
@@ -177,7 +206,7 @@ export default {
 					semester: '上',
 					key: `${this.modalVersion}-0-上`,
 					label: '课标300基本字',
-					cover: '/static/images/yuwen_youxiao.jpg'
+					cover: this.resolveAppStaticImg('/static/images/yuwen_youxiao.jpg')
 				}
 				return [{ grade: 0, up: book, down: null }]
 			}
@@ -185,6 +214,7 @@ export default {
 			COVER_BOOKS.forEach((b) => {
 				const book = {
 					...b,
+					cover: this.resolveAppStaticImg(b.cover),
 					key: `${this.modalVersion}-${b.grade}-${b.semester}`,
 					label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
 				}
@@ -205,12 +235,41 @@ export default {
 	onShow() {
 		this.reload()
 	},
+	created() {
+		this.syncHeroBookCover()
+	},
 	methods: {
+		/**
+		 * App 端：低版本 WebView 对「/static/…」解析不稳，转为 5+ 运行时本地路径（适配 Android 5+）。
+		 * H5/小程序等无 plus 时原样返回。
+		 */
+		resolveAppStaticImg(src) {
+			if (!src || typeof src !== 'string') return src
+			// #ifdef APP-PLUS
+			if (typeof plus !== 'undefined' && plus.io) {
+				const isStatic = src.indexOf('/static/') === 0 || src.indexOf('static/') === 0
+				if (isStatic) {
+					try {
+						const rel = src.replace(/^\//, '')
+						return plus.io.convertLocalFileSystemURL('_www/' + rel)
+					} catch (e) {
+						console.warn('[textbook] resolveAppStaticImg', e)
+					}
+				}
+			}
+			// #endif
+			return src
+		},
+		syncHeroBookCover() {
+			const prefs = getCurriculumPrefs()
+			this.heroBookCoverSrc = this.resolveAppStaticImg(rawCoverPathForPrefs(prefs))
+		},
 		async reload() {
 			if (this.loading) return
 			this.loading = true
 			try {
 				const prefs = getCurriculumPrefs()
+				this.syncHeroBookCover()
 				this.summary = formatCurriculumSummary(prefs)
 				this.textbookTexts = []
 				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
@@ -237,7 +296,7 @@ export default {
 						map[hint].count += 1
 					})
 					this.lessons = Object.values(map).sort((a, b) =>
-						String(a.hint).localeCompare(String(b.hint), 'zh-Hans-CN')
+						String(a.hint).localeCompare(String(b.hint))
 					)
 				}
 			} catch (e) {
@@ -364,6 +423,7 @@ export default {
 	background: #fff8ed !important;
 	border: 1rpx solid #ffe0b2 !important;
 	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
 }
 
 .hero-action-btn + .hero-action-btn {
@@ -374,13 +434,36 @@ export default {
 	border: none !important;
 }
 
-.hero-refresh-icon {
-	font-size: 32rpx;
-	line-height: 1;
+/* 竖版封面：按钮整体加大，内边距收窄，封面更贴边、更显大 */
+.hero-action-btn-book {
+	position: relative;
+	width: 96rpx !important;
+	height: 128rpx !important;
+	min-height: 128rpx !important;
+	padding: 0 !important;
+	overflow: hidden;
+	border-radius: 14rpx !important;
 }
 
-.hero-action-icon {
-	font-size: 30rpx;
+.hero-book-thumb {
+	position: absolute;
+	left: 2rpx;
+	right: 2rpx;
+	top: 2rpx;
+	bottom: 2rpx;
+	border-radius: 10rpx;
+	background: #f3ebe0;
+	overflow: hidden;
+}
+
+.hero-book-cover-img {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.hero-refresh-icon {
+	font-size: 32rpx;
 	line-height: 1;
 }
 
@@ -609,6 +692,7 @@ export default {
 
 .picker-panel {
 	width: 100%;
+	max-height: 1200rpx;
 	max-height: 78vh;
 	background: #fffdf7;
 	border-radius: 26rpx 26rpx 0 0;
@@ -676,6 +760,7 @@ export default {
 }
 
 .book-scroll {
+	max-height: 880rpx;
 	max-height: 56vh;
 }
 
@@ -704,19 +789,24 @@ export default {
 	width: 48%;
 }
 
-/* 竖版课本封面：等比例完整显示，不裁切 */
+/*
+ * 竖版课本封面 3:4（宽:高）。不用 aspect-ratio：Android 5+ 旧系统 WebView 不支持，会导致高度为 0、图片不显示。
+ * 使用 padding-bottom 占位 + 绝对定位铺满（兼容 Android 5 WebView / Chrome 37 级）。
+ */
 .book-cover-wrap {
+	position: relative;
 	width: 100%;
-	aspect-ratio: 3 / 4;
+	height: 0;
+	padding-bottom: 133.3333%;
 	border-radius: 12rpx;
 	background: #f3ebe0;
 	overflow: hidden;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 }
 
 .book-cover {
+	position: absolute;
+	left: 0;
+	top: 0;
 	width: 100%;
 	height: 100%;
 }
