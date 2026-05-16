@@ -53,14 +53,14 @@ export default {
 }
 </script>
 <style scoped>
-.page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
+.page { min-height: 100vh; padding: 24rpx; background: var(--meng-page-bg); }
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 14rpx; }
-.title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
+.title { display: block; font-size: 32rpx; font-weight: 700; color: var(--meng-text); margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }
-.field-label { display: block; font-size: 27rpx; color: #2c2419; font-weight: 600; margin-bottom: 10rpx; }
+.field-label { display: block; font-size: 27rpx; color: var(--meng-text); font-weight: 600; margin-bottom: 10rpx; }
 .switch-row { display: flex; flex-direction: row; }
 .switch-row > .chip + .chip { margin-left: 10rpx; }
 .chip { padding: 12rpx 18rpx; border-radius: 999rpx; background: #f1ece2; font-size: 24rpx; color: #6b6560; }
-.chip-on { background: #ffe2b8; color: #2c2419; font-weight: 700; }
+.chip-on { background: var(--meng-chip-active-bg); color: var(--meng-text); font-weight: 700; }
 .tip { display: block; margin-top: 10rpx; font-size: 22rpx; color: #8a8279; }
 </style>

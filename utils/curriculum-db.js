@@ -86,6 +86,28 @@ export async function queryCurriculumChars(prefs) {
 	return out
 }
 
+/**
+ * 全库「识字表」生字（未选教材时写字练习等用）
+ * @returns {Promise<Array<Record<string, unknown>>>}
+ */
+export async function queryAllShiziCurriculumChars() {
+	const seen = new Set()
+	const out = []
+	for (const r of rows) {
+		if (r.list_type !== LIST_TYPE.SHIZI) continue
+		const h = typeof r.hanzi === 'string' ? r.hanzi.trim() : ''
+		if (!h || seen.has(h)) continue
+		seen.add(h)
+		out.push(r)
+	}
+	out.sort((a, b) => {
+		const so = (Number(a[COL.sort_order]) || 0) - (Number(b[COL.sort_order]) || 0)
+		if (so !== 0) return so
+		return (Number(a[COL.id]) || 0) - (Number(b[COL.id]) || 0)
+	})
+	return out
+}
+
 /** 调试：筛选条件与排序说明（供开发页展示） */
 export function debugCurriculumFilter(prefs) {
 	const { whereSql, params } = buildCurriculumWhere(prefs)

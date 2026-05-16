@@ -98,7 +98,7 @@
 		{
 			"path": "pages/literacy/lesson-dictation",
 			"style": {
-				"navigationBarTitleText": "听音找字"
+				"navigationBarTitleText": "听写"
 			}
 		},
 		{
@@ -111,6 +111,12 @@
 			"path": "pages/literacy/daily",
 			"style": {
 				"navigationBarTitleText": "每日一练"
+			}
+		},
+		{
+			"path": "pages/literacy/write-practice",
+			"style": {
+				"navigationBarTitleText": "写字练习"
 			}
 		},
 		{
@@ -128,7 +134,8 @@
 		{
 			"path": "pages/dictionary/result",
 			"style": {
-				"navigationBarTitleText": "查字结果"
+				"navigationBarTitleText": "查询详情结果",
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -161,34 +168,34 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "萌萌识字",
-		"navigationBarBackgroundColor": "#F4F1EA",
-		"backgroundColor": "#F4F1EA",
+		"navigationBarBackgroundColor": "#F6F3EC",
+		"backgroundColor": "#F6F3EC",
 		"app-plus": {
-			"background": "#F4F1EA",
+			"background": "#F6F3EC",
 			"bounce": "vertical",
-			"bounceBackground": "#F4F1EA",
+			"bounceBackground": "#F6F3EC",
 			"safearea": {
-				"background": "#F4F1EA",
-				"backgroundDark": "#F4F1EA"
+				"background": "#F6F3EC",
+				"backgroundDark": "#F6F3EC"
 			},
 			"titleNView": {
 				"titleColor": "#2c2419",
-				"backgroundColor": "#F4F1EA",
+				"backgroundColor": "#F6F3EC",
 				"splitLine": {
-					"color": "#F4F1EA",
+					"color": "#F6F3EC",
 					"height": "0px"
 				}
 			}
 		},
 		"mp-weixin": {
-			"navigationBarBackgroundColor": "#F4F1EA",
+			"navigationBarBackgroundColor": "#F6F3EC",
 			"navigationBarTextStyle": "black"
 		}
 	},
 	"tabBar": {
 		"custom": true,
 		"color": "#7A7E83",
-		"selectedColor": "#3d6b4a",
+		"selectedColor": "#b84a28",
 		"borderStyle": "white",
 		"backgroundColor": "#ffffff",
 		"list": [

@@ -109,7 +109,7 @@ export default {
 .page {
 	padding: 28rpx;
 	min-height: 100vh;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 
@@ -137,7 +137,7 @@ export default {
 	background: #fff;
 	border-radius: 12rpx;
 	font-size: 28rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .ok {

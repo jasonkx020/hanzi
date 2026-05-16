@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:build": "node scripts/build-db.mjs",
-    "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs"
+    "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
+    "pinyin:fingerprints": "node scripts/build-pinyin-audio-fingerprints.mjs"
   },
   "keywords": [],
   "author": "",

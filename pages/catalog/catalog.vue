@@ -65,7 +65,7 @@ export default {
 <style scoped>
 .page {
 	min-height: 100vh;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	padding: 24rpx;
 	box-sizing: border-box;
 }
@@ -102,7 +102,7 @@ export default {
 .p-title {
 	font-size: 34rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .p-desc {
@@ -136,7 +136,7 @@ export default {
 	display: block;
 	font-size: 28rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .lesson-meta {

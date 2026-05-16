@@ -28,6 +28,16 @@ function normalizePrefs(raw) {
 	return base
 }
 
+/** 用户是否在设置/首页/课本中保存过教材偏好（无则写字练习等走全表识字） */
+export function hasUserCurriculumPrefsSaved() {
+	try {
+		const raw = uni.getStorageSync(STORAGE_KEYS.CURRICULUM_PREFS)
+		return !!(raw && typeof raw === 'object')
+	} catch (_) {
+		return false
+	}
+}
+
 /** 读取完整偏好对象 */
 export function getCurriculumPrefs() {
 	try {

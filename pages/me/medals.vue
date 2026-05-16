@@ -34,9 +34,9 @@ export default {
 }
 </script>
 <style scoped>
-.page { min-height: 100vh; padding: 24rpx; background: #f4f1ea; }
+.page { min-height: 100vh; padding: 24rpx; background: var(--meng-page-bg); }
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.title { display: block; font-size: 32rpx; font-weight: 700; color: #2c2419; margin-bottom: 10rpx; }
+.title { display: block; font-size: 32rpx; font-weight: 700; color: var(--meng-text); margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }
 .grid { display: flex; flex-direction: row; flex-wrap: wrap; }
 .medal {
@@ -54,6 +54,6 @@ export default {
 .medal-on { border: 1rpx solid #ffd36b; }
 .medal-off { border: 1rpx solid #e7e1d4; }
 .icon { display: block; font-size: 36rpx; margin-bottom: 8rpx; }
-.name { display: block; font-size: 27rpx; color: #2c2419; font-weight: 600; margin-bottom: 4rpx; }
+.name { display: block; font-size: 27rpx; color: var(--meng-text); font-weight: 600; margin-bottom: 4rpx; }
 .rule { display: block; font-size: 22rpx; color: #8a8279; }
 </style>

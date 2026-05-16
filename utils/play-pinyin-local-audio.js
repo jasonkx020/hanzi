@@ -7,6 +7,7 @@ import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
+import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
 
 /** ü */
 const U_UML = '\u00fc'
@@ -84,8 +85,15 @@ export function applyToneToSyllableStem(symbol, tone) {
 }
 
 let _inner = null
+/** @type {(() => void)|null} */
+let _chainAbort = null
 
 export function stopLocalPinyinAudio() {
+	if (_chainAbort) {
+		const abort = _chainAbort
+		_chainAbort = null
+		abort()
+	}
 	if (!_inner) return
 	try {
 		_inner.stop()
@@ -232,42 +240,37 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 }
 
 /**
- * App 端打包资源在 /static/...，InnerAudioContext 需转为可读的本地绝对路径。
+ * App 端：InnerAudioContext 使用 _www/static/... 逻辑路径。
+ * 禁止 plus.io.convertLocalFileSystemURL(整条路径)，release 会与运行时二次拼接导致路径重复。
  * @param {string} src
  */
 function resolveLocalAudioSrc(src) {
 	if (!src || typeof src !== 'string') return src
-	// #ifdef APP-PLUS
-	try {
-		if (typeof plus !== 'undefined' && plus.io && typeof plus.io.convertLocalFileSystemURL === 'function') {
-			if (src.startsWith('/static/')) {
-				const rel = `_www${src}`
-				return plus.io.convertLocalFileSystemURL(rel)
-			}
-		}
-	} catch (_) {}
-	// #endif
-	return src
+	return resolveAppStaticLogicalUrl(src)
 }
 
 /**
  * @param {string} src 如 /static/pinyin/a.opus
  * @returns {Promise<void>}
  */
-export function playPinyinLocalAudio(src) {
+export function playPinyinLocalAudio(src, opts = {}) {
 	if (!src) return Promise.reject(new Error('empty src'))
 	stopLocalPinyinAudio()
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
 	inner.src = resolveLocalAudioSrc(src)
+	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 6000
 	return new Promise((resolve, reject) => {
 		let settled = false
+		let timer = null
 		const finish = (fn) => {
 			if (settled) return
 			settled = true
+			if (timer != null) clearTimeout(timer)
 			stopLocalPinyinAudio()
 			fn()
 		}
+		timer = setTimeout(() => finish(() => reject(new Error('play timeout'))), timeoutMs)
 		inner.onEnded(() => finish(() => resolve()))
 		inner.onError((err) => finish(() => reject(err || new Error('play error'))))
 		try {
@@ -275,5 +278,133 @@ export function playPinyinLocalAudio(src) {
 		} catch (e) {
 			finish(() => reject(e))
 		}
+	})
+}
+
+/** @param {string} sym */
+function getLocalPinyinTryUrls(sym, useTone1Fallback) {
+	const tryUrls = []
+	const neutral = getLocalPinyinAudioPath(sym)
+	if (neutral) tryUrls.push(neutral)
+	if (useTone1Fallback) {
+		const tone1 = getLocalPinyinTone1AudioPath(sym)
+		if (tone1 && tryUrls.indexOf(tone1) === -1) tryUrls.push(tone1)
+	}
+	return tryUrls
+}
+
+/**
+ * 同一 InnerAudioContext 连续播多个音节，避免每段 destroy 造成的长停顿（复合笔画名连读）。
+ * @param {string[]} symbols 带调音节列表
+ * @param {{ gapMs?: number, narrator?: string, useTone1Fallback?: boolean }} [opts]
+ * @returns {Promise<boolean>}
+ */
+export function playPinyinLocalAudioSequence(symbols, opts = {}) {
+	const list = (Array.isArray(symbols) ? symbols : [])
+		.map((s) => String(s || '').trim())
+		.filter(Boolean)
+	if (!list.length) return Promise.resolve(false)
+
+	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
+	const gapMs = opts.gapMs != null ? opts.gapMs : 0
+	const useTone1Fallback = opts.useTone1Fallback !== false
+
+	stopLocalPinyinAudio()
+	const inner = uni.createInnerAudioContext()
+	_inner = inner
+
+	let anyOk = false
+	let symIndex = 0
+	let aborted = false
+
+	return new Promise((resolve) => {
+		const finishAll = () => {
+			if (aborted) return
+			aborted = true
+			_chainAbort = null
+			stopLocalPinyinAudio()
+			resolve(anyOk)
+		}
+
+		_chainAbort = () => {
+			if (aborted) return
+			aborted = true
+			_chainAbort = null
+			if (_inner) {
+				try {
+					_inner.stop()
+				} catch (_) {}
+				try {
+					_inner.destroy()
+				} catch (_) {}
+				_inner = null
+			}
+			resolve(anyOk)
+		}
+
+		const playSymbolAt = (idx) => {
+			if (aborted || idx >= list.length) {
+				finishAll()
+				return
+			}
+			const sym = list[idx]
+			const urls = getLocalPinyinTryUrls(sym, useTone1Fallback)
+
+			const advance = () => {
+				if (aborted) return
+				symIndex = idx + 1
+				if (symIndex >= list.length) {
+					finishAll()
+					return
+				}
+				if (gapMs > 0) {
+					setTimeout(() => playSymbolAt(symIndex), gapMs)
+				} else {
+					playSymbolAt(symIndex)
+				}
+			}
+
+			const tryTts = () => {
+				speakPinyinSymbolAsync(sym, narrator)
+					.then((ok) => {
+						if (ok) anyOk = true
+						advance()
+					})
+					.catch(() => advance())
+			}
+
+			const tryUrlAt = (urlIdx) => {
+				if (aborted) return
+				if (urlIdx >= urls.length) {
+					tryTts()
+					return
+				}
+				const src = resolveLocalAudioSrc(urls[urlIdx])
+				let settled = false
+				const done = (ok) => {
+					if (settled || aborted) return
+					settled = true
+					if (ok) {
+						anyOk = true
+						logHanziSpeak('local.chain_ok', { sym, src })
+						advance()
+					} else {
+						tryUrlAt(urlIdx + 1)
+					}
+				}
+				inner.onEnded(() => done(true))
+				inner.onError(() => done(false))
+				inner.src = src
+				try {
+					inner.play()
+				} catch (_) {
+					done(false)
+				}
+			}
+
+			tryUrlAt(0)
+		}
+
+		playSymbolAt(0)
 	})
 }

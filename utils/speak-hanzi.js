@@ -28,16 +28,47 @@ function tryPlusSpeech(s) {
 	return false
 }
 
+let _lastVoiceCtl = null
+
 function tryCncharVoice(s) {
 	try {
 		if (typeof cnchar.voice !== 'function') return false
 		const ctl = cnchar.voice(s)
+		_lastVoiceCtl = ctl
 		if (ctl && typeof ctl.start === 'function') {
 			ctl.start()
 			return true
 		}
 	} catch (_) {}
 	return false
+}
+
+/** 停止 TTS / 语音合成（换字、离开页时与本地音频一并停掉） */
+export function stopHanziSpeech() {
+	try {
+		// #ifdef APP-PLUS
+		if (typeof plus !== 'undefined' && plus.speech) {
+			if (typeof plus.speech.stopSpeaking === 'function') {
+				plus.speech.stopSpeaking()
+			} else if (typeof plus.speech.stop === 'function') {
+				plus.speech.stop()
+			}
+		}
+		// #endif
+	} catch (_) {}
+	try {
+		if (typeof window !== 'undefined' && window.speechSynthesis) {
+			window.speechSynthesis.cancel()
+		}
+	} catch (_) {}
+	try {
+		const ctl = _lastVoiceCtl
+		if (ctl) {
+			if (typeof ctl.stop === 'function') ctl.stop()
+			else if (typeof ctl.pause === 'function') ctl.pause()
+		}
+	} catch (_) {}
+	_lastVoiceCtl = null
 }
 
 /**

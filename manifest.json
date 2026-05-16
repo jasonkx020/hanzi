@@ -10,15 +10,15 @@
         "usingComponents" : true,
         "nvueStyleCompiler" : "uni-app",
         "compilerVersion" : 3,
-        "background" : "#F4F1EA",
+        "background" : "#F6F3EC",
         "statusbar" : {
             "immersed" : "supportedDevice",
             "style" : "dark",
-            "background" : "#FFF4F1EA"
+            "background" : "#FFF6F3EC"
         },
         "safearea" : {
-            "background" : "#FFF4F1EA",
-            "backgroundDark" : "#FFF4F1EA"
+            "background" : "#FFF6F3EC",
+            "backgroundDark" : "#FFF6F3EC"
         },
         "splashscreen" : {
             "alwaysShowBeforeRender" : true,
@@ -26,7 +26,6 @@
             "autoclose" : true,
             "delay" : 0
         },
-        /* 模块配置（Speech 为「语音输入/识别」，与拼音 TTS 无直接关系；点读依赖 WebView 内 speechSynthesis） */
         "modules" : {},
         /* 应用发布信息 */
         "distribute" : {
@@ -49,14 +48,17 @@
                     "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
                     "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
                     "<uses-feature android:name=\"android.hardware.camera\"/>",
+                    "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
                     "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
                 ]
             },
             /* ios打包配置 */
             "ios" : {
-                "dSYMs" : false
+                "dSYMs" : false,
+                "privacyDescription" : {
+                    "NSMicrophoneUsageDescription" : "用于拼音跟读练习，录制你的读音并给出鼓励反馈"
+                }
             },
-            /* SDK配置 */
             "sdkConfigs" : {}
         }
     },

@@ -107,7 +107,7 @@ export default {
 <style scoped>
 .page {
 	min-height: 100vh;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	padding: 32rpx;
 	box-sizing: border-box;
 }
@@ -136,7 +136,7 @@ export default {
 	display: block;
 	font-size: 42rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .stat-label {
@@ -174,7 +174,7 @@ export default {
 	padding: 28rpx 24rpx;
 	border-bottom: 1rpx solid #eee;
 	font-size: 28rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .item-sub {

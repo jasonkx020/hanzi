@@ -47,7 +47,7 @@
 				class="test-feedback"
 				:class="testFeedbackType === 'bad' ? 'test-feedback-bad' : 'test-feedback-ok'"
 			>{{ testFeedback }}</text>
-			<text class="test-order-title">书写顺序记录（最新在前）</text>
+			<text class="test-order-title">书写顺序记录（第一笔在上）</text>
 			<text v-for="(item, idx) in testHistory" :key="`${idx}-${item}`" class="test-order-item">{{ item }}</text>
 		</view>
 		<canvas
@@ -328,7 +328,7 @@ export default {
 			}
 		},
 		pushTestHistory(text) {
-			this.testHistory = [text, ...this.testHistory].slice(0, 12)
+			this.testHistory = [...this.testHistory, text].slice(-12)
 		},
 		handleTestStatus(index, status, data = {}) {
 			const strokeNo = Number(index) + 1
@@ -361,15 +361,19 @@ export default {
 				uni.showToast({ title: '测试通过', icon: 'success' })
 			}
 		},
+		pickCanvasTouch(e) {
+			if (!e) return null
+			return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || null
+		},
 		onCanvasTouchStart(e) {
 			if (!this.drawWriter || typeof this.drawWriter.handleTouchStart !== 'function') return
-			const t = e.touches && e.touches[0]
-			if (t) this.drawWriter.handleTouchStart(t)
+			const t = this.pickCanvasTouch(e)
+			if (t) this.drawWriter.handleTouchStart(t, e.detail)
 		},
 		onCanvasTouchMove(e) {
 			if (!this.drawWriter || typeof this.drawWriter.handleTouchMove !== 'function') return
-			const t = e.touches && e.touches[0]
-			if (t) this.drawWriter.handleTouchMove(t)
+			const t = this.pickCanvasTouch(e)
+			if (t) this.drawWriter.handleTouchMove(t, e.detail)
 		},
 		onCanvasTouchEnd() {
 			if (!this.drawWriter || typeof this.drawWriter.handleTouchEnd !== 'function') return
@@ -389,7 +393,7 @@ export default {
 	padding-top: 24rpx;
 	padding-bottom: 48rpx;
 	box-sizing: border-box;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 }
 
 .vip-strip {

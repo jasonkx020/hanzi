@@ -1,3 +1,2 @@
-/** 与 static/styles/pinyin-font.css 中 @font-face 名称一致 */
-export const PINYIN_FONT_FAMILY =
-	"'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"
+/** @deprecated 请使用 PINYIN_FONT_FAMILY_CSS from pinyin-font-loader.js */
+export { PINYIN_FONT_FAMILY_CSS as PINYIN_FONT_FAMILY } from '@/utils/pinyin-font-loader.js'

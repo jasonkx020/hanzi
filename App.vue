@@ -1,35 +1,16 @@
 <script>
 import { initAppStores } from '@/store/index.js'
+import { schedulePinyinFontLoad } from '@/utils/pinyin-font-loader.js'
 	export default {
 		onLaunch: function() {
 			console.log('App Launch')
 			initAppStores()
 			// #ifndef H5
-			// 首帧尚无页面栈时 uni.loadFontFace 会读 $page 报错，延后到首屏就绪再加载
-			const tryLoadPinyinFont = (attempt) => {
-				try {
-					if (typeof uni.loadFontFace !== 'function') return
-					const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
-					if (!pages.length && attempt < 25) {
-						setTimeout(() => tryLoadPinyinFont(attempt + 1), 120)
-						return
-					}
-					uni.loadFontFace({
-						family: 'Pinyin Regular',
-						source: 'url("/static/fonts/Pinyin-Regular.ttf")',
-						global: true,
-						success: () => {},
-						fail: (e) => console.warn('[App] loadFontFace Pinyin Regular', e)
-					})
-				} catch (e) {
-					console.warn('[App] loadPinyinFontFace', e)
-				}
-			}
-			setTimeout(() => tryLoadPinyinFont(0), 0)
+			schedulePinyinFontLoad()
 			// #endif
 			// #ifdef APP-PLUS
 			try {
-				const bg = '#F4F1EA'
+				const bg = '#F6F3EC'
 				const applyWebviewBg = (wv) => {
 					if (wv && typeof wv.setStyle === 'function') {
 						wv.setStyle({ background: bg })
@@ -64,10 +45,11 @@ import { initAppStores } from '@/store/index.js'
 </script>
 
 <style>
+@import './static/styles/app-theme.css';
 @import './static/styles/pinyin-font.css';
 	/* 页面底色与 App 回弹露底同色 */
 	page {
-		background-color: #f4f1ea;
+		background-color: var(--meng-page-bg);
 		box-sizing: border-box;
 		width: 100%;
 		min-height: 100%;
@@ -84,7 +66,7 @@ import { initAppStores } from '@/store/index.js'
 	#app,
 	html,
 	body {
-		background-color: #f4f1ea;
+		background-color: var(--meng-page-bg);
 		width: 100%;
 		min-height: 100%;
 	}

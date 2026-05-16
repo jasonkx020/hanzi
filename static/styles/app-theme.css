@@ -1,0 +1,35 @@
+/**
+ * 萌萌识字 · 全局主题（对齐 static/logo.png：熊猫黑白、积木暖橙渐变、奶油字感、小花绿叶点缀）
+ * 由 App.vue 引入；页面/组件样式中优先使用 var(--meng-*)，与 pages.json / manifest 中底色 #F6F3EC 保持一致。
+ */
+page {
+	--meng-page-bg: #f6f3ec;
+	--meng-card: #fffcf8;
+	--meng-card-solid: #ffffff;
+	--meng-text: #2c2419;
+	--meng-text-secondary: #6d5e52;
+	--meng-text-muted: #8a8076;
+	--meng-border: #ebe3d8;
+	--meng-border-warm: #e3d9c8;
+	/* 主操作：logo 积木橙 → 珊瑚红，略降饱和 */
+	--meng-accent-from: #ff9a45;
+	--meng-accent-to: #ff5c38;
+	--meng-accent-solid: #ff8a4c;
+	--meng-chip-active-bg: #fff0e0;
+	--meng-chip-active-border: rgba(255, 107, 66, 0.42);
+	--meng-banner-soft: #fff6ec;
+	--meng-tip-bg: #fff4e8;
+	--meng-tip-text: #7a5f2a;
+	--meng-blush: #ffdce4;
+	--meng-leaf: #6bae7d;
+	--meng-leaf-soft: #e8f4ec;
+	--meng-shadow: rgba(44, 36, 25, 0.07);
+	--meng-shadow-warm: rgba(255, 120, 72, 0.22);
+	/* 底部 Tab：选中态偏暖，与 logo 主色呼应 */
+	--meng-tab-bar-bg: #fffdf8;
+	--meng-tab-warm-from: #fff8f0;
+	--meng-tab-warm-to: #ffece0;
+	--meng-tab-active-border: rgba(255, 107, 66, 0.38);
+	--meng-tab-active-text: #b84a28;
+	--meng-tab-inactive-text: #9c958c;
+}

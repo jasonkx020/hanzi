@@ -180,9 +180,11 @@ export function speakPinyinSymbolAsync(symbol, narrator) {
 		const finish = (v) => {
 			if (settled) return
 			settled = true
+			if (timeoutTimer != null) clearTimeout(timeoutTimer)
 			logHanziSpeak('tts.finish', { symbol, text, ok: v })
 			resolve(v)
 		}
+		const timeoutTimer = setTimeout(() => finish(false), 6500)
 
 		try {
 			const root =

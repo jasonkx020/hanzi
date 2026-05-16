@@ -134,7 +134,7 @@ export default {
 .page {
 	min-height: 100vh;
 	padding: 32rpx 28rpx 80rpx;
-	background: linear-gradient(180deg, #f4f1ea 0%, #efeae3 40%, #e8e4dc 100%);
+	background: linear-gradient(180deg, var(--meng-page-bg) 0%, #efeae3 40%, #e3ded4 100%);
 	box-sizing: border-box;
 }
 
@@ -156,7 +156,7 @@ export default {
 	display: block;
 	font-size: 40rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	line-height: 1.35;
 	margin-bottom: 12rpx;
 }
@@ -217,7 +217,7 @@ export default {
 	display: block;
 	font-size: 30rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 20rpx;
 }
 
@@ -314,7 +314,7 @@ export default {
 .plan-name {
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .plan-price {

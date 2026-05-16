@@ -1,18 +1,24 @@
 /**
  * 汉语拼音常规体：jaywcjlove/pinyin-font（docs/pinyin-regular.ttf）
  * 授权见 static/fonts/Pinyin-Regular-LICENSE.txt（SIL Open Font License 1.1）
+ *
+ * 全项目拼音（四线三格、纯文本）统一用本字体；App/小程序另见 utils/pinyin-font-loader.js
  */
 @font-face {
 	font-family: 'Pinyin Regular';
 	src: url('/static/fonts/Pinyin-Regular.ttf') format('truetype');
-	/* 单字重字体：声明区间，避免对带调字母只做局部伪粗导致调号偏细 */
 	font-weight: 100 900;
 	font-style: normal;
 	font-display: swap;
 }
 
+:root,
+page {
+	--meng-pinyin-font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+
 .font-pinyin {
-	font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+	font-family: var(--meng-pinyin-font-family);
 	font-weight: normal;
 	font-synthesis: none;
 }

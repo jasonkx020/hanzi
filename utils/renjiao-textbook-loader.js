@@ -32,7 +32,7 @@ function readStaticTextAppPlus(url) {
 			reject(new Error('readStaticTextAppPlus: not app or bad url'))
 			return
 		}
-		const fullPath = `_www${url}`
+		const fullPath = `${url}`
 		plus.io.resolveLocalFileSystemURL(
 			fullPath,
 			(entry) => {
@@ -57,6 +57,29 @@ function readStaticTextAppPlus(url) {
 	})
 }
 
+/** 将 uni.request / 本地读出的 payload 统一为可 JSON.parse 的字符串或已是数组 */
+function normalizeTextbookJsonPayload(data) {
+	if (data == null || data === '') return ''
+	if (Array.isArray(data)) return data
+	if (typeof data === 'object') {
+		try {
+			return JSON.stringify(data)
+		} catch (_) {
+			return ''
+		}
+	}
+	return String(data)
+}
+
+function parseTextbookJsonArray(payload) {
+	if (Array.isArray(payload)) return payload
+	const text = normalizeTextbookJsonPayload(payload)
+	if (!text) return null
+	const trimmed = text.trim()
+	if (!trimmed || trimmed === '[object Object]') return null
+	return JSON.parse(trimmed)
+}
+
 function requestText(url) {
 	return new Promise((resolve, reject) => {
 		if (typeof plus !== 'undefined' && plus.io && typeof url === 'string' && url.startsWith('/static/')) {
@@ -67,9 +90,15 @@ function requestText(url) {
 			url,
 			method: 'GET',
 			responseType: 'text',
+			dataType: 'text',
 			success: (res) => {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
-					resolve(String(res.data || ''))
+					// H5 等端可能对 .json 自动解析为对象，不可 String(object)
+					if (Array.isArray(res.data)) {
+						resolve(res.data)
+						return
+					}
+					resolve(normalizeTextbookJsonPayload(res.data))
 					return
 				}
 				reject(new Error(`HTTP ${res.statusCode}`))
@@ -97,8 +126,8 @@ export async function loadRenjiaoTextbookTexts({ grade, semester }) {
 				lastError = e
 			}
 		}
-		if (!text) throw lastError || new Error('empty textbook json')
-		const arr = JSON.parse(text)
+		if (text === '' || text == null) throw lastError || new Error('empty textbook json')
+		const arr = parseTextbookJsonArray(text)
 		if (!Array.isArray(arr)) return []
 		return arr
 			.map((it) => {

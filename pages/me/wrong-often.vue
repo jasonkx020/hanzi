@@ -56,7 +56,7 @@ export default {
 <style scoped>
 .page {
 	min-height: 100vh;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	padding: 24rpx;
 	box-sizing: border-box;
 }
@@ -71,7 +71,7 @@ export default {
 	display: block;
 	font-size: 30rpx;
 	font-weight: 600;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 16rpx;
 }
 
@@ -107,7 +107,7 @@ export default {
 .char {
 	font-size: 40rpx;
 	font-weight: 600;
-	color: #2c2419;
+	color: var(--meng-text);
 	min-width: 72rpx;
 }
 

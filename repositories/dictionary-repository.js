@@ -9,6 +9,7 @@ import {
 	fallbackDictionaryDetail
 } from '@/data/dictionary-detail.js'
 import { getCachedDictionaryDetail, setCachedDictionaryDetail } from '@/utils/dictionary-cache.js'
+import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 
 const STROKE_CACHE = Object.create(null)
 const HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
@@ -77,12 +78,15 @@ function cncharStrokeShapes(char) {
 	return ''
 }
 
-/** 笔顺笔画名称（如 横 横 撇 捺） */
+/** 笔顺笔画名称（如 横 横 撇 捺）；| 同义只保留一条叫法 */
 function cncharStrokeNames(char) {
 	try {
 		const rows = cnchar.stroke(char, 'order', 'name')
 		if (Array.isArray(rows) && rows[0] && Array.isArray(rows[0])) {
-			return rows[0].join(' ')
+			return rows[0]
+				.map((s) => formatStrokeLabelDisplay(String(s || '').trim()))
+				.filter(Boolean)
+				.join(' ')
 		}
 	} catch (_) {}
 	return ''

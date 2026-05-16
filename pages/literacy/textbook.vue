@@ -1,36 +1,40 @@
 <template>
-	<view class="page">
-		<!-- 当前学什么：一眼看懂 -->
-		<view class="hero">
-			<text class="hero-icon">📘</text>
-			<view class="hero-body">
-				<view class="hero-row">
-					<text class="hero-title">课本同步学</text>
-				</view>
-				<text class="hero-sub">{{ summary }}</text>
-			</view>
-			<view class="hero-actions">
-						<button class="hero-action-btn hero-action-btn-book" type="default" @click.stop="openCurriculumPicker">
-							<view class="hero-book-thumb">
-								<image
-									class="hero-book-cover-img"
-									:src="heroBookCoverSrc"
-									mode="aspectFit"
-									:lazy-load="false"
-								/>
-							</view>
-						</button>
-						<button class="hero-action-btn" type="default" @click.stop="reload">
-							<text class="hero-refresh-icon">🔄</text>
-						</button>
+	<view class="page tb-page">
+		<view class="tb-hero">
+			<view class="tb-hero-sky" />
+			<view class="tb-hero-card">
+				<view class="tb-hero-head">
+					<text class="tb-hero-title">课本同步学</text>
+					<view class="tb-hero-tools">
+						<view class="tb-circle-btn" @click="reload">
+							<text class="tb-circle-icon">🔄</text>
+						</view>
 					</view>
+				</view>
+				<view class="tb-hero-body">
+					<view class="tb-cover-wrap" @click="openCurriculumPicker">
+						<image
+							class="tb-cover-img"
+							:src="heroBookCoverSrc"
+							mode="aspectFit"
+							:lazy-load="false"
+						/>
+						<text class="tb-cover-tag">换教材</text>
+					</view>
+					<view class="tb-hero-meta">
+						<text class="tb-hero-sub">{{ summary }}</text>
+						<view v-if="lessons.length" class="tb-stat-pill">
+							<text class="tb-stat-txt">
+								共 <text class="tb-stat-num">{{ lessons.length }}</text> 课 ·
+								<text class="tb-stat-num">{{ statSlotCount }}</text> 个生字
+							</text>
+						</view>
+					</view>
+				</view>
+			</view>
 		</view>
 
-		<!-- 体量感知 -->
-		<view v-if="lessons.length" class="stat-pill">
-			<text class="stat-txt">共 <text class="stat-num">{{ lessons.length }}</text> 课 · <text class="stat-num">{{ statSlotCount }}</text> 个生字</text>
-		</view>
-
+		<view class="tb-sheet">
 		<view v-if="textbookTexts.length" class="textbook-panel">
 			<view class="textbook-panel-head">
 				<text class="textbook-panel-title">人教版（部编）课文原文</text>
@@ -80,7 +84,8 @@
 
 		<view class="foot-tip">
 			<text class="foot-icon">🐼</text>
-			<text class="foot-msg">小朋友看点字卡听读音；也可以点右上角教材按钮直接切换版本与课本。</text>
+			<text class="foot-msg">点一课进入字卡听读音；点封面可换年级册别。</text>
+		</view>
 		</view>
 
 		<view v-if="showCurriculumPicker" class="picker-mask" @click="closeCurriculumPicker">
@@ -147,6 +152,7 @@ import {
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
+import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
 
 const COVER_BOOKS = [
 	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
@@ -249,21 +255,7 @@ export default {
 		 * H5/小程序等无 plus 时原样返回。
 		 */
 		resolveAppStaticImg(src) {
-			if (!src || typeof src !== 'string') return src
-			// #ifdef APP-PLUS
-			if (typeof plus !== 'undefined' && plus.io) {
-				const isStatic = src.indexOf('/static/') === 0 || src.indexOf('static/') === 0
-				if (isStatic) {
-					try {
-						const rel = src.replace(/^\//, '')
-						return plus.io.convertLocalFileSystemURL('_www/' + rel)
-					} catch (e) {
-						console.warn('[textbook] resolveAppStaticImg', e)
-					}
-				}
-			}
-			// #endif
-			return src
+			return resolveAppStaticAbsoluteUrl(src)
 		},
 		syncHeroBookCover() {
 			const prefs = getCurriculumPrefs()
@@ -406,150 +398,176 @@ export default {
 </script>
 
 <style scoped>
-.page {
+.tb-page {
 	min-height: 100vh;
-	padding: 24rpx 24rpx 40rpx;
-	background: #fff8e7;
+	padding: 0 0 48rpx;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 32%, var(--meng-page-bg, #f6f3ec) 100%);
+}
+
+/* —— 顶区（对齐首页 Hero 粉奶油氛围）—— */
+.tb-hero {
+	position: relative;
+	padding: 16rpx 20rpx 8rpx;
 	box-sizing: border-box;
 }
 
-.hero {
+.tb-hero-sky {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 280rpx;
+	background: linear-gradient(
+		180deg,
+		rgba(255, 220, 235, 0.45) 0%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	pointer-events: none;
+}
+
+.tb-hero-card {
+	position: relative;
+	z-index: 1;
+	padding: 24rpx 22rpx 22rpx;
+	border-radius: 32rpx;
+	background: rgba(255, 255, 255, 0.9);
+	border: 2rpx solid rgba(255, 255, 255, 0.95);
+	box-shadow:
+		0 12rpx 40rpx rgba(255, 150, 180, 0.14),
+		0 8rpx 24rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
+}
+
+.tb-hero-head {
 	display: flex;
 	flex-direction: row;
-	align-items: flex-start;
-	padding: 28rpx 24rpx;
-	background: #fff;
-	border-radius: 20rpx;
-	border: 1rpx solid #ffe0b2;
-	box-shadow: 0 6rpx 20rpx rgba(255, 167, 38, 0.12);
+	align-items: center;
+	justify-content: space-between;
 	margin-bottom: 20rpx;
 }
 
-.hero-icon {
-	font-size: 52rpx;
-	margin-right: 18rpx;
-	line-height: 1;
+.tb-hero-title {
+	font-size: 38rpx;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
+	letter-spacing: 2rpx;
 }
 
-.hero-body {
-	flex: 1;
-	min-width: 0;
-}
-
-.hero-row {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	margin-bottom: 10rpx;
-}
-
-.hero-title {
-	flex: 1;
-	min-width: 0;
-	font-size: 36rpx;
-	font-weight: 700;
-	color: #4e4e4e;
-	line-height: 1.25;
-}
-
-.hero-actions {
+.tb-hero-tools {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 }
 
-.hero-action-btn {
-	flex-shrink: 0;
-	display: flex !important;
+.tb-circle-btn {
+	width: 72rpx;
+	height: 72rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.95);
+	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 64rpx !important;
-	height: 64rpx !important;
-	min-height: 64rpx !important;
-	padding: 0 !important;
-	margin: 0 0 0 12rpx !important;
-	line-height: 1 !important;
-	border-radius: 16rpx !important;
-	background: #fff8ed !important;
-	border: 1rpx solid #ffe0b2 !important;
-	box-sizing: border-box;
-	-webkit-tap-highlight-color: transparent;
+	box-shadow: 0 8rpx 22rpx rgba(255, 120, 160, 0.2);
+	border: 2rpx solid rgba(255, 200, 215, 0.5);
 }
 
-.hero-action-btn + .hero-action-btn {
-	margin-left: 10rpx !important;
+.tb-circle-icon {
+	font-size: 30rpx;
 }
 
-.hero-action-btn::after {
-	border: none !important;
+.tb-hero-body {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
 }
 
-/* 竖版封面：按钮整体加大，内边距收窄，封面更贴边、更显大 */
-.hero-action-btn-book {
+.tb-cover-wrap {
+	flex-shrink: 0;
 	position: relative;
-	width: 96rpx !important;
-	height: 128rpx !important;
-	min-height: 128rpx !important;
-	padding: 0 !important;
+	width: 152rpx;
+	height: 0;
+	padding-bottom: 200rpx;
+	margin-right: 22rpx;
+	border-radius: 18rpx;
+	background: linear-gradient(160deg, #f3ebe0 0%, #fff8f0 100%);
 	overflow: hidden;
-	border-radius: 14rpx !important;
+	box-shadow: 0 10rpx 28rpx rgba(44, 36, 25, 0.1);
+	border: 2rpx solid rgba(255, 200, 180, 0.35);
 }
 
-.hero-book-thumb {
+.tb-cover-img {
 	position: absolute;
-	left: 2rpx;
-	right: 2rpx;
-	top: 2rpx;
-	bottom: 2rpx;
-	border-radius: 10rpx;
-	background: #f3ebe0;
-	overflow: hidden;
-}
-
-.hero-book-cover-img {
-	display: block;
+	left: 0;
+	top: 0;
 	width: 100%;
 	height: 100%;
 }
 
-.hero-refresh-icon {
-	font-size: 32rpx;
-	line-height: 1;
+.tb-cover-tag {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 8rpx 0;
+	text-align: center;
+	font-size: 20rpx;
+	font-weight: 700;
+	color: #fff;
+	background: linear-gradient(180deg, transparent 0%, rgba(196, 77, 106, 0.75) 100%);
 }
 
-.hero-sub {
+.tb-hero-meta {
+	flex: 1;
+	min-width: 0;
+}
+
+.tb-hero-sub {
 	display: block;
-	font-size: 24rpx;
-	color: #9e9e9e;
-	line-height: 1.45;
+	font-size: 26rpx;
+	color: var(--meng-text-secondary, #6d5e52);
+	line-height: 1.5;
 	word-break: break-all;
 }
 
-.stat-pill {
-	align-self: flex-start;
-	padding: 10rpx 20rpx;
-	background: rgba(139, 195, 74, 0.15);
+.tb-stat-pill {
+	display: inline-flex;
+	margin-top: 14rpx;
+	padding: 10rpx 18rpx;
 	border-radius: 999rpx;
-	margin-bottom: 24rpx;
-	border: 1rpx solid rgba(139, 195, 74, 0.35);
+	background: linear-gradient(135deg, #e8f8ee 0%, #d4f0dc 100%);
+	border: 2rpx solid rgba(111, 186, 125, 0.35);
 }
 
-.stat-txt {
+.tb-stat-txt {
 	font-size: 24rpx;
-	color: #558b2f;
+	color: #3d6b4a;
+	font-weight: 600;
 }
 
-.stat-num {
-	font-weight: 700;
-	color: #33691e;
+.tb-stat-num {
+	font-weight: 800;
+	color: #2e7d32;
+}
+
+/* —— 主内容玻璃区（对齐首页 dock-glass）—— */
+.tb-sheet {
+	margin: 0 20rpx;
+	padding: 24rpx 22rpx 20rpx;
+	border-radius: 36rpx 36rpx 28rpx 28rpx;
+	background: rgba(255, 255, 255, 0.88);
+	border: 2rpx solid rgba(255, 255, 255, 0.95);
+	box-shadow:
+		0 -8rpx 36rpx rgba(255, 150, 180, 0.1),
+		0 16rpx 40rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
+	box-sizing: border-box;
 }
 
 .textbook-panel {
 	margin-bottom: 20rpx;
-	background: #fff;
-	border-radius: 18rpx;
+	background: linear-gradient(135deg, #fffaf5 0%, #fff5f8 100%);
+	border-radius: 22rpx;
 	padding: 18rpx 20rpx;
-	border: 1rpx solid #f0e6d4;
+	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }
 
 .textbook-panel-head {
@@ -560,7 +578,7 @@ export default {
 	display: block;
 	font-size: 28rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .textbook-panel-sub {
@@ -575,20 +593,25 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	padding: 14rpx 4rpx;
-	border-top: 1rpx solid #f5eee3;
+	padding: 16rpx 6rpx;
+	border-top: 1rpx solid rgba(255, 220, 200, 0.45);
+}
+
+.text-row:active {
+	opacity: 0.85;
 }
 
 .text-row-title {
 	flex: 1;
-	font-size: 25rpx;
-	color: #5a534c;
+	font-size: 26rpx;
+	color: var(--meng-text-secondary, #6d5e52);
 	line-height: 1.45;
+	font-weight: 500;
 }
 
 .text-row-arrow {
 	font-size: 34rpx;
-	color: #cfd8dc;
+	color: rgba(196, 77, 106, 0.4);
 	margin-left: 12rpx;
 }
 
@@ -600,15 +623,16 @@ export default {
 .section-title {
 	display: block;
 	font-size: 30rpx;
-	font-weight: 700;
-	color: #4e4e4e;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
 	margin-bottom: 6rpx;
 }
 
 .section-hint {
 	display: block;
 	font-size: 22rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
+	line-height: 1.45;
 }
 
 .lesson-list {
@@ -624,26 +648,32 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 26rpx 22rpx;
+	padding: 24rpx 20rpx;
 	background: #fff;
-	border-radius: 18rpx;
-	border: 1rpx solid #f0e6d4;
-	box-shadow: 0 4rpx 14rpx rgba(78, 78, 78, 0.06);
+	border-radius: 24rpx;
+	border: 2rpx solid rgba(255, 230, 210, 0.6);
+	box-shadow: 0 8rpx 20rpx rgba(44, 36, 25, 0.05);
 	box-sizing: border-box;
+}
+
+.lesson-card:active {
+	opacity: 0.94;
+	transform: scale(0.995);
 }
 
 .lesson-num {
 	flex-shrink: 0;
-	width: 52rpx;
-	height: 52rpx;
-	line-height: 52rpx;
+	width: 56rpx;
+	height: 56rpx;
+	line-height: 56rpx;
 	text-align: center;
 	font-size: 26rpx;
-	font-weight: 700;
+	font-weight: 800;
 	color: #fff;
-	background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
-	border-radius: 14rpx;
+	background: linear-gradient(160deg, #b8e8c8 0%, #7fd49a 100%);
+	border-radius: 16rpx;
 	margin-right: 18rpx;
+	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.28);
 }
 
 .lesson-main {
@@ -664,7 +694,7 @@ export default {
 	display: block;
 	font-size: 30rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	line-height: 1.35;
 	word-break: break-all;
 }
@@ -685,23 +715,23 @@ export default {
 	display: block;
 	margin-top: 8rpx;
 	font-size: 24rpx;
-	color: #42a5f5;
-	font-weight: 500;
+	color: #c44d6a;
+	font-weight: 600;
 }
 
 .lesson-arrow {
 	flex-shrink: 0;
 	font-size: 40rpx;
-	color: #cfd8dc;
+	color: rgba(196, 77, 106, 0.35);
 	margin-left: 12rpx;
 	font-weight: 300;
 }
 
 .empty-box {
 	padding: 48rpx 28rpx;
-	background: #fff;
-	border-radius: 18rpx;
-	border: 2rpx dashed #ffe0b2;
+	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	border-radius: 24rpx;
+	border: 2rpx dashed rgba(255, 180, 200, 0.45);
 	text-align: center;
 }
 
@@ -729,11 +759,11 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: flex-start;
-	margin-top: 28rpx;
-	padding: 18rpx 20rpx;
-	background: rgba(66, 165, 245, 0.08);
-	border-radius: 14rpx;
-	border: 1rpx solid rgba(66, 165, 245, 0.25);
+	margin-top: 8rpx;
+	padding: 16rpx 18rpx;
+	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	border-radius: 20rpx;
+	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }
 
 .foot-icon {
@@ -765,10 +795,11 @@ export default {
 	width: 100%;
 	max-height: 1200rpx;
 	max-height: 78vh;
-	background: #fffdf7;
-	border-radius: 26rpx 26rpx 0 0;
-	padding: 24rpx;
+	background: linear-gradient(180deg, #fffaf8 0%, #fff6fa 100%);
+	border-radius: 36rpx 36rpx 0 0;
+	padding: 28rpx 24rpx 32rpx;
 	box-sizing: border-box;
+	border-top: 2rpx solid rgba(255, 255, 255, 0.9);
 }
 
 .picker-head {
@@ -781,7 +812,7 @@ export default {
 .picker-title {
 	font-size: 32rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 
 .picker-close {
@@ -801,11 +832,12 @@ export default {
 	flex: 1;
 	display: flex;
 	align-items: center;
-	background: #fff;
-	border: 1rpx solid #eadfcd;
-	border-radius: 14rpx;
-	padding: 12rpx;
+	background: rgba(255, 255, 255, 0.95);
+	border: 2rpx solid rgba(255, 180, 200, 0.25);
+	border-radius: 20rpx;
+	padding: 14rpx 12rpx;
 	box-sizing: border-box;
+	box-shadow: 0 4rpx 12rpx rgba(44, 36, 25, 0.04);
 }
 
 .version-chip + .version-chip {
@@ -813,8 +845,9 @@ export default {
 }
 
 .version-chip-on {
-	background: #fff3df;
-	border-color: #ffb74d;
+	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	border-color: var(--meng-chip-active-border, rgba(255, 107, 66, 0.42));
+	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.18);
 }
 
 .version-icon {
@@ -826,8 +859,12 @@ export default {
 
 .version-label {
 	font-size: 26rpx;
-	font-weight: 600;
+	font-weight: 700;
 	color: #5a534c;
+}
+
+.version-chip-on .version-label {
+	color: #c44d6a;
 }
 
 .book-scroll {

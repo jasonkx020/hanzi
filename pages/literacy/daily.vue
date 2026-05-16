@@ -511,14 +511,14 @@ export default {
 .page {
 	min-height: 100vh;
 	padding: 20rpx 24rpx 24rpx;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 .title {
 	display: block;
 	font-size: 32rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 4rpx;
 }
 .sub {
@@ -743,7 +743,7 @@ export default {
 .dense-glyphs {
 	display: block;
 	font-size: 36rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	line-height: 1.35;
 	margin-bottom: 2rpx;
 }
@@ -782,8 +782,5 @@ export default {
 }
 .foot-spacer {
 	height: 8rpx;
-}
-.font-pinyin {
-	font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 </style>

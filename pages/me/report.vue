@@ -141,7 +141,7 @@ export default {
 .page {
 	min-height: 100vh;
 	padding: 24rpx;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 
@@ -156,7 +156,7 @@ export default {
 	display: block;
 	font-size: 34rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 10rpx;
 }
 
@@ -202,7 +202,7 @@ export default {
 .num {
 	display: block;
 	font-size: 34rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	font-weight: 700;
 }
 
@@ -217,7 +217,7 @@ export default {
 .sub-title {
 	display: block;
 	font-size: 28rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	font-weight: 600;
 	margin-bottom: 8rpx;
 }
@@ -255,7 +255,7 @@ export default {
 
 .pass-name {
 	font-size: 28rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	flex: 1;
 	min-width: 0;
 	padding-right: 12rpx;
@@ -283,7 +283,7 @@ export default {
 
 .weak-char {
 	font-size: 34rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	font-weight: 600;
 }
 

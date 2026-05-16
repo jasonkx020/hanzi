@@ -60,6 +60,7 @@ export default {
 </script>
 
 <style>
+@import '../static/styles/app-theme.css';
 .tab-wrap {
 	position: fixed;
 	left: 0;
@@ -67,9 +68,9 @@ export default {
 	bottom: 0;
 	z-index: 999;
 	padding-bottom: env(safe-area-inset-bottom);
-	background: #fffdf8;
+	background: var(--meng-tab-bar-bg);
 	box-shadow: 0 -6rpx 28rpx rgba(44, 36, 25, 0.08);
-	border-top: 1rpx solid rgba(232, 224, 214, 0.95);
+	border-top: 1rpx solid var(--meng-border);
 	box-sizing: border-box;
 }
 
@@ -101,8 +102,8 @@ export default {
 }
 
 .tab-item-active {
-	background: linear-gradient(180deg, #e8f4ec 0%, #dcefe3 100%);
-	box-shadow: inset 0 0 0 2rpx rgba(61, 107, 74, 0.35);
+	background: linear-gradient(180deg, var(--meng-tab-warm-from) 0%, var(--meng-tab-warm-to) 100%);
+	box-shadow: inset 0 0 0 2rpx var(--meng-tab-active-border);
 }
 
 .tab-icon {
@@ -118,13 +119,13 @@ export default {
 .tab-text {
 	margin-top: 4rpx;
 	font-size: 22rpx;
-	color: #9c958c;
+	color: var(--meng-tab-inactive-text);
 	line-height: 1.2;
 	transition: color 0.15s ease;
 }
 
 .tab-item-active .tab-text {
-	color: #3d6b4a;
+	color: var(--meng-tab-active-text);
 	font-weight: 700;
 }
 </style>

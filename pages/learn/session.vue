@@ -20,7 +20,7 @@ export default {
 .page {
 	min-height: 100vh;
 	padding: 32rpx;
-	background: #f4f1ea;
+	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 
@@ -28,7 +28,7 @@ export default {
 	display: block;
 	font-size: 36rpx;
 	font-weight: 700;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 16rpx;
 }
 

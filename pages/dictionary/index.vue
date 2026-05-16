@@ -1,35 +1,69 @@
 <template>
-	<view class="page tab-root-page" :style="tabPageStyle">
-		<!-- 汉字搜索 -->
-		<view class="search-row">
-			<text class="search-glyph">🔍</text>
-			<input
-				v-model="hanziInput"
-				class="hanzi-input"
-				type="text"
-				maxlength="12"
-				placeholder="输入汉字，如「萌」"
-				confirm-type="search"
-				@confirm="runHanziLookup"
-			/>
-			<text class="search-tool" @click="goSettings">⚙️</text>
-		</view>
-		<view class="quick-row">
-			<button class="quick-btn" type="default" @click="openHandwritePad">
-				<text class="quick-btn-text">✍️ 手写</text>
-			</button>
-			<button
-				class="quick-btn"
-				:class="radicalPanelOn ? 'quick-btn-active' : ''"
-				type="default"
-				@click="toggleRadicalPanel"
-			>
-				<text class="quick-btn-text">📖 部首检索</text>
-			</button>
+	<view class="page dict-page tab-root-page" :style="tabPageStyle">
+		<view class="dict-hero">
+			<view class="dict-hero-sky" />
+			<view class="dict-hero-bar">
+				<image class="dict-hero-logo" src="/static/logo.png" mode="aspectFit" />
+				<view class="dict-hero-meta">
+					<text class="dict-hero-title">查字</text>
+					<text class="dict-hero-sub">{{ curriculumChip }} · 字库 {{ chars.length }} 字</text>
+				</view>
+				<view class="dict-hero-btn" @click="goSettings">
+					<text class="dict-hero-btn-icon">⚙️</text>
+				</view>
+			</view>
 		</view>
 
-		<!-- 部首筛选 -->
-		<view v-if="radicalPanelOn" class="radical-panel">
+		<view class="dict-body">
+			<view class="glass-card search-card">
+				<view class="search-row">
+					<text class="search-glyph">🔍</text>
+					<input
+						v-model="hanziInput"
+						class="hanzi-input"
+						type="text"
+						maxlength="12"
+						placeholder="输入汉字，如「萌」"
+						confirm-type="search"
+						@confirm="runHanziLookup"
+					/>
+					<view class="search-go" @click="runHanziLookup">
+						<text class="search-go-text">查</text>
+					</view>
+				</view>
+				<view
+					class="quick-pill quick-pill--rad"
+					:class="{ 'quick-pill--on': radicalPanelOn }"
+					@click="toggleRadicalPanel"
+				>
+					<text class="quick-pill-emoji">📖</text>
+					<text class="quick-pill-label">部首检索</text>
+				</view>
+			</view>
+
+		<!-- 部首候选字置顶：选中部首后最先看到，滚动详情时仍吸顶 -->
+			<view
+				v-if="radicalPanelOn && radicalFilter && radicalHits.length"
+				class="glass-card radical-hits-top"
+			>
+			<view class="radical-hits-top-head">
+				<text class="radical-hits-top-title">部首「{{ radicalFilter }}」</text>
+				<text class="radical-hits-top-count">共 {{ radicalHits.length }} 字 · 点字查看</text>
+			</view>
+			<view class="radical-grid radical-grid--top">
+				<view
+					v-for="(row, i) in radicalHits"
+					:key="row.id != null ? row.id : `${row.hanzi}-${i}`"
+					class="rad-cell"
+					:class="{ 'rad-cell--active': activeEntry && activeEntry.hanzi === row.hanzi }"
+					@click="selectGridChar(row.hanzi)"
+				>
+					<text class="rad-cell-char">{{ row.hanzi }}</text>
+				</view>
+			</view>
+		</view>
+
+			<view v-if="radicalPanelOn" class="glass-card radical-panel">
 			<text class="radical-title">按部首筛选字库（当前 {{ chars.length }} 字）</text>
 			<view class="radical-chips">
 				<text
@@ -40,24 +74,15 @@
 					@click="pickRadical(r)"
 				>{{ r }}</text>
 			</view>
-			<text v-if="radicalFilter" class="radical-count">共 {{ radicalHits.length }} 个候选字 · 点字查看详情</text>
-			<view v-if="radicalFilter && radicalHits.length" class="radical-grid">
-				<view
-					v-for="(row, i) in radicalHits"
-					:key="row.id != null ? row.id : `${row.hanzi}-${i}`"
-					class="rad-cell"
-					@click="selectGridChar(row.hanzi)"
-				>
-					<text class="rad-cell-char">{{ row.hanzi }}</text>
-				</view>
-			</view>
+			<text v-if="radicalFilter && !radicalHits.length" class="radical-count radical-count--empty">
+				该部首暂无候选字，请换部首
+			</text>
 		</view>
 
-		<!-- 主体：查字结果卡片（田字格 + 属性 + 笔顺 + 组词 + 生字本） -->
-		<view v-if="loadingEntry" class="loading-card">
-			<text class="loading-text">加载中…</text>
-		</view>
-		<view v-else-if="activeEntry" class="hero-card">
+			<view v-if="loadingEntry" class="glass-card loading-card">
+				<text class="loading-text">加载中…</text>
+			</view>
+			<view v-else-if="activeEntry" class="glass-card result-card">
 			<!-- 左：田字格动画；右：拼音与部首等（并排省纵向空间，便于一屏看完） -->
 			<view class="hero-top-row">
 				<view class="hero-top-left" @click="playActiveDictionaryPinyin">
@@ -119,50 +144,56 @@
 				</view>
 			</view>
 			<view class="stroke-box">
-				<text class="stroke-title">✍️ 笔顺分解（对照左侧动画）</text>
+				<text class="stroke-title">笔顺分解</text>
 				<text v-if="activeEntry.strokeShapes" class="stroke-glyphs">{{ activeEntry.strokeShapes }}</text>
 				<text v-if="activeEntry.strokeNames" class="stroke-names">{{ activeEntry.strokeNames }}</text>
 				<text class="stroke-desc">{{ strokeHint }}</text>
 			</view>
 			<view v-if="activeEntry.explainText" class="explain-box">
-				<text class="explain-title">📙 释义（cnchar-explain）</text>
+				<text class="explain-title">释义</text>
 				<text class="explain-body">{{ activeEntry.explainText }}</text>
 			</view>
 			<view class="words-box">
-				<text class="words-title">📖 组词 </text>
+				<text class="words-title">组词</text>
 				<view class="words-wrap">
 					<text v-for="(w, idx) in activeEntry.words" :key="`${w}-${idx}`" class="word-chip">{{ w }}</text>
 				</view>
 			</view>
 			<view class="card-actions">
-				<button class="notebook-btn" type="primary" @click="addToNotebook">➕ 加入生字本</button>
+				<button class="notebook-btn" type="primary" @click="addToNotebook">加入生字本</button>
 			</view>
-		</view>
-		<view v-else class="empty-card">
-			<text class="empty-title">查一查汉字</text>
-			<text class="empty-desc">
-				输入汉字后即显示田字格内笔顺动画、拼音 / 部首 / 结构与组词释义等；手写练习请点「手写」进入实验室。部首检索结合 cnchar-radical 与教材字库。
-			</text>
-			<button type="default" size="mini" class="empty-btn" @click="tryDemoChar">试试「天」</button>
-		</view>
-
-		<!-- 汉字小侦探 -->
-		<view class="detective" @click="playDetective">
-			<text class="detective-emoji">🧸</text>
-			<view class="detective-main">
-				<text class="detective-label">汉字小侦探</text>
-				<text class="detective-clue">{{ currentDetective.clue }}</text>
-				<text class="detective-hint">点我揭晓并查看该字</text>
 			</view>
-		</view>
+			<view v-else class="glass-card empty-card">
+				<image class="empty-logo" src="/static/logo.png" mode="aspectFit" />
+				<text class="empty-title">查一查汉字</text>
+				<text class="empty-desc">
+					输入汉字看笔顺动画、拼音与组词；也可按部首从当前字库里找字。
+				</text>
+				<view class="empty-demo" @click="tryDemoChar">
+					<text class="empty-demo-text">试试「天」</text>
+				</view>
+			</view>
 
-		<!-- 进阶：拼音筛选字表 -->
-		<view class="advanced">
-			<text class="advanced-toggle" @click="showPinyinTools = !showPinyinTools">
-				{{ showPinyinTools ? '▼ 收起拼音筛选' : '▶ 拼音筛选（进阶）' }}
-			</text>
-			<text class="curriculum-hint">{{ summary }}</text>
-			<view v-if="showPinyinTools" class="advanced-body">
+			<view class="glass-card detective" @click="playDetective">
+				<view class="detective-icon-wrap">
+					<text class="detective-emoji">🧸</text>
+				</view>
+				<view class="detective-main">
+					<text class="detective-label">汉字小侦探</text>
+					<text class="detective-clue">{{ currentDetective.clue }}</text>
+					<text class="detective-hint">点我揭晓并查看该字</text>
+				</view>
+			</view>
+
+			<view class="glass-card advanced">
+				<view class="advanced-head" @click="showPinyinTools = !showPinyinTools">
+					<text class="advanced-toggle">
+						{{ showPinyinTools ? '收起拼音筛选' : '拼音筛选（进阶）' }}
+					</text>
+					<text class="advanced-arrow">{{ showPinyinTools ? '▲' : '▼' }}</text>
+				</view>
+				<text class="curriculum-hint">{{ summary }}</text>
+				<view v-if="showPinyinTools" class="advanced-body">
 				<input
 					v-model="pinyinKeyword"
 					class="pinyin-filter-input"
@@ -181,6 +212,7 @@
 						<text class="filter-cell-char">{{ row.hanzi }}</text>
 					</view>
 				</view>
+				</view>
 			</view>
 		</view>
 	</view>
@@ -193,9 +225,15 @@ import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { speakDictionaryEntryPinyin, DICTIONARY_LOCAL_PINYIN_OPTS } from '@/utils/dictionary-pinyin-speak.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
-import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
+import {
+	getCurriculumPrefs,
+	formatCurriculumSummary,
+	formatGradeSemesterLabel
+} from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getDictionaryEntry, getRadicalLabel } from '@/repositories/dictionary-repository.js'
+import { DICTIONARY_RADICAL_PRESETS } from '@/data/dictionary-radical-presets.js'
+import { charMatchesRadicalFilter } from '@/utils/dictionary-radical-filter.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
@@ -249,6 +287,9 @@ export default {
 		}
 	},
 	computed: {
+		curriculumChip() {
+			return formatGradeSemesterLabel(getCurriculumPrefs())
+		},
 		pinyinDisplayPlain() {
 			const t = String(this.pinyinDisplay || '').replace(/[()（）]/g, '').trim()
 			return t || '—'
@@ -278,7 +319,8 @@ export default {
 		},
 		radicalHits() {
 			if (!this.radicalFilter) return []
-			return this.chars.filter((row) => getRadicalLabel(row.hanzi) === this.radicalFilter)
+			const rad = this.radicalFilter
+			return this.chars.filter((row) => charMatchesRadicalFilter(row.hanzi, rad))
 		},
 		strokeHint() {
 			if (!this.activeEntry) return ''
@@ -448,16 +490,17 @@ export default {
 			this.rebuildRadicalOptions()
 		},
 		rebuildRadicalOptions() {
-			const set = new Set()
+			const fromDb = new Set()
 			for (const row of this.chars) {
 				const ch = String(row.hanzi || '').trim().charAt(0)
 				if (!ch) continue
 				const rad = getRadicalLabel(ch)
-				if (rad && rad !== '—') set.add(rad)
+				if (rad && rad !== '—') fromDb.add(rad)
 			}
-			this.radicalOptions = Array.from(set).sort((a, b) =>
-				String(a).localeCompare(String(b), 'zh-Hans-CN')
-			)
+			const extra = [...fromDb]
+				.filter((r) => DICTIONARY_RADICAL_PRESETS.indexOf(r) === -1)
+				.sort((a, b) => String(a).localeCompare(String(b), 'zh-Hans-CN'))
+			this.radicalOptions = [...DICTIONARY_RADICAL_PRESETS, ...extra]
 		},
 		normalizePinyin(s) {
 			return String(s || '')
@@ -546,12 +589,6 @@ export default {
 		pickRadical(r) {
 			this.radicalFilter = this.radicalFilter === r ? '' : r
 		},
-		openHandwritePad() {
-			const q = this.activeEntry?.hanzi
-				? `?hanzi=${encodeURIComponent(this.activeEntry.hanzi)}`
-				: ''
-			uni.navigateTo({ url: `/pages/tools/stroke${q}` })
-		},
 		addToNotebook() {
 			if (!this.activeEntry?.hanzi) return
 			recordCharLearned(this.activeEntry.hanzi, getCurriculumPrefs())
@@ -571,29 +608,115 @@ export default {
 </script>
 
 <style scoped>
-.page {
+.dict-page {
 	min-height: 100vh;
-	padding: 20rpx 24rpx 48rpx;
-	background: #fff8e7;
+	box-sizing: border-box;
+	background: linear-gradient(
+		180deg,
+		#ffe8f2 0%,
+		#fff6fa 22%,
+		var(--meng-page-bg, #f6f3ec) 100%
+	);
+}
+
+.dict-hero {
+	position: relative;
+	padding: 12rpx 24rpx 20rpx;
+	overflow: hidden;
+}
+
+.dict-hero-sky {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		180deg,
+		rgba(255, 220, 235, 0.4) 0%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	pointer-events: none;
+}
+
+.dict-hero-bar {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.dict-hero-logo {
+	width: 72rpx;
+	height: 72rpx;
+	flex-shrink: 0;
+	margin-right: 16rpx;
+}
+
+.dict-hero-meta {
+	flex: 1;
+	min-width: 0;
+}
+
+.dict-hero-title {
+	display: block;
+	font-size: 40rpx;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
+	line-height: 1.2;
+}
+
+.dict-hero-sub {
+	display: block;
+	margin-top: 4rpx;
+	font-size: 22rpx;
+	color: var(--meng-text-secondary, #6d5e52);
+	line-height: 1.35;
+}
+
+.dict-hero-btn {
+	flex-shrink: 0;
+	width: 72rpx;
+	height: 72rpx;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0 8rpx 24rpx rgba(255, 120, 160, 0.2);
+}
+
+.dict-hero-btn-icon {
+	font-size: 32rpx;
+}
+
+.dict-body {
+	padding: 0 20rpx 48rpx;
 	box-sizing: border-box;
 }
 
-.search-tool {
-	font-size: 34rpx;
-	padding: 8rpx 12rpx;
-	margin-left: 8rpx;
-	opacity: 0.9;
+.glass-card {
+	margin-top: 16rpx;
+	padding: 22rpx 20rpx;
+	border-radius: 28rpx;
+	background: rgba(255, 255, 255, 0.9);
+	border: 2rpx solid rgba(255, 255, 255, 0.95);
+	box-shadow:
+		0 8rpx 32rpx rgba(255, 150, 180, 0.1),
+		0 12rpx 36rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
+	box-sizing: border-box;
+}
+
+.search-card {
+	margin-top: 0;
 }
 
 .search-row {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	background: #fff;
-	border-radius: 16rpx;
-	padding: 6rpx 16rpx 6rpx 12rpx;
-	box-shadow: 0 4rpx 16rpx rgba(78, 78, 78, 0.08);
-	border: 1rpx solid #f0e6d4;
+	padding: 8rpx 10rpx 8rpx 16rpx;
+	border-radius: 20rpx;
+	background: #faf8f5;
+	border: 2rpx solid var(--meng-border-warm, #e3d9c8);
 }
 
 .search-glyph {
@@ -605,55 +728,100 @@ export default {
 .hanzi-input {
 	flex: 1;
 	min-width: 0;
-	height: 80rpx;
+	height: 76rpx;
 	font-size: 30rpx;
-	color: #4e4e4e;
+	color: var(--meng-text, #2c2419);
 }
 
-.quick-row {
+.search-go {
+	flex-shrink: 0;
+	padding: 0 28rpx;
+	height: 68rpx;
+	line-height: 68rpx;
+	border-radius: 16rpx;
+	background: linear-gradient(135deg, var(--meng-accent-from), var(--meng-accent-to));
+	box-shadow: 0 6rpx 18rpx var(--meng-shadow-warm, rgba(255, 120, 72, 0.22));
+}
+
+.search-go-text {
+	font-size: 28rpx;
+	font-weight: 800;
+	color: #fff;
+}
+
+.quick-pill {
 	display: flex;
 	flex-direction: row;
-	margin-top: 18rpx;
+	align-items: center;
+	justify-content: center;
+	gap: 8rpx;
+	margin-top: 16rpx;
+	padding: 18rpx 12rpx;
+	border-radius: 18rpx;
+	border: 2rpx solid rgba(144, 202, 249, 0.45);
+	background: linear-gradient(135deg, #f4faff 0%, #eef6ff 100%);
 }
 
-.quick-btn {
-	flex: 1;
-	min-width: 0;
-	height: 76rpx;
-	line-height: 76rpx;
-	border-radius: 14rpx;
-	background: #fff;
-	border: 1rpx solid #ffe0b2;
-	padding: 0;
+.quick-pill--on {
+	border-color: rgba(255, 140, 170, 0.65);
+	background: linear-gradient(135deg, #ffe8f2 0%, #fff0f8 100%);
+	box-shadow: 0 0 0 2rpx rgba(255, 107, 157, 0.2);
 }
 
-.quick-btn + .quick-btn {
-	margin-left: 16rpx;
+.quick-pill-emoji {
+	font-size: 30rpx;
+	line-height: 1;
 }
 
-.quick-btn-active {
-	background: #ffe8cc;
-	border-color: #ffa726;
+.quick-pill-label {
+	font-size: 26rpx;
+	font-weight: 700;
+	color: var(--meng-text, #2c2419);
 }
 
-.quick-btn-text {
+.radical-hits-top {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	border-color: rgba(127, 212, 154, 0.45);
+	box-shadow: 0 8rpx 28rpx rgba(90, 160, 110, 0.12);
+}
+
+.radical-hits-top-head {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	flex-wrap: wrap;
+	margin-bottom: 12rpx;
+}
+
+.radical-hits-top-title {
 	font-size: 28rpx;
-	color: #5d4037;
+	font-weight: 800;
+	color: #3d9a5c;
+	margin-right: 12rpx;
+}
+
+.radical-hits-top-count {
+	font-size: 22rpx;
+	color: var(--meng-text-secondary, #6d5e52);
 	font-weight: 600;
 }
 
+.radical-grid--top {
+	margin-top: 0;
+	max-height: 42vh;
+	overflow-y: auto;
+}
+
 .radical-panel {
-	margin-top: 20rpx;
-	padding: 20rpx;
-	background: #fff;
-	border-radius: 16rpx;
-	border: 1rpx solid #f0e6d4;
+	padding: 20rpx 18rpx;
 }
 
 .radical-title {
 	display: block;
 	font-size: 24rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
 	margin-bottom: 14rpx;
 }
 
@@ -668,24 +836,29 @@ export default {
 	margin: 6rpx;
 	padding: 10rpx 20rpx;
 	border-radius: 999rpx;
-	background: #f5f5f5;
 	font-size: 26rpx;
-	color: #4e4e4e;
+	color: var(--meng-text-secondary, #6d5e52);
+	background: rgba(255, 255, 255, 0.85);
+	border: 2rpx solid rgba(255, 200, 220, 0.35);
 }
 
 .rad-chip-on {
-	background: #fff3e0;
-	color: #e65100;
-	font-weight: 600;
-	border: 1rpx solid #ffa726;
+	color: #c44d6a;
+	font-weight: 700;
+	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	border-color: rgba(255, 120, 160, 0.45);
 }
 
 .radical-count {
 	display: block;
 	font-size: 24rpx;
-	color: #8bc34a;
+	color: var(--meng-leaf, #6bae7d);
 	margin-top: 12rpx;
 	font-weight: 600;
+}
+
+.radical-count--empty {
+	color: var(--meng-text-muted, #8a8076);
 }
 
 .radical-grid {
@@ -703,44 +876,42 @@ export default {
 	margin-right: 4%;
 	margin-bottom: 12rpx;
 	min-height: 72rpx;
-	background: #fffef9;
-	border-radius: 12rpx;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 14rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border: 1rpx solid #eee;
+	border: 2rpx solid rgba(255, 220, 200, 0.5);
 }
 
 .rad-cell:nth-child(4n) {
 	margin-right: 0;
 }
 
+.rad-cell--active {
+	background: linear-gradient(135deg, #fff5f9 0%, #fff 100%);
+	border-color: #ff8aab;
+	box-shadow: 0 4rpx 14rpx rgba(255, 140, 170, 0.2);
+}
+
 .rad-cell-char {
 	font-size: 38rpx;
-	font-weight: 600;
-	color: #2c2419;
+	font-weight: 700;
+	color: var(--meng-text, #2c2419);
 }
 
 .loading-card {
-	margin-top: 24rpx;
-	padding: 48rpx;
-	background: #fff;
-	border-radius: 20rpx;
+	padding: 48rpx 24rpx;
 	text-align: center;
 }
 
 .loading-text {
 	font-size: 28rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
 }
 
-.hero-card {
-	margin-top: 24rpx;
-	padding: 28rpx 22rpx 32rpx;
-	background: #fff;
-	border-radius: 24rpx;
-	box-shadow: 0 8rpx 28rpx rgba(78, 78, 78, 0.08);
-	border: 1rpx solid #f5ebe0;
+.result-card {
+	padding: 24rpx 20rpx 28rpx;
 }
 
 .hero-top-row {
@@ -769,10 +940,10 @@ export default {
 
 .meta-compact {
 	position: relative;
-	background: #fffaf2;
-	border-radius: 12rpx;
-	border: 1rpx solid #fce8c8;
-	padding: 12rpx 40rpx 36rpx 14rpx;
+	background: linear-gradient(135deg, #fff8fb 0%, #fff5f8 100%);
+	border-radius: 16rpx;
+	border: 2rpx solid rgba(255, 180, 200, 0.4);
+	padding: 14rpx 16rpx;
 	box-sizing: border-box;
 }
 
@@ -812,7 +983,7 @@ export default {
 	flex-shrink: 0;
 	width: 64rpx;
 	font-size: 22rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
 	line-height: 1.4;
 	padding-top: 2rpx;
 }
@@ -822,7 +993,7 @@ export default {
 	min-width: 0;
 	font-size: 26rpx;
 	font-weight: 600;
-	color: #4e4e4e;
+	color: var(--meng-text, #2c2419);
 	line-height: 1.4;
 	word-break: break-all;
 }
@@ -857,7 +1028,7 @@ export default {
 	flex-shrink: 0;
 	font-size: 22rpx;
 	font-weight: 600;
-	color: #8a8279;
+	color: #c44d6a;
 	margin-right: 10rpx;
 	line-height: 1.2;
 	padding-bottom: 4rpx;
@@ -902,8 +1073,8 @@ export default {
 .hero-char-fallback {
 	font-size: 132rpx;
 	line-height: 1;
-	font-weight: 700;
-	color: #6d6560;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
 }
 
 .tap-speak-tip {
@@ -918,26 +1089,26 @@ export default {
 }
 
 .stroke-box {
-	margin-top: 6rpx;
-	padding: 14rpx 16rpx;
-	background: #f9fbe7;
-	border-radius: 14rpx;
-	border: 1rpx dashed #c5e1a5;
+	margin-top: 12rpx;
+	padding: 16rpx 18rpx;
+	background: var(--meng-leaf-soft, #e8f4ec);
+	border-radius: 18rpx;
+	border: 2rpx solid rgba(127, 212, 154, 0.35);
 }
 
 .stroke-title {
 	display: block;
 	font-size: 24rpx;
-	font-weight: 700;
-	color: #558b2f;
-	margin-bottom: 6rpx;
+	font-weight: 800;
+	color: #3d9a5c;
+	margin-bottom: 8rpx;
 }
 
 .stroke-glyphs {
 	display: block;
 	font-size: 30rpx;
 	letter-spacing: 3rpx;
-	color: #2c2419;
+	color: var(--meng-text);
 	margin-bottom: 8rpx;
 	word-break: break-all;
 	line-height: 1.35;
@@ -946,7 +1117,7 @@ export default {
 .stroke-names {
 	display: block;
 	font-size: 22rpx;
-	color: #5d4037;
+	color: var(--meng-text-secondary, #6d5e52);
 	margin-bottom: 10rpx;
 	line-height: 1.45;
 }
@@ -954,31 +1125,31 @@ export default {
 .stroke-desc {
 	display: block;
 	font-size: 22rpx;
-	color: #6d4c41;
+	color: var(--meng-text-secondary, #6d5e52);
 	line-height: 1.45;
 	margin-bottom: 0;
 }
 
 .explain-box {
 	margin-top: 14rpx;
-	padding: 14rpx 16rpx;
-	background: #fce4ec;
-	border-radius: 14rpx;
-	border: 1rpx solid #f48fb1;
+	padding: 16rpx 18rpx;
+	background: linear-gradient(135deg, #fff5f8 0%, #ffeef5 100%);
+	border-radius: 18rpx;
+	border: 2rpx solid rgba(255, 160, 190, 0.4);
 }
 
 .explain-title {
 	display: block;
 	font-size: 24rpx;
-	font-weight: 700;
-	color: #880e4f;
+	font-weight: 800;
+	color: #c44d6a;
 	margin-bottom: 10rpx;
 }
 
 .explain-body {
 	display: block;
 	font-size: 24rpx;
-	color: #4e4e4e;
+	color: var(--meng-text, #2c2419);
 	line-height: 1.55;
 }
 
@@ -989,8 +1160,8 @@ export default {
 .words-title {
 	display: block;
 	font-size: 24rpx;
-	font-weight: 700;
-	color: #42a5f5;
+	font-weight: 800;
+	color: #1565c0;
 	margin-bottom: 12rpx;
 }
 
@@ -1003,41 +1174,49 @@ export default {
 
 .word-chip {
 	margin: 6rpx;
-	padding: 8rpx 14rpx;
+	padding: 8rpx 16rpx;
 	border-radius: 999rpx;
-	background: #e3f2fd;
+	background: linear-gradient(135deg, #e8f4fc 0%, #e3f2fd 100%);
 	font-size: 24rpx;
 	color: #1565c0;
+	font-weight: 600;
 }
 
 .card-actions {
-	margin-top: 18rpx;
+	margin-top: 20rpx;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
 }
 
 .notebook-btn {
-	border-radius: 999rpx;
-	background: #8bc34a !important;
+	border-radius: 999rpx !important;
+	background: linear-gradient(135deg, var(--meng-leaf, #6bae7d), #5a9a6c) !important;
 	border: none !important;
-	font-size: 30rpx;
-	font-weight: 600;
+	font-size: 28rpx !important;
+	font-weight: 700 !important;
+	color: #fff !important;
 }
 
 .empty-card {
-	margin-top: 24rpx;
-	padding: 40rpx 28rpx;
-	background: #fff;
-	border-radius: 24rpx;
-	border: 2rpx dashed #ffe0b2;
+	padding: 36rpx 28rpx 32rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	border: 2rpx dashed rgba(255, 160, 190, 0.45);
+}
+
+.empty-logo {
+	width: 88rpx;
+	height: 88rpx;
+	margin-bottom: 16rpx;
 }
 
 .empty-title {
 	display: block;
-	font-size: 32rpx;
-	font-weight: 700;
-	color: #4e4e4e;
+	font-size: 34rpx;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
 	margin-bottom: 12rpx;
 	text-align: center;
 }
@@ -1045,30 +1224,48 @@ export default {
 .empty-desc {
 	display: block;
 	font-size: 26rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-secondary, #6d5e52);
 	line-height: 1.55;
 	margin-bottom: 24rpx;
 	text-align: center;
 }
 
-.empty-btn {
-	align-self: center;
+.empty-demo {
+	padding: 14rpx 36rpx;
+	border-radius: 999rpx;
+	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	border: 2rpx solid rgba(255, 120, 160, 0.4);
+}
+
+.empty-demo-text {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #c44d6a;
 }
 
 .detective {
-	margin-top: 28rpx;
-	padding: 22rpx 20rpx;
-	background: linear-gradient(135deg, #fff8e7 0%, #ffe4ec 100%);
-	border-radius: 18rpx;
-	border: 1rpx solid #f8bbd9;
 	display: flex;
 	flex-direction: row;
 	align-items: flex-start;
+	background: linear-gradient(135deg, #f3eeff 0%, #ffeef5 100%);
+	border-color: rgba(200, 160, 255, 0.35);
+}
+
+.detective-icon-wrap {
+	width: 80rpx;
+	height: 80rpx;
+	border-radius: 22rpx;
+	background: rgba(255, 255, 255, 0.85);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-right: 16rpx;
 }
 
 .detective-emoji {
 	font-size: 44rpx;
-	margin-right: 14rpx;
+	line-height: 1;
 }
 
 .detective-main {
@@ -1079,15 +1276,15 @@ export default {
 .detective-label {
 	display: block;
 	font-size: 22rpx;
-	color: #ad1457;
-	font-weight: 700;
+	color: #9c6ade;
+	font-weight: 800;
 	margin-bottom: 6rpx;
 }
 
 .detective-clue {
 	display: block;
 	font-size: 28rpx;
-	color: #4e4e4e;
+	color: var(--meng-text, #2c2419);
 	line-height: 1.45;
 	font-weight: 600;
 }
@@ -1095,52 +1292,63 @@ export default {
 .detective-hint {
 	display: block;
 	font-size: 22rpx;
-	color: #f48fb1;
+	color: #c44d6a;
 	margin-top: 10rpx;
 }
 
 .advanced {
-	margin-top: 32rpx;
-	padding-bottom: 24rpx;
+	padding-bottom: 8rpx;
+}
+
+.advanced-head {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8rpx;
 }
 
 .advanced-toggle {
-	display: block;
-	font-size: 26rpx;
-	color: #42a5f5;
-	font-weight: 600;
-	margin-bottom: 10rpx;
+	font-size: 28rpx;
+	color: #1565c0;
+	font-weight: 800;
+}
+
+.advanced-arrow {
+	font-size: 22rpx;
+	color: var(--meng-text-muted, #8a8076);
 }
 
 .curriculum-hint {
 	display: block;
 	font-size: 22rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
 	line-height: 1.45;
 	margin-bottom: 12rpx;
 }
 
 .advanced-body {
-	margin-top: 12rpx;
-	padding: 20rpx;
-	background: #fff;
-	border-radius: 16rpx;
-	border: 1rpx solid #eee;
+	margin-top: 8rpx;
+	padding: 18rpx;
+	border-radius: 18rpx;
+	background: #faf8f5;
+	border: 2rpx solid var(--meng-border, #ebe3d8);
 }
 
 .pinyin-filter-input {
 	height: 72rpx;
-	border: 1px solid #e0e0e0;
-	border-radius: 12rpx;
+	border: 2rpx solid var(--meng-border-warm, #e3d9c8);
+	border-radius: 14rpx;
 	padding: 0 16rpx;
 	font-size: 28rpx;
-	background: #fafafa;
+	background: #fff;
+	box-sizing: border-box;
 }
 
 .filter-tip {
 	display: block;
 	font-size: 22rpx;
-	color: #9e9e9e;
+	color: var(--meng-text-muted, #8a8076);
 	margin-top: 10rpx;
 }
 
@@ -1159,12 +1367,13 @@ export default {
 	margin-right: 4%;
 	margin-bottom: 12rpx;
 	min-height: 80rpx;
-	background: #fffef9;
-	border-radius: 12rpx;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 14rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 2rpx 8rpx rgba(44, 36, 25, 0.06);
+	border: 2rpx solid rgba(255, 220, 200, 0.45);
+	box-shadow: 0 2rpx 8rpx rgba(44, 36, 25, 0.05);
 }
 
 .filter-cell:nth-child(4n) {
@@ -1174,6 +1383,6 @@ export default {
 .filter-cell-char {
 	font-size: 40rpx;
 	font-weight: 600;
-	color: #2c2419;
+	color: var(--meng-text);
 }
 </style>

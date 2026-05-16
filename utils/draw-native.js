@@ -279,13 +279,27 @@ class NativeWriter {
 		this.lastTickTime = 0
 		this.strokeElapsed = 0
 		this.waitElapsed = 0
-		this.phase = 'drawing' // drawing | corner_wait | waiting
+		this.phase = 'drawing' // drawing | waiting
 		this.cornerPauseMs = Math.max(0, Number(this.animationOpt.cornerPauseMs) || 35)
 		this.lastPausedCornerIndex = -1
 		this.frameCornerIndex = -1
 		this.strokeTimelineCache = Object.create(null)
 		this.charTransformCache = Object.create(null)
 		this.cornerPauseCursor = -1
+		/** 为 true 时笔间 waiting 阶段暂不进入下一笔（等读音播完） */
+		this.strokeAudioHold = false
+		this.onStrokeWillStart =
+			typeof this.animationOpt.onStrokeWillStart === 'function'
+				? this.animationOpt.onStrokeWillStart
+				: null
+		this.onStrokeCorner =
+			typeof this.animationOpt.onStrokeCorner === 'function'
+				? this.animationOpt.onStrokeCorner
+				: null
+		this.onStrokeTrailSegments =
+			typeof this.animationOpt.onStrokeTrailSegments === 'function'
+				? this.animationOpt.onStrokeTrailSegments
+				: null
 		this.testState = {
 			activeStroke: 0,
 			totalMistakes: 0,
@@ -293,6 +307,12 @@ class NativeWriter {
 			drawing: false,
 			path: []
 		}
+		/** 测验模式：高亮提示「待写」的那一笔 */
+		this.testGuideActive = false
+		this.testGuideShown = false
+		this.testGuideBlinkTimer = null
+		/** @type {{ left: number, top: number, width: number, height: number } | null} */
+		this._canvasRect = null
 
 		this.init()
 	}
@@ -304,6 +324,83 @@ class NativeWriter {
 		if (typeof this.option.animateComplete === 'function') {
 			this.option.animateComplete(end)
 		}
+	}
+
+	_invokeStrokeCallback(fn, args, label) {
+		if (!fn || this.destroyed) return
+		try {
+			const ret = fn(...args)
+			if (ret && typeof ret.catch === 'function') {
+				ret.catch((e) => console.warn(`[draw-native] ${label}`, e))
+			}
+		} catch (e) {
+			console.warn(`[draw-native] ${label}`, e)
+		}
+	}
+
+	/** 笔顺动画：该笔第一分段开始（如「横折」的「横」） */
+	notifyStrokeAudio(strokeIndex) {
+		this._invokeStrokeCallback(
+			this.onStrokeWillStart,
+			[strokeIndex, this.getMainChar()],
+			'onStrokeWillStart'
+		)
+	}
+
+	/** 中线拐点：触发下一分段读音（不冻结绘制，避免拐弯处卡顿） */
+	notifyStrokeCorner(strokeIndex, cornerIndex) {
+		this._invokeStrokeCallback(
+			this.onStrokeCorner,
+			[strokeIndex, cornerIndex, this.getMainChar()],
+			'onStrokeCorner'
+		)
+	}
+
+	/** 该笔收尾：播放拐点未覆盖的剩余音节（如「钩」）；返回 Promise 时动画等其 resolve 再进下一笔 */
+	notifyStrokeTrailSegments(strokeIndex, fromSegmentIndex) {
+		if (!this.onStrokeTrailSegments || this.destroyed) {
+			this.strokeAudioHold = false
+			return
+		}
+		this.strokeAudioHold = true
+		try {
+			const ret = this.onStrokeTrailSegments(strokeIndex, fromSegmentIndex, this.getMainChar())
+			const release = () => {
+				if (!this.destroyed) this.strokeAudioHold = false
+			}
+			if (ret && typeof ret.then === 'function') {
+				ret.then(release, release)
+			} else {
+				release()
+			}
+		} catch (e) {
+			console.warn('[draw-native] onStrokeTrailSegments', e)
+			this.strokeAudioHold = false
+		}
+	}
+
+	_scheduleAnimationTick(tick) {
+		if (typeof requestAnimationFrame === 'function') {
+			this.frameTimer = requestAnimationFrame(() => {
+				this.frameTimer = null
+				tick()
+			})
+			return
+		}
+		this.frameTimer = setTimeout(tick, this.frameInterval)
+	}
+
+	_cancelAnimationTick() {
+		const id = this.frameTimer
+		this.frameTimer = null
+		if (id == null) return
+		if (typeof cancelAnimationFrame === 'function') {
+			try {
+				cancelAnimationFrame(id)
+				return
+			} catch (_) {}
+		}
+		clearTimeout(id)
 	}
 
 	getMainChar() {
@@ -318,15 +415,98 @@ class NativeWriter {
 		}
 	}
 
-	getCanvasPointFromTouch(touch) {
+	updateCanvasRect(done) {
+		if (!this.vm || !this.el) {
+			if (typeof done === 'function') done()
+			return
+		}
+		try {
+			const query = uni.createSelectorQuery().in(this.vm)
+			query
+				.select(this.el)
+				.boundingClientRect((rect) => {
+					if (rect && rect.width > 0 && rect.height > 0) {
+						this._canvasRect = rect
+					}
+					if (typeof done === 'function') done()
+				})
+				.exec()
+		} catch (_) {
+			if (typeof done === 'function') done()
+		}
+	}
+
+	/**
+	 * 解析触点坐标（避免 clientX 未换算时落到左上角 0,0）
+	 * @param {object} touch touches[0]
+	 * @param {object} [detail] 事件 detail（部分端为 canvas 相对坐标）
+	 */
+	resolveTouchPoint(touch, detail) {
+		if (!touch) return null
 		const { canvasSize } = this.getSize()
 		const padding = 10
-		const defaultSize = Number(this.option.length) + 30
-		const scale = canvasSize / (defaultSize || 1)
-		return {
-			x: (touch.x || touch.clientX || 0) * scale - padding,
-			y: (touch.y || touch.clientY || 0) * scale - padding
+		let x
+		let y
+		let has = false
+
+		if (Number.isFinite(touch.x) && Number.isFinite(touch.y)) {
+			x = touch.x
+			y = touch.y
+			has = true
+		} else if (detail && Number.isFinite(detail.x) && Number.isFinite(detail.y)) {
+			x = detail.x
+			y = detail.y
+			has = true
+		} else if (Number.isFinite(touch.offsetX) && Number.isFinite(touch.offsetY)) {
+			x = touch.offsetX
+			y = touch.offsetY
+			has = true
+		} else if (this._canvasRect) {
+			if (Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
+				x = touch.clientX - this._canvasRect.left
+				y = touch.clientY - this._canvasRect.top
+				has = true
+			} else if (Number.isFinite(touch.pageX) && Number.isFinite(touch.pageY)) {
+				x = touch.pageX - this._canvasRect.left
+				y = touch.pageY - this._canvasRect.top
+				has = true
+			}
 		}
+
+		if (!has) return null
+
+		const rectW = this._canvasRect?.width || 0
+		const rectH = this._canvasRect?.height || 0
+		if (rectW > 0 && rectH > 0 && Math.abs(rectW - canvasSize) > 1) {
+			x = (x / rectW) * canvasSize
+			y = (y / rectH) * canvasSize
+		}
+
+		x = Math.min(canvasSize - padding, Math.max(padding, x))
+		y = Math.min(canvasSize - padding, Math.max(padding, y))
+		if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+		return { x, y }
+	}
+
+	getCanvasPointFromTouch(touch, detail) {
+		return this.resolveTouchPoint(touch, detail)
+	}
+
+	/** 测试笔迹：去重过密点、丢弃大幅跳变（连点/坏坐标） */
+	appendTestPathPoint(point) {
+		if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false
+		const path = this.testState.path
+		const { canvasSize } = this.getSize()
+		const maxJump = Math.max(28, canvasSize * 0.32)
+		const minDist = 2.5
+		if (path.length) {
+			const last = path[path.length - 1]
+			const d = Math.hypot(point.x - last.x, point.y - last.y)
+			if (d < minDist) return false
+			if (d > maxJump) return false
+		}
+		path.push({ x: point.x, y: point.y })
+		return true
 	}
 
 	getMedianPoint(strokeIndex, t = 1) {
@@ -468,18 +648,26 @@ class NativeWriter {
 		})
 	}
 
-	handleTouchStart(touch) {
+	handleTouchStart(touch, detail) {
 		if (this.type !== TYPE.TEST || !this.ready || !this.charData) return
-		this.testState.drawing = true
-		this.testState.path = []
-		const p = this.getCanvasPointFromTouch(touch)
-		this.testState.path.push(p)
+		const begin = () => {
+			this.stopTestGuideBlink()
+			this.testGuideActive = false
+			this.testGuideShown = false
+			this.testState.drawing = true
+			this.testState.path = []
+			const p = this.resolveTouchPoint(touch, detail)
+			if (p) this.appendTestPathPoint(p)
+			if (this.testState.path.length) this.drawState(this.testState.activeStroke, 0)
+		}
+		this.updateCanvasRect(begin)
 	}
 
-	handleTouchMove(touch) {
+	handleTouchMove(touch, detail) {
 		if (this.type !== TYPE.TEST || !this.testState.drawing) return
-		const p = this.getCanvasPointFromTouch(touch)
-		this.testState.path.push(p)
+		const p = this.resolveTouchPoint(touch, detail)
+		if (!p) return
+		if (!this.appendTestPathPoint(p)) return
 		this.drawState(this.testState.activeStroke, 0)
 	}
 
@@ -489,6 +677,16 @@ class NativeWriter {
 		const total = this.charData?.medians?.length || 0
 		const strokeIndex = this.testState.activeStroke
 		if (strokeIndex >= total) return
+		if (this.testState.path.length < 2) {
+			this.testState.mistakesOnStroke += 1
+			this.testState.totalMistakes += 1
+			this.emitTestStatus(TEST_STATUS.MISTAKE, {
+				expectedStroke: strokeIndex,
+				reason: 'tooShort'
+			})
+			this.drawState(this.testState.activeStroke, 0)
+			return
+		}
 		const endTarget = this.getMedianPoint(strokeIndex, 1)
 		const endPoint = this.testState.path[this.testState.path.length - 1]
 		if (!endTarget || !endPoint) return
@@ -507,10 +705,11 @@ class NativeWriter {
 		const orderPass = strictOrder ? strokeIndex === expectedStroke : strokeIndex >= expectedStroke
 		const pass = finalScore <= passThreshold && endDist <= endpointThreshold && orderPass
 		if (pass) {
+			const finishedPath = this.testState.path.slice()
 			this.emitTestStatus(TEST_STATUS.CORRECT, {
 				drawnPath: {
-					pathString: this.buildPathString(this.testState.path),
-					points: this.testState.path
+					pathString: this.buildPathString(finishedPath),
+					points: finishedPath
 				},
 				score: Number(finalScore.toFixed(3))
 			})
@@ -521,6 +720,8 @@ class NativeWriter {
 				this.emitTestStatus(TEST_STATUS.COMPLETE)
 				this.notifyComplete(true)
 			}
+			this.drawState(this.testState.activeStroke, 0)
+			return
 		} else {
 			this.testState.totalMistakes += 1
 			this.testState.mistakesOnStroke += 1
@@ -551,12 +752,21 @@ class NativeWriter {
 	drawTestPath() {
 		if (this.type !== TYPE.TEST) return
 		const points = this.testState.path
-		if (!points || points.length < 2) return
+		if (!points || !points.length) return
 		const ctx = this.ctx
-		ctx.setStrokeStyle(this.option.drawingColor || '#333')
-		ctx.setLineWidth(Number(this.option.drawingWidth) || 4)
+		const color = this.option.drawingColor || '#ff7043'
+		const width = Number(this.option.drawingWidth) || 4
+		ctx.setStrokeStyle(color)
+		ctx.setLineWidth(width)
 		ctx.setLineCap('round')
 		ctx.setLineJoin('round')
+		if (points.length === 1) {
+			ctx.setFillStyle(color)
+			ctx.beginPath()
+			ctx.arc(points[0].x, points[0].y, width * 0.55, 0, Math.PI * 2)
+			ctx.fill()
+			return
+		}
 		ctx.beginPath()
 		ctx.moveTo(points[0].x, points[0].y)
 		for (let i = 1; i < points.length; i++) {
@@ -997,6 +1207,17 @@ class NativeWriter {
 
 			if (i < testCompleted) {
 				this.drawStrokePath(strokePaths[i], strokeColor, canvasSize)
+			} else if (
+				i === testCompleted &&
+				this.type === TYPE.TEST &&
+				this.testGuideActive &&
+				this.testGuideShown
+			) {
+				const guideColor =
+					this.option.guideStrokeColor ||
+					this.option.highlightColor ||
+					'#ff8a65'
+				this.drawStrokePath(strokePaths[i], guideColor, canvasSize)
 			} else if (i === testCompleted && this.type === TYPE.ANIMATION) {
 				// 当前笔接近结束时，直接填充完整轮廓，避免“竖钩拐点没写到”的视觉缺口
 				if (currentStrokeRatio >= 0.995) {
@@ -1040,24 +1261,25 @@ class NativeWriter {
 		const loopAnimate = this.animationOpt.loopAnimate !== false
 		const delayBetweenLoops = Number(this.animationOpt.delayBetweenLoops) || 1000
 		const speed = Number(this.animationOpt.strokeAnimationSpeed) || 1
-		const strokeDuration = Math.max(180, Math.round(650 / speed))
+		const strokeDuration = Math.max(
+			280,
+			Math.round((Number(this.animationOpt.strokeDurationMs) || 880) / speed)
+		)
 
 		const stopFrameLoop = () => {
-			if (this.frameTimer) {
-				clearTimeout(this.frameTimer)
-				this.frameTimer = null
-			}
+			this._cancelAnimationTick()
 		}
 
 		const tick = () => {
 			if (this.destroyed) return
 			if (this.paused) {
-				this.frameTimer = setTimeout(tick, this.frameInterval)
+				this._scheduleAnimationTick(tick)
 				return
 			}
 
 			const now = Date.now()
-			const dt = this.lastTickTime ? (now - this.lastTickTime) : this.frameInterval
+			const rawDt = this.lastTickTime ? now - this.lastTickTime : this.frameInterval
+			const dt = Math.min(48, Math.max(8, rawDt))
 			this.lastTickTime = now
 			const total = this.charData?.medians?.length || 0
 			if (total === 0) {
@@ -1082,31 +1304,28 @@ class NativeWriter {
 					nextLen >= nextCornerLen &&
 					nextCornerLen > currentLen
 				) {
-					nextLen = nextCornerLen
 					this.cornerPauseCursor += 1
-					this.phase = 'corner_wait'
-					this.waitElapsed = 0
+					this.notifyStrokeCorner(this.strokeIndex, this.cornerPauseCursor)
 				}
 
 				this.strokeProgress = Math.min(1, nextLen / totalLen)
-				if (this.strokeProgress >= 1) {
+				if (this.strokeProgress >= 1 && this.phase !== 'waiting') {
+					const fromSeg = this.cornerPauseCursor + 2
 					this.phase = 'waiting'
 					this.waitElapsed = 0
-				}
-			} else if (this.phase === 'corner_wait') {
-				this.waitElapsed += dt
-				if (this.waitElapsed >= this.cornerPauseMs) {
-					this.phase = 'drawing'
+					this.notifyStrokeTrailSegments(this.strokeIndex, fromSeg)
 				}
 			} else {
 				this.waitElapsed += dt
 				this.strokeProgress = 1
-				if (this.waitElapsed >= delayBetweenStrokes) {
-					this.strokeIndex += 1
+				if (this.waitElapsed >= delayBetweenStrokes && !this.strokeAudioHold) {
+					const nextIndex = this.strokeIndex + 1
+					this.strokeIndex = nextIndex
 					this.strokeElapsed = 0
 					this.strokeProgress = 0
 					this.phase = 'drawing'
 					this.cornerPauseCursor = -1
+					this.notifyStrokeAudio(nextIndex)
 				}
 			}
 
@@ -1119,6 +1338,7 @@ class NativeWriter {
 					this.waitElapsed = 0
 					this.phase = 'drawing'
 					this.cornerPauseCursor = -1
+					this.notifyStrokeAudio(0)
 					this.drawState(0, 0)
 					stopFrameLoop()
 					this.timer = setTimeout(() => {
@@ -1135,7 +1355,7 @@ class NativeWriter {
 			}
 
 			this.drawState(this.strokeIndex, this.strokeProgress)
-			this.frameTimer = setTimeout(tick, this.frameInterval)
+			this._scheduleAnimationTick(tick)
 		}
 
 		this.strokeIndex = 0
@@ -1144,9 +1364,11 @@ class NativeWriter {
 		this.waitElapsed = 0
 		this.phase = 'drawing'
 		this.cornerPauseCursor = -1
+		this.strokeAudioHold = false
 		this.lastTickTime = 0
+		this.notifyStrokeAudio(0)
 		this.drawState(0, 0)
-		this.frameTimer = setTimeout(tick, this.frameInterval)
+		this._scheduleAnimationTick(tick)
 		return true
 	}
 
@@ -1176,6 +1398,76 @@ class NativeWriter {
 		return true
 	}
 
+	stopTestGuideBlink() {
+		if (this.testGuideBlinkTimer != null) {
+			clearInterval(this.testGuideBlinkTimer)
+			this.testGuideBlinkTimer = null
+		}
+	}
+
+	/**
+	 * 测试模式：高亮当前待写笔画；可选闪动吸引注意
+	 * @param {boolean} active
+	 * @param {{ blink?: boolean, blinkTimes?: number, blinkIntervalMs?: number }} [opts]
+	 */
+	setTestStrokeGuide(active, opts = {}) {
+		if (this.type !== TYPE.TEST || !this.charData) return false
+		this.stopTestGuideBlink()
+		if (!active) {
+			this.testGuideActive = false
+			this.testGuideShown = false
+			this.drawState(this.testState.activeStroke, 0)
+			return true
+		}
+		this.testGuideActive = true
+		const wantBlink = opts.blink !== false
+		if (wantBlink) {
+			this.startTestGuideBlink(opts)
+		} else {
+			this.testGuideShown = true
+			this.drawState(this.testState.activeStroke, 0)
+		}
+		return true
+	}
+
+	startTestGuideBlink(opts = {}) {
+		const cycles = Math.max(1, Math.min(6, Number(opts.blinkTimes) || 3))
+		const intervalMs = Math.max(160, Number(opts.blinkIntervalMs) || 280)
+		const totalSteps = cycles * 2
+		let step = 0
+		this.testGuideShown = false
+		this.drawState(this.testState.activeStroke, 0)
+		this.testGuideBlinkTimer = setInterval(() => {
+			if (this.destroyed || !this.testGuideActive) {
+				this.stopTestGuideBlink()
+				return
+			}
+			step += 1
+			this.testGuideShown = step % 2 === 1
+			this.drawState(this.testState.activeStroke, 0)
+			if (step >= totalSteps) {
+				this.stopTestGuideBlink()
+				this.testGuideShown = true
+				this.drawState(this.testState.activeStroke, 0)
+			}
+		}, intervalMs)
+	}
+
+	/** 测试模式：清空已写笔画，从第一笔重新开始 */
+	resetStrokeTest() {
+		if (this.type !== TYPE.TEST || !this.charData) return false
+		this.stopTestGuideBlink()
+		this.testState.activeStroke = 0
+		this.testState.totalMistakes = 0
+		this.testState.mistakesOnStroke = 0
+		this.testState.drawing = false
+		this.testState.path = []
+		this.testGuideActive = false
+		this.testGuideShown = false
+		this.drawState(0, 0)
+		return true
+	}
+
 	pauseAnimation() {
 		if (this.type !== TYPE.ANIMATION) return
 		this.paused = true
@@ -1192,6 +1484,7 @@ class NativeWriter {
 		this.strokeIndex = 0
 		this.strokeProgress = 0
 		this.cornerPauseCursor = -1
+		this.strokeAudioHold = false
 		if (this.ready) this.drawState(0, 0)
 		if (this.type === TYPE.ANIMATION) {
 			this.startAnimation()
@@ -1203,13 +1496,12 @@ class NativeWriter {
 			clearTimeout(this.timer)
 			this.timer = null
 		}
-		if (this.frameTimer) {
-			clearTimeout(this.frameTimer)
-			this.frameTimer = null
-		}
+		this._cancelAnimationTick()
+		this.strokeAudioHold = false
 	}
 
 	destroy() {
+		this.stopTestGuideBlink()
 		this.stop()
 		this.destroyed = true
 	}

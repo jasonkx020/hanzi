@@ -40,9 +40,26 @@ export function splitPinyinSyllableGlyphs(syllable) {
 	}
 	return out.map((ch) => ({
 		ch,
-		kind: classifyPinyinGlyph(ch),
+		kind: classifyToneGlyphKind(ch),
 		alphMetricFix: false
 	}))
+}
+
+/** 带调字母或独立声调符号（连读高亮时与主体同比例放大） */
+export function isTonedPinyinCluster(cluster) {
+	const s = String(cluster || '').normalize('NFC')
+	if (!s) return false
+	for (const ch of s) {
+		if (isCombiningDiacritic(ch)) return true
+		const cp = ch.codePointAt(0)
+		if (cp >= 0x0100 && cp <= 0x024f) return true
+	}
+	return false
+}
+
+function classifyToneGlyphKind(cluster) {
+	if (isTonedPinyinCluster(cluster)) return 'tone'
+	return classifyPinyinGlyph(cluster)
 }
 
 /** 取下缀拉丁字母用于分类 */
