@@ -1,49 +1,12 @@
 <template>
-	<view class="page">
-		<view class="hero-card">
-			<view class="char-badge">
-				<text class="char-badge-text">{{ displayChar }}</text>
-			</view>
-			<view class="hero-meta">
-				<view v-if="pinyinTokens.length" class="pinyin-row">
-					<pinyin-four-lines-row :syllables="pinyinTokens" size="md" />
-				</view>
-				<text class="progress-line">第 {{ currentStrokeNo }} / {{ strokeTotal }} 笔</text>
-				<view class="hint-row">
-					<text class="hint-line">
-						{{ completed ? '全部笔画正确，太棒了！' : (currentStrokeGuidance || '请按笔顺写…') }}
-					</text>
-					<view
-						v-if="!completed && currentStrokeLabel"
-						class="hint-speak"
-						@click.stop="playCurrentStrokeAudio"
-					>
-						<text class="hint-speak-icon">🔊</text>
-						<text class="hint-speak-text">听笔画</text>
-					</view>
-				</view>
-			</view>
-		</view>
-
-		<view class="write-stage">
-			<view class="history-float">
-				<text class="history-title">书写记录</text>
-				<scroll-view scroll-y class="history-scroll" :show-scrollbar="false">
-					<text v-if="!history.length" class="history-empty">写完后这里会显示每一笔的结果</text>
-					<text
-						v-for="(line, i) in history"
-						:key="i"
-						class="history-item"
-						:class="historyItemClass(line)"
-					>{{ line }}</text>
-				</scroll-view>
-			</view>
-
-			<view class="canvas-shell">
+	<view class="page" :class="{ 'page--embedded': compact }">
+		<!-- 每日一练内嵌：仅田字格 + 极简辅助 -->
+		<view v-if="compact" class="write-compact">
+			<view class="canvas-shell canvas-shell--compact">
 				<canvas
 					v-if="canvasReady"
-					id="write-practice-canvas"
-					canvas-id="write-practice-canvas"
+					:id="canvasId"
+					:canvas-id="canvasId"
 					class="practice-canvas"
 					disable-scroll
 					:style="canvasStyle"
@@ -52,40 +15,116 @@
 					@touchend="onTouchEnd"
 					@touchcancel="onTouchCancel"
 				/>
-				<text v-else class="canvas-fallback">{{ displayChar }}</text>
-				<view v-if="!demoPlaying && !introBusy && canvasReady && !completed" class="canvas-hint">
-					<text class="canvas-hint-icon">👆</text>
-					<text class="canvas-hint-text">按住田字格，写出「{{ currentStrokeGuidancePhrase || '当前笔' }}」，松手自动判断</text>
+				<text v-else class="canvas-fallback canvas-fallback--compact">{{
+					mountPending ? '…' : displayChar
+				}}</text>
+			</view>
+			<view
+				v-if="!completed && !demoPlaying"
+				class="write-compact-hint"
+				@click.stop="playCompactStrokeHint"
+			>
+				<text class="write-compact-caption">{{ compactHintLabel }}</text>
+				<text class="write-compact-hint-btn">🔊 听提示</text>
+			</view>
+			<text v-else-if="compactStatusLine" class="write-compact-caption write-compact-caption--static">{{
+				compactStatusLine
+			}}</text>
+			<view class="write-compact-actions">
+				<text class="write-compact-link" @click.stop="showStrokeDemo">笔顺</text>
+				<text class="write-compact-sep">·</text>
+				<text class="write-compact-link" @click.stop="resetPractice">重写</text>
+			</view>
+		</view>
+
+		<template v-else>
+			<view class="hero-card">
+				<view class="char-badge">
+					<text class="char-badge-text">{{ displayChar }}</text>
+				</view>
+				<view class="hero-meta">
+					<view v-if="pinyinTokens.length" class="pinyin-row">
+						<pinyin-four-lines-row :syllables="pinyinTokens" size="md" />
+					</view>
+					<text class="progress-line">第 {{ currentStrokeNo }} / {{ strokeTotal }} 笔</text>
+					<view class="hint-row">
+						<text class="hint-line">
+							{{ completed ? '全部笔画正确，太棒了！' : (currentStrokeGuidance || '请按笔顺写…') }}
+						</text>
+						<view
+							v-if="!completed && currentStrokeLabel"
+							class="hint-speak"
+							@click.stop="playCurrentStrokeAudio"
+						>
+							<text class="hint-speak-icon">🔊</text>
+							<text class="hint-speak-text">听笔画</text>
+						</view>
+					</view>
 				</view>
 			</view>
-		</view>
 
-		<view
-			class="feedback"
-			:class="feedbackType === 'bad' ? 'feedback--bad' : feedbackType === 'ok' ? 'feedback--ok' : 'feedback--idle'"
-		>
-			<text v-if="feedbackIcon" class="feedback-icon">{{ feedbackIcon }}</text>
-			<text class="feedback-text">{{ feedbackText }}</text>
-		</view>
+			<view class="write-stage">
+				<view class="history-float">
+					<text class="history-title">书写记录</text>
+					<scroll-view scroll-y class="history-scroll" :show-scrollbar="false">
+						<text v-if="!history.length" class="history-empty">写完后这里会显示每一笔的结果</text>
+						<text
+							v-for="(line, i) in history"
+							:key="i"
+							class="history-item"
+							:class="historyItemClass(line)"
+						>{{ line }}</text>
+					</scroll-view>
+				</view>
 
-		<view class="tool-row">
-			<view class="tool-cell">
-				<button class="tool-btn tool-btn--ghost" size="mini" :disabled="demoPlaying" @click="showStrokeDemo">
-					看笔顺
-				</button>
-				<text class="tool-caption">先看动画怎么写</text>
+				<view class="canvas-shell">
+					<canvas
+						v-if="canvasReady"
+						:id="canvasId"
+						:canvas-id="canvasId"
+						class="practice-canvas"
+						disable-scroll
+						:style="canvasStyle"
+						@touchstart="onTouchStart"
+						@touchmove="onTouchMove"
+						@touchend="onTouchEnd"
+						@touchcancel="onTouchCancel"
+					/>
+					<text v-else class="canvas-fallback">{{ displayChar }}</text>
+					<view v-if="!demoPlaying && !introBusy && canvasReady && !completed" class="canvas-hint">
+						<text class="canvas-hint-icon">👆</text>
+						<text class="canvas-hint-text">按住田字格，写出「{{ currentStrokeGuidancePhrase || '当前笔' }}」，松手自动判断</text>
+					</view>
+				</view>
 			</view>
-			<view class="tool-cell">
-				<button class="tool-btn tool-btn--ghost" size="mini" @click="resetPractice">重写</button>
-				<text class="tool-caption">从第一笔重来</text>
-			</view>
-			<view class="tool-cell">
-				<button class="tool-btn tool-btn--primary" size="mini" @click="nextChar">换一字</button>
-				<text class="tool-caption">练别的生字</text>
-			</view>
-		</view>
 
-		<view class="input-card">
+			<view
+				class="feedback"
+				:class="feedbackType === 'bad' ? 'feedback--bad' : feedbackType === 'ok' ? 'feedback--ok' : 'feedback--idle'"
+			>
+				<text v-if="feedbackIcon" class="feedback-icon">{{ feedbackIcon }}</text>
+				<text class="feedback-text">{{ feedbackText }}</text>
+			</view>
+
+			<view class="tool-row">
+				<view class="tool-cell">
+					<button class="tool-btn tool-btn--ghost" size="mini" :disabled="demoPlaying" @click="showStrokeDemo">
+						看笔顺
+					</button>
+					<text class="tool-caption">先看动画怎么写</text>
+				</view>
+				<view class="tool-cell">
+					<button class="tool-btn tool-btn--ghost" size="mini" @click="resetPractice">重写</button>
+					<text class="tool-caption">从第一笔重来</text>
+				</view>
+				<view class="tool-cell">
+					<button class="tool-btn tool-btn--primary" size="mini" @click="nextChar">换一字</button>
+					<text class="tool-caption">练别的生字</text>
+				</view>
+			</view>
+		</template>
+
+		<view v-if="!compact" class="input-card">
 			<text class="input-label">想练哪个字？输入一个汉字后点确定</text>
 			<view class="input-row">
 				<input
@@ -110,11 +149,12 @@ import {
 	getCncharStrokeNameList,
 	playStrokeGuidanceAudio,
 	formatStrokeGuidancePhrase,
-	stopStrokeOrderAudio
+	resetStrokeAudioQueue
 } from '@/utils/stroke-order-audio.js'
 import {
 	playOpusForDisplayPinyin,
 	playPinyinLocalAudioSequence,
+	sleepUnlessCancelled,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
 import { speakHanzi, stopHanziSpeech } from '@/utils/speak-hanzi.js'
@@ -126,12 +166,33 @@ import { buildWritePracticeCharPool } from '@/utils/write-practice-char-pool.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
-const CANVAS_LENGTH = 200
+const CANVAS_LENGTH_FULL = 200
+const CANVAS_LENGTH_COMPACT = 200
 /** 整字读音播完后，再过多久才播笔画名 / 闪笔画 */
 const CHAR_TO_STROKE_AUDIO_GAP_MS = 2000
+const CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT = 600
 
 export default {
 	components: { PinyinFourLinesRow },
+	props: {
+		/** 每日一练内嵌：无换字输入、紧凑布局 */
+		compact: {
+			type: Boolean,
+			default: false
+		},
+		initialHanzi: {
+			type: String,
+			default: ''
+		},
+		initialPinyin: {
+			type: String,
+			default: ''
+		},
+		canvasId: {
+			type: String,
+			default: 'write-practice-canvas'
+		}
+	},
 	data() {
 		return {
 			hanzi: '人',
@@ -154,7 +215,8 @@ export default {
 			history: [],
 			charPool: [],
 			poolIndex: 0,
-			wrongAddedAt: 0
+			wrongAddedAt: 0,
+			mountPending: false
 		}
 	},
 	computed: {
@@ -185,17 +247,38 @@ export default {
 			if (!label) return ''
 			return formatStrokeGuidancePhrase(this.activeStroke, label)
 		},
+		canvasLength() {
+			return this.compact ? CANVAS_LENGTH_COMPACT : CANVAS_LENGTH_FULL
+		},
 		canvasStyle() {
-			const px = CANVAS_LENGTH + 30
+			const px = this.canvasLength + 30
 			return { width: px + 'px', height: px + 'px', display: 'block' }
 		},
 		feedbackIcon() {
 			if (this.feedbackType === 'ok') return '✓'
 			if (this.feedbackType === 'bad') return '✗'
 			return ''
+		},
+		compactHintLabel() {
+			if (!this.compact || this.completed || this.demoPlaying) return ''
+			if (this.currentStrokeGuidancePhrase) return this.currentStrokeGuidancePhrase
+			if (this.strokeTotal > 0) {
+				return `第 ${this.currentStrokeNo} / ${this.strokeTotal} 笔`
+			}
+			return '当前笔画'
+		},
+		compactStatusLine() {
+			if (!this.compact) return ''
+			if (this.completed) return '全部写对了'
+			if (this.demoPlaying) return '笔顺演示中'
+			return ''
+		},
+		charToStrokeGapMs() {
+			return this.compact ? CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT : CHAR_TO_STROKE_AUDIO_GAP_MS
 		}
 	},
 	onLoad(query) {
+		if (this.compact) return
 		const from = query?.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const pure = String(from || '').match(/[\u4e00-\u9fff]/)?.[0]
 		if (pure) {
@@ -203,15 +286,28 @@ export default {
 			this.inputHanzi = pure
 		}
 	},
+	watch: {
+		initialHanzi(val, oldVal) {
+			if (!this.compact || !val || val === oldVal) return
+			const pure = String(val || '').match(/[\u4e00-\u9fff]/)?.[0]
+			if (!pure || (pure === this.hanzi && this.writer)) return
+			this.initCompactPractice(pure, this.initialPinyin)
+		}
+	},
+	mounted() {
+		if (this.compact) {
+			this.initCompactPractice()
+		}
+	},
 	onReady() {
+		if (this.compact) return
 		this.bootstrap()
 	},
 	onUnload() {
-		this.cancelWriteIntro()
-		this.teardownWriter()
+		this.stopAllPracticeAudio()
 	},
 	onHide() {
-		this.cancelWriteIntro()
+		this.stopAllPracticeAudio()
 	},
 	methods: {
 		curriculumDims() {
@@ -222,6 +318,19 @@ export default {
 				grade: Number.isFinite(g) && g >= 0 ? g : 1,
 				semester: p.semester === '下' ? '下' : '上'
 			}
+		},
+		/** 内嵌在每日一练：子组件无 onReady，须在 mounted 后挂载 canvas */
+		initCompactPractice(hanzi, pinyin) {
+			const pure =
+				String(hanzi || this.initialHanzi || '')
+					.match(/[\u4e00-\u9fff]/)?.[0] || ''
+			if (!pure) return
+			const py = pinyin != null ? pinyin : this.initialPinyin
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					this.applyChar(pure, py)
+				})
+			})
 		},
 		async bootstrap() {
 			await this.loadCharPool()
@@ -238,14 +347,34 @@ export default {
 				this.charPool = ['大', '小', '天', '口', '手', '人']
 			}
 		},
-		refreshMeta() {
-			try {
-				this.pinyinText = spellDisplayString(this.displayChar, 'poly', 'tone', 'array', 'low')
-			} catch (_) {
-				this.pinyinText = ''
+		refreshMeta(externalPinyin) {
+			const pyIn = String(externalPinyin != null ? externalPinyin : this.initialPinyin || '')
+				.replace(/\s+/g, ' ')
+				.trim()
+			if (pyIn) {
+				this.pinyinText = pyIn
+			} else {
+				try {
+					this.pinyinText = spellDisplayString(this.displayChar, 'poly', 'tone', 'array', 'low')
+				} catch (_) {
+					this.pinyinText = ''
+				}
 			}
 			this.strokeNames = getCncharStrokeNameList(this.displayChar)
 			this.strokeTotal = this.strokeNames.length || 0
+		},
+		applyChar(hanzi, pinyin) {
+			const pure = String(hanzi || '').match(/[\u4e00-\u9fff]/)?.[0]
+			if (!pure) return
+			this.mountPending = true
+			this.stopAllPracticeAudio()
+			this.hanzi = pure
+			this.inputHanzi = pure
+			this.history = []
+			this.completed = false
+			this.activeStroke = 0
+			this.refreshMeta(pinyin)
+			this.mountTestWriter()
 		},
 		pushHistory(text) {
 			this.history = [...this.history, text].slice(-12)
@@ -256,20 +385,43 @@ export default {
 			if (s.includes('✗')) return 'history-item--bad'
 			return ''
 		},
-		/** 停掉字音、笔画音、TTS 及未完成的引导流程 */
-		stopAllPracticeAudio() {
-			this.cancelWriteIntro()
-		},
-		cancelWriteIntro() {
+		/** 停字音 / 笔画音 / TTS，并作废进行中的引导（不销毁 canvas） */
+		stopPracticePlayback() {
 			this.introGen++
 			this.introBusy = false
 			if (this.introDelayTimer != null) {
 				clearTimeout(this.introDelayTimer)
 				this.introDelayTimer = null
 			}
-			stopStrokeOrderAudio()
+			if (this.writer && typeof this.writer.stop === 'function') {
+				try {
+					this.writer.stop()
+				} catch (_) {}
+			}
+			resetStrokeAudioQueue()
 			stopLocalPinyinAudio()
 			stopHanziSpeech()
+		},
+		/** 换字、演示、离开页：停音 + 取消挂载 + 销毁 writer */
+		stopAllPracticeAudio() {
+			this.demoPlaying = false
+			this.stopPracticePlayback()
+			if (this.attachTimer != null) {
+				clearTimeout(this.attachTimer)
+				this.attachTimer = null
+			}
+			this.mountGen++
+			if (this.writer) {
+				try {
+					if (typeof this.writer.destroy === 'function') {
+						this.writer.destroy()
+					}
+				} catch (_) {}
+				this.writer = null
+			}
+		},
+		cancelWriteIntro() {
+			this.stopPracticePlayback()
 		},
 		waitIntroGap(ms, gen) {
 			const delay = Math.max(0, Number(ms) || 0)
@@ -288,84 +440,153 @@ export default {
 			this.introBusy = true
 			try {
 				if (playCharFirst) {
-					this.feedbackText = `先听「${this.displayChar}」的读音`
-					this.feedbackType = ''
-					await this.playCharReading()
+					if (!this.compact) {
+						this.feedbackText = `先听「${this.displayChar}」的读音`
+						this.feedbackType = ''
+					}
+					await this.playCharReading(gen)
 					if (gen !== this.introGen || this.completed || this.demoPlaying) return
-					this.feedbackText = '想一想，准备写第一笔…'
-					this.feedbackType = ''
-					await this.waitIntroGap(CHAR_TO_STROKE_AUDIO_GAP_MS, gen)
+					if (!this.compact) {
+						this.feedbackText = '想一想，准备写第一笔…'
+						this.feedbackType = ''
+					}
+					await this.waitIntroGap(this.charToStrokeGapMs, gen)
 					if (gen !== this.introGen || this.completed || this.demoPlaying) return
 				}
-				await this.beginStrokeGuidance(strokeIndex)
+				await this.beginStrokeGuidance(strokeIndex, gen)
 			} finally {
 				if (gen === this.introGen) this.introBusy = false
 			}
 		},
-		async playCharReading() {
-			stopStrokeOrderAudio()
+		/** @param {number} [introGen] runWriteIntro 会话 id，换字后丢弃在途播放 */
+		async playCharReading(introGen) {
+			const gen = introGen != null ? introGen : this.introGen
+			const charSnap = this.displayChar
+			const cancelled = () => gen !== this.introGen || this.displayChar !== charSnap
 			stopLocalPinyinAudio()
+			stopHanziSpeech()
 			const narrator = getAudioNarrator()
 			const tokens = this.pinyinTokens
 			if (tokens.length > 1) {
-				await playPinyinLocalAudioSequence(tokens, { narrator, gapMs: 90 })
+				await playPinyinLocalAudioSequence(tokens, {
+					narrator,
+					gapMs: 90,
+					isCancelled: cancelled
+				})
+				if (cancelled()) return
 				return
 			}
 			if (tokens.length === 1) {
-				await playOpusForDisplayPinyin(tokens[0], { narrator, gapMs: 0 })
+				await playOpusForDisplayPinyin(tokens[0], {
+					narrator,
+					gapMs: 0,
+					isCancelled: cancelled
+				})
+				if (cancelled()) return
 				return
 			}
 			const py = String(this.pinyinText || '').trim()
 			if (py) {
-				await playOpusForDisplayPinyin(py, { narrator, gapMs: 0 })
+				await playOpusForDisplayPinyin(py, {
+					narrator,
+					gapMs: 0,
+					isCancelled: cancelled
+				})
+				if (cancelled()) return
 				return
 			}
+			if (cancelled()) return
 			speakHanzi(this.displayChar)
-			await new Promise((r) => setTimeout(r, 850))
+			await sleepUnlessCancelled(850, cancelled)
 		},
-		async beginStrokeGuidance(strokeIndex) {
+		async beginStrokeGuidance(strokeIndex, introGen) {
+			const gen = introGen != null ? introGen : this.introGen
+			const charSnap = this.displayChar
+			const cancelled = () => gen !== this.introGen || this.displayChar !== charSnap
 			const idx = Number(strokeIndex)
 			if (!Number.isFinite(idx) || idx < 0 || this.completed || this.demoPlaying) return
+			if (cancelled()) return
 			if (this.writer && typeof this.writer.setTestStrokeGuide === 'function') {
 				this.writer.setTestStrokeGuide(true, { blink: true, blinkTimes: 3 })
 			}
 			const label = this.strokeNames[idx]
-			if (label) {
+			if (label && !this.compact) {
 				this.feedbackText = `请写：${formatStrokeGuidancePhrase(idx, label)}`
 				this.feedbackType = ''
 			}
 			if (!label) return
 			stopLocalPinyinAudio()
-			await playStrokeGuidanceAudio(idx, label, { narrator: getAudioNarrator() })
+			await playStrokeGuidanceAudio(idx, label, {
+				narrator: getAudioNarrator(),
+				isCancelled: cancelled
+			})
+			if (cancelled()) return
 		},
 		playCurrentStrokeAudio() {
 			if (this.completed || this.demoPlaying || this.introBusy) return
 			this.cancelWriteIntro()
 			this.runWriteIntro(this.activeStroke, { playCharFirst: false })
 		},
+		/** 内嵌模式：仅高亮当前应收笔（不播音） */
+		applyCompactStrokeGuideVisual(strokeIndex) {
+			if (!this.compact || this.completed || this.demoPlaying) return
+			const idx =
+				strokeIndex != null && Number.isFinite(Number(strokeIndex))
+					? Number(strokeIndex)
+					: this.activeStroke
+			if (idx < 0) return
+			if (this.writer && typeof this.writer.setTestStrokeGuide === 'function') {
+				this.writer.setTestStrokeGuide(true, { blink: true, blinkTimes: 3 })
+			}
+		},
+		/** 内嵌模式：用户点击后播放当前应收笔画提示 */
+		playCompactStrokeHint() {
+			if (this.completed || this.demoPlaying || this.introBusy) return
+			this.cancelWriteIntro()
+			const gen = ++this.introGen
+			this.introBusy = true
+			this.applyCompactStrokeGuideVisual(this.activeStroke)
+			this.beginStrokeGuidance(this.activeStroke, gen).finally(() => {
+				if (gen === this.introGen) this.introBusy = false
+			})
+		},
+		compactToast() {
+			/* 每日一练内嵌：不弹 Toast，避免打断书写 */
+		},
 		handleTestStatus(index, status, data = {}) {
 			const strokeNo = Number(index) + 1
 			if (status === 'correct') {
-				this.feedbackType = 'ok'
-				this.feedbackText =
-					strokeNo >= this.strokeTotal
-						? `第 ${strokeNo} 笔写对了`
-						: `第 ${strokeNo} 笔写对了，请写第 ${strokeNo + 1} 笔`
+				if (!this.compact) {
+					this.feedbackType = 'ok'
+					this.feedbackText =
+						strokeNo >= this.strokeTotal
+							? `第 ${strokeNo} 笔写对了`
+							: `第 ${strokeNo} 笔写对了，请写第 ${strokeNo + 1} 笔`
+				}
 				this.activeStroke = strokeNo
-				this.pushHistory(`第 ${strokeNo} 笔 ✓`)
+				if (!this.compact) this.pushHistory(`第 ${strokeNo} 笔 ✓`)
 				if (!this.completed && strokeNo < this.strokeTotal) {
-					this.$nextTick(() =>
-						this.runWriteIntro(strokeNo, { playCharFirst: false })
-					)
+					if (this.compact) {
+						this.$nextTick(() => this.applyCompactStrokeGuideVisual(strokeNo))
+					} else {
+						this.$nextTick(() =>
+							this.runWriteIntro(strokeNo, { playCharFirst: false })
+						)
+					}
 				}
 				return
 			}
 			if (status === 'mistake') {
 				if (data.reason === 'tooShort') {
-					this.feedbackType = 'bad'
-					this.feedbackText = '笔画太短啦，请按住田字格多拖一段再松手'
-					uni.showToast({ title: '请画完整一笔', icon: 'none' })
-					this.pushHistory(`第 ${strokeNo} 笔 ✗ 笔画太短`)
+					if (!this.compact) {
+						this.feedbackType = 'bad'
+						this.feedbackText = '笔画太短啦，请按住田字格多拖一段再松手'
+					}
+					this.compactToast('请画完整一笔')
+					if (!this.compact) {
+						uni.showToast({ title: '请画完整一笔', icon: 'none' })
+					}
+					if (!this.compact) this.pushHistory(`第 ${strokeNo} 笔 ✗ 笔画太短`)
 					return
 				}
 				const expectedNo = Number(data.expectedStroke) + 1
@@ -376,21 +597,32 @@ export default {
 				const expectedPhrase = expectedLabel
 					? formatStrokeGuidancePhrase(data.expectedStroke, expectedLabel)
 					: ''
-				this.feedbackType = 'bad'
-				const shapeHint =
-					typeof data.score === 'number' && data.score > 30
-						? '形状或方向不太像，'
-						: ''
-				this.feedbackText = expectedPhrase
-					? `${shapeHint}这一笔不对。应先写${expectedPhrase}，请重画`
-					: `${shapeHint}这一笔不对，请按提示重画第 ${expectedNo} 笔`
-				this.pushHistory(`第 ${strokeNo} 笔 ✗ → 应收第 ${expectedNo} 笔`)
-				if (Number.isFinite(data.expectedStroke) && data.expectedStroke >= 0) {
-					this.$nextTick(() =>
-						this.runWriteIntro(data.expectedStroke, { playCharFirst: false })
-					)
+				if (!this.compact) {
+					this.feedbackType = 'bad'
+					const shapeHint =
+						typeof data.score === 'number' && data.score > 30
+							? '形状或方向不太像，'
+							: ''
+					this.feedbackText = expectedPhrase
+						? `${shapeHint}这一笔不对。应先写${expectedPhrase}，请重画`
+						: `${shapeHint}这一笔不对，请按提示重画第 ${expectedNo} 笔`
+					this.pushHistory(`第 ${strokeNo} 笔 ✗ → 应收第 ${expectedNo} 笔`)
+					uni.showToast({ title: '再试一次', icon: 'none', duration: 1500 })
+				} else {
+					this.compactToast(expectedPhrase ? `应写${expectedPhrase}` : '再试一次')
 				}
-				uni.showToast({ title: '再试一次', icon: 'none', duration: 1500 })
+				if (Number.isFinite(data.expectedStroke) && data.expectedStroke >= 0) {
+					if (this.compact) {
+						this.activeStroke = data.expectedStroke
+						this.$nextTick(() =>
+							this.applyCompactStrokeGuideVisual(data.expectedStroke)
+						)
+					} else {
+						this.$nextTick(() =>
+							this.runWriteIntro(data.expectedStroke, { playCharFirst: false })
+						)
+					}
+				}
 				const now = Date.now()
 				if (now - this.wrongAddedAt > 300) {
 					addCharWrongCount(this.displayChar, 1, this.curriculumDims())
@@ -401,16 +633,20 @@ export default {
 			if (status === 'complete') {
 				this.completed = true
 				this.activeStroke = this.strokeTotal
-				this.feedbackType = 'ok'
-				this.feedbackText = '全部笔画写对了，笔顺正确！'
-				this.pushHistory('✓ 全部通过')
+				if (this.compact) {
+					this.compactToast('全部写对了', 'success')
+				} else {
+					this.feedbackType = 'ok'
+					this.feedbackText = '全部笔画写对了，笔顺正确！'
+					this.pushHistory('✓ 全部通过')
+				}
 			}
 		},
 		sharedDrawOpts() {
 			return {
 				vm: this,
 				style: {
-					length: CANVAS_LENGTH,
+					length: this.canvasLength,
 					charInsetRatio: 0.12,
 					strokeColor: '#2c3e50',
 					outlineColor: '#d5d5d5',
@@ -430,16 +666,20 @@ export default {
 			}
 		},
 		teardownWriter() {
-			this.cancelWriteIntro()
+			this.stopPracticePlayback()
 			if (this.attachTimer) {
 				clearTimeout(this.attachTimer)
 				this.attachTimer = null
 			}
 			this.mountGen++
-			if (this.writer && typeof this.writer.destroy === 'function') {
-				this.writer.destroy()
+			if (this.writer) {
+				try {
+					if (typeof this.writer.destroy === 'function') {
+						this.writer.destroy()
+					}
+				} catch (_) {}
+				this.writer = null
 			}
-			this.writer = null
 		},
 		scheduleMount(fn) {
 			this.teardownWriter()
@@ -450,9 +690,10 @@ export default {
 				if (token !== this.mountGen) return
 				fn()
 			}
+			const delayMs = this.compact ? 120 : 48
 			this.$nextTick(() => {
 				this.$nextTick(() => {
-					this.attachTimer = setTimeout(attach, 48)
+					this.attachTimer = setTimeout(attach, delayMs)
 				})
 			})
 		},
@@ -460,8 +701,10 @@ export default {
 			this.stopAllPracticeAudio()
 			this.completed = false
 			this.activeStroke = 0
-			this.feedbackText = '请用手指在下方田字格写出当前这一笔，写完后松手'
-			this.feedbackType = ''
+			if (!this.compact) {
+				this.feedbackText = '请用手指在下方田字格写出当前这一笔，写完后松手'
+				this.feedbackType = ''
+			}
 			this.demoPlaying = false
 			const ch = this.displayChar
 			if (!ch || ch === '—') return
@@ -470,7 +713,7 @@ export default {
 					const vm = this
 					this.writer = drawNative(ch, {
 						...this.sharedDrawOpts(),
-						el: '#write-practice-canvas',
+						el: `#${this.canvasId}`,
 						type: drawNative.TYPE.TEST,
 						animation: { autoAnimate: false },
 						test: {
@@ -488,10 +731,19 @@ export default {
 					if (typeof this.writer.updateCanvasRect === 'function') {
 						this.writer.updateCanvasRect()
 					}
-					vm.$nextTick(() => vm.runWriteIntro(0, { playCharFirst: true }))
+					vm.mountPending = false
+					if (vm.compact) {
+						vm.$nextTick(() => vm.applyCompactStrokeGuideVisual(0))
+					} else {
+						vm.$nextTick(() => vm.runWriteIntro(0, { playCharFirst: true }))
+					}
 				} catch (e) {
+					vm.mountPending = false
+					vm.canvasReady = false
 					console.warn('[write-practice] mount test', e)
-					uni.showToast({ title: '该字暂不支持练习', icon: 'none' })
+					if (!vm.compact) {
+						uni.showToast({ title: '该字暂不支持练习', icon: 'none' })
+					}
 				}
 			})
 		},
@@ -499,13 +751,13 @@ export default {
 			const ch = this.displayChar
 			if (!ch || ch === '—') return
 			this.demoPlaying = true
-			this.feedbackText = '笔顺演示中…'
+			if (!this.compact) this.feedbackText = '笔顺演示中…'
 			this.scheduleMount(() => {
 				try {
 					const vm = this
 					this.writer = drawNative(ch, {
 						...this.sharedDrawOpts(),
-						el: '#write-practice-canvas',
+						el: `#${this.canvasId}`,
 						type: drawNative.TYPE.ANIMATION,
 						animation: {
 							autoAnimate: true,
@@ -521,24 +773,33 @@ export default {
 					})
 				} catch (e) {
 					this.demoPlaying = false
-					uni.showToast({ title: '笔顺演示失败', icon: 'none' })
+					if (!this.compact) {
+						uni.showToast({ title: '笔顺演示失败', icon: 'none' })
+					}
 					this.mountTestWriter()
 				}
 			})
 		},
 		showStrokeDemo() {
 			if (this.demoPlaying || this.completed) return
-			this.cancelWriteIntro()
+			this.stopAllPracticeAudio()
 			this.mountDemoWriter()
 		},
 		resetPractice() {
+			this.stopPracticePlayback()
 			this.completed = false
 			this.activeStroke = 0
-			this.feedbackText = '已重置，先听字音再写第一笔'
-			this.feedbackType = ''
+			if (!this.compact) {
+				this.feedbackText = '已重置，先听字音再写第一笔'
+				this.feedbackType = ''
+			}
 			if (this.writer && typeof this.writer.resetStrokeTest === 'function') {
 				this.writer.resetStrokeTest()
-				this.$nextTick(() => this.runWriteIntro(0, { playCharFirst: true }))
+				if (this.compact) {
+					this.$nextTick(() => this.applyCompactStrokeGuideVisual(0))
+				} else {
+					this.$nextTick(() => this.runWriteIntro(0, { playCharFirst: true }))
+				}
 				return
 			}
 			this.mountTestWriter()
@@ -559,6 +820,7 @@ export default {
 		},
 		async nextChar() {
 			this.stopAllPracticeAudio()
+			this.canvasReady = false
 			const prev = this.displayChar
 			await this.loadCharPool(prev)
 			if (!this.charPool.length) {
@@ -609,6 +871,76 @@ export default {
 	padding: 24rpx 24rpx 48rpx;
 	box-sizing: border-box;
 	background: linear-gradient(180deg, #ffeef5 0%, #fff8fb 35%, var(--meng-page-bg) 100%);
+}
+
+.page--embedded {
+	min-height: 0;
+	padding: 0;
+	background: transparent;
+}
+
+.write-compact {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+}
+
+.write-compact-hint {
+	margin-top: 12rpx;
+	padding: 12rpx 18rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 252, 248, 0.98);
+	border: 1rpx solid rgba(235, 227, 216, 0.9);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 10rpx 16rpx;
+}
+
+.write-compact-caption {
+	font-size: 26rpx;
+	color: var(--meng-text);
+	font-weight: 600;
+	line-height: 1.4;
+	text-align: center;
+}
+
+.write-compact-caption--static {
+	display: block;
+	margin-top: 12rpx;
+	width: 100%;
+	font-weight: 500;
+	color: var(--meng-text-muted);
+}
+
+.write-compact-hint-btn {
+	font-size: 24rpx;
+	color: #c44d6a;
+	font-weight: 600;
+}
+
+.write-compact-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	margin-top: 10rpx;
+}
+
+.write-compact-link {
+	font-size: 24rpx;
+	color: #c44d6a;
+	font-weight: 600;
+	padding: 6rpx 12rpx;
+}
+
+.write-compact-sep {
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
 }
 
 .hero-card {
@@ -771,6 +1103,20 @@ export default {
 	background: #fff;
 	box-shadow: 0 12rpx 36rpx rgba(44, 36, 25, 0.08);
 	box-sizing: border-box;
+}
+
+.canvas-shell--compact {
+	width: 100%;
+	padding: 10rpx;
+	box-shadow: none;
+	border-radius: 24rpx;
+	background: #fffefb;
+	border: 2rpx solid rgba(235, 227, 216, 0.95);
+}
+
+.canvas-fallback--compact {
+	min-height: 200px;
+	font-size: 100rpx;
 }
 
 .practice-canvas {

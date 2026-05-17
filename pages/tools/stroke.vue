@@ -1,110 +1,155 @@
 <template>
-	<view class="content">
-		<view class="vip-strip" @click="goVip">
-			<text class="vip-strip-icon">◇</text>
-			<text class="vip-strip-text">{{ vipActive ? '会员已开通 · 查看权益' : '家长专区 · 开通会员解锁全年级与练习' }}</text>
-			<text class="vip-strip-arrow">›</text>
-		</view>
-		<view class="title-wrap">
-			<text class="title">{{ word }}</text>
-		</view>
-		<view class="input-row">
-			<input
-				v-model="inputWord"
-				class="hanzi-input"
-				type="text"
-				placeholder="请输入汉字，如：我 或 中国"
-				confirm-type="done"
-				@confirm="applyInputWord"
-			/>
-			<button size="mini" type="primary" @click="applyInputWord">应用</button>
-		</view>
-		<view class="pinyin-strip">
-			<text class="pinyin-label">拼音：</text>
-			<view class="pinyin-cells">
-				<pinyin-four-lines-row :syllables="pinyinStrokeTokens" size="lg" />
+	<view class="stroke-lab-page">
+		<view class="lab-card lab-input-card">
+			<view class="lab-input-row">
+				<text class="lab-input-label">要练的字</text>
+				<input
+					:value="inputWord"
+					class="hanzi-input"
+					type="text"
+					maxlength="1"
+					placeholder="输入一字"
+					@focus="onPracticeInputFocus"
+					@blur="onPracticeInputBlur"
+					@input="onPracticeCharInput"
+				/>
 			</view>
 		</view>
-		<view class="control-row">
-			<button size="mini" @click="runDraw('normal')">normal</button>
-			<button size="mini" @click="runDraw('animation')">animation</button>
-			<button size="mini" @click="runDraw('stroke')">stroke</button>
-			<button size="mini" @click="runDraw('test')">test</button>
+
+		<view class="lab-card lab-stage-card">
+			<view class="lab-canvas-shell">
+				<canvas
+					v-if="strokeReady"
+					canvas-id="stroke-box"
+					id="stroke-box"
+					class="stroke-canvas"
+					disable-scroll
+					:style="strokeCanvasInlineStyle"
+					@touchstart="onCanvasTouchStart"
+					@touchmove="onCanvasTouchMove"
+					@touchend="onCanvasTouchEnd"
+				/>
+				<text v-else class="fallback-char">{{ displayHanzi }}</text>
+			</view>
+
+			<text v-if="labMode === 'test'" class="lab-stage-hint">按住田字格书写，松手自动判断笔顺</text>
+			<text v-else-if="labMode === 'step'" class="lab-stage-hint">点「下一笔」逐笔显示</text>
+			<text v-else class="lab-stage-hint">笔顺自动循环播放，可用下方按钮控制</text>
+
+			<view
+				v-if="labMode === 'test' && testFeedback"
+				class="lab-test-badge"
+				:class="testFeedbackType === 'bad' ? 'lab-test-badge--bad' : 'lab-test-badge--ok'"
+			>
+				<text class="lab-test-badge-icon">{{ testFeedback }}</text>
+			</view>
 		</view>
-		<view class="control-row">
-			<button size="mini" @click="startAnimation">开始</button>
-			<button size="mini" @click="pauseAnimation">暂停</button>
-			<button size="mini" @click="resumeAnimation">恢复</button>
-			<button size="mini" @click="restartAnimation">重播</button>
-			<button size="mini" @click="drawNextStroke">下一笔</button>
+
+		<scroll-view scroll-x class="lab-mode-scroll" :show-scrollbar="false">
+			<view class="lab-mode-row">
+				<view
+					class="lab-mode-chip lab-mode-chip--anim"
+					:class="{ 'lab-mode-chip--on': labMode === 'animation' }"
+					@click="setLabMode('animation')"
+				>
+					<text class="lab-chip-emoji">🎬</text>
+					<text class="lab-chip-text">笔顺动画</text>
+				</view>
+				<view
+					class="lab-mode-chip lab-mode-chip--write"
+					:class="{ 'lab-mode-chip--on': labMode === 'test' }"
+					@click="setLabMode('test')"
+				>
+					<text class="lab-chip-emoji">✏️</text>
+					<text class="lab-chip-text">书写练习</text>
+				</view>
+				<view
+					class="lab-mode-chip lab-mode-chip--step"
+					:class="{ 'lab-mode-chip--on': labMode === 'step' }"
+					@click="setLabMode('step')"
+				>
+					<text class="lab-chip-emoji">👣</text>
+					<text class="lab-chip-text">分步笔画</text>
+				</view>
+			</view>
+		</scroll-view>
+
+		<view v-if="labMode === 'animation'" class="lab-tool-row">
+			<view class="lab-pill lab-pill--sun" @click="startAnimation">
+				<text class="lab-pill-emoji">▶️</text>
+				<text class="lab-pill-label">播放</text>
+			</view>
+			<view class="lab-pill lab-pill--lavender" @click="pauseAnimation">
+				<text class="lab-pill-emoji">⏸️</text>
+				<text class="lab-pill-label">暂停</text>
+			</view>
+			<view class="lab-pill lab-pill--leaf" @click="resumeAnimation">
+				<text class="lab-pill-emoji">⏯️</text>
+				<text class="lab-pill-label">继续</text>
+			</view>
+			<view class="lab-pill lab-pill--pink" @click="restartAnimation">
+				<text class="lab-pill-emoji">🔄</text>
+				<text class="lab-pill-label">重播</text>
+			</view>
 		</view>
-		<view class="control-row">
-			<button size="mini" type="warn" @click="testWordNotFound">测试404回调</button>
+
+		<view v-else-if="labMode === 'step'" class="lab-tool-row">
+			<view class="lab-pill lab-pill--sun lab-pill--wide" @click="drawNextStroke">
+				<text class="lab-pill-emoji">👉</text>
+				<text class="lab-pill-label">下一笔</text>
+			</view>
+			<view class="lab-pill lab-pill--pink lab-pill--wide" @click="restartAnimation">
+				<text class="lab-pill-emoji">🐣</text>
+				<text class="lab-pill-label">从头开始</text>
+			</view>
 		</view>
-		<view v-if="testFeedback || testHistory.length" class="test-panel">
+
+		<view v-if="labMode === 'test' && testHistory.length" class="lab-card lab-log-card">
+			<text class="lab-log-title">书写记录</text>
 			<text
-				v-if="testFeedback"
-				class="test-feedback"
-				:class="testFeedbackType === 'bad' ? 'test-feedback-bad' : 'test-feedback-ok'"
-			>{{ testFeedback }}</text>
-			<text class="test-order-title">书写顺序记录（第一笔在上）</text>
-			<text v-for="(item, idx) in testHistory" :key="`${idx}-${item}`" class="test-order-item">{{ item }}</text>
+				v-for="(item, idx) in testHistory"
+				:key="`${idx}-${item}`"
+				class="lab-log-item"
+				:class="logItemClass(item)"
+			>{{ item }}</text>
 		</view>
-		<canvas
-			v-if="strokeReady"
-			canvas-id="stroke-box"
-			id="stroke-box"
-			class="stroke-canvas"
-			disable-scroll
-			:style="strokeCanvasInlineStyle"
-			@touchstart="onCanvasTouchStart"
-			@touchmove="onCanvasTouchMove"
-			@touchend="onCanvasTouchEnd"
-		/>
-		<text v-if="!strokeReady" class="fallback-char">我</text>
 	</view>
 </template>
 
 <script>
 import drawNative from '@/utils/draw-native.js'
-import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
-import { isVipActive } from '@/utils/vip.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
-import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
-import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
-/** 与 utils/draw-native.js 中 canvasSize = length + 30 保持一致 */
-const STROKE_DRAW_LENGTH = 180
+const STROKE_DRAW_LENGTH = 200
+
+const LAB_DRAW_MODE = {
+	animation: 'animation',
+	test: 'test',
+	step: 'stroke'
+}
 
 export default {
-	components: {
-		PinyinFourLinesRow
-	},
 	data() {
 		return {
-			word: '银',
-			inputWord: '银',
-			pinyinText: '',
+			word: '人',
+			inputWord: '人',
+			labMode: 'animation',
 			strokeReady: false,
 			drawWriter: null,
 			wordNotFoundRegistered: false,
-			vipActive: false,
 			testFeedback: '',
 			testFeedbackType: '',
 			testHistory: [],
 			testWrongAddedAt: 0,
-			initialMode: 'animation',
 			strokeMountGen: 0,
 			strokeAttachTimer: null
 		}
 	},
 	computed: {
-		pinyinStrokeTokens() {
-			const tokens = splitPinyinDisplayTokens(this.pinyinText)
-			if (tokens.length) return tokens
-			const s = String(this.pinyinText || '').trim()
-			return s ? [s] : []
+		displayHanzi() {
+			const c = String(this.word || '').trim().charAt(0)
+			return c || '—'
 		},
 		strokeCanvasInlineStyle() {
 			const px = STROKE_DRAW_LENGTH + 30
@@ -118,21 +163,18 @@ export default {
 	onLoad(query) {
 		const fromHanzi = query?.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const fromWord = query?.word ? decodeURIComponent(query.word) : ''
-		const incoming = fromHanzi || fromWord
-		if (query?.mode) this.initialMode = String(query.mode)
+		const incoming = (fromHanzi || fromWord).match(/[\u4e00-\u9fff]/)?.[0]
 		if (incoming) {
 			this.word = incoming
 			this.inputWord = incoming
 		}
-	},
-	onShow() {
-		this.vipActive = isVipActive()
+		const mode = String(query?.mode || '').toLowerCase()
+		if (mode === 'test') this.labMode = 'test'
+		else if (mode === 'stroke' || mode === 'step') this.labMode = 'step'
 	},
 	onReady() {
 		this.registerWordNotFoundHook()
-		this.initPinyin()
-		this.runDraw(this.initialMode)
-		this.vipActive = isVipActive()
+		this.runDraw(LAB_DRAW_MODE[this.labMode] || 'animation')
 	},
 	onUnload() {
 		if (this.strokeAttachTimer) {
@@ -145,34 +187,51 @@ export default {
 		}
 	},
 	methods: {
-		goVip() {
-			uni.navigateTo({ url: '/pages/vip/vip' })
+		logItemClass(item) {
+			const s = String(item || '')
+			if (s.includes('✓')) return 'lab-log-item--ok'
+			if (s.includes('✗')) return 'lab-log-item--bad'
+			return ''
 		},
-		initPinyin() {
-			try {
-				this.pinyinText = spellDisplayString(this.word, 'poly', 'tone', 'array', 'low')
-			} catch (e) {
-				this.pinyinText = ''
-				console.error(e)
+		setLabMode(mode) {
+			if (this.labMode === mode) return
+			this.labMode = mode
+			this.runDraw(LAB_DRAW_MODE[mode] || 'animation')
+		},
+		pickLastHanziFromInput(raw) {
+			const all = String(raw || '').match(/[\u4e00-\u9fff]/g)
+			if (!all || !all.length) return ''
+			return all[all.length - 1]
+		},
+		onPracticeInputFocus() {
+			this.inputWord = ''
+		},
+		onPracticeInputBlur() {
+			if (!this.pickLastHanziFromInput(this.inputWord)) {
+				this.inputWord = this.word
 			}
 		},
-		applyInputWord() {
-			const pure = String(this.inputWord || '').match(/[\u4e00-\u9fa5]+/g)
-			const nextWord = pure ? pure.join('') : ''
-			if (!nextWord) {
-				console.warn('[draw-native] 输入无效：请输入至少一个汉字')
+		onPracticeCharInput(e) {
+			const raw = e?.detail?.value != null ? String(e.detail.value) : ''
+			const ch = this.pickLastHanziFromInput(raw)
+			if (!ch) {
+				if (!String(raw || '').trim()) {
+					this.$nextTick(() => {
+						this.inputWord = ''
+					})
+				}
 				return
 			}
-			this.word = nextWord
-			this.inputWord = nextWord
-			this.initPinyin()
-			this.runDraw('animation')
+			if (this.inputWord !== ch || raw.length > 1) {
+				this.inputWord = ch
+			}
+			if (ch === this.word) return
+			this.word = ch
+			this.runDraw(LAB_DRAW_MODE[this.labMode] || 'animation')
 		},
 		registerWordNotFoundHook() {
 			if (this.wordNotFoundRegistered) return
-			drawNative.onWordNotFound((word) => {
-				console.warn(`[draw-native] onWordNotFound 触发: ${word}`)
-			})
+			drawNative.onWordNotFound(() => {})
 			this.wordNotFoundRegistered = true
 		},
 		destroyWriter() {
@@ -181,11 +240,10 @@ export default {
 			}
 			this.drawWriter = null
 		},
-		runDraw(mode = 'animation') {
+		runDraw(drawMode = 'animation') {
 			try {
 				if (typeof drawNative !== 'function') {
 					this.strokeReady = false
-					console.warn('[draw-native] draw-native 未加载，已降级为静态文字显示')
 					return
 				}
 				this.strokeReady = true
@@ -195,30 +253,24 @@ export default {
 					this.strokeAttachTimer = null
 				}
 				const token = ++this.strokeMountGen
-				const bindMode = mode
+				const bindMode = drawMode
 				const attach = () => {
 					this.strokeAttachTimer = null
 					if (token !== this.strokeMountGen) return
 					this.mountStrokeWriter(bindMode)
 				}
-				// App / 小程序端 canvas 常在布局未完成时 createCanvasContext 会绘制失败；双 nextTick + 短暂延迟更稳
 				this.$nextTick(() => {
 					this.$nextTick(() => {
-						this.strokeAttachTimer = setTimeout(attach, 48)
+						this.strokeAttachTimer = setTimeout(attach, 80)
 					})
 				})
 			} catch (e) {
 				this.strokeReady = false
-				console.warn('[draw-native] 初始化失败，已降级为静态文字显示')
-				console.error(e)
+				console.warn('[stroke-lab] init failed', e)
 			}
 		},
 		mountStrokeWriter(mode = 'animation') {
 			try {
-				if (typeof drawNative !== 'function') {
-					this.strokeReady = false
-					return
-				}
 				const vm = this
 				const typeMap = {
 					normal: drawNative.TYPE.NORMAL,
@@ -227,6 +279,7 @@ export default {
 					test: drawNative.TYPE.TEST
 				}
 				const targetType = typeMap[mode] || drawNative.TYPE.ANIMATION
+				const isAnim = targetType === drawNative.TYPE.ANIMATION
 				this.resetTestPanel()
 				this.drawWriter = drawNative(this.word, {
 					el: '#stroke-box',
@@ -234,78 +287,64 @@ export default {
 					type: targetType,
 					style: {
 						length: STROKE_DRAW_LENGTH,
-						charInsetRatio: 0.15,
+						charInsetRatio: 0.12,
 						strokeColor: '#2c3e50',
-						outlineColor: '#d5d5d5',
-						currentColor: '#e74c3c'
+						outlineColor: '#e8d5c8',
+						currentColor: '#ff7043',
+						drawingColor: '#ff7043',
+						drawingWidth: 5,
+						guideStrokeColor: '#ff6b9d',
+						highlightColor: '#ffab40'
 					},
 					line: {
 						show: true,
-						borderColor: '#d7d7d7',
-						centerColor: '#cfcfcf',
-						diagonalColor: '#e2e2e2'
+						borderColor: '#e0cfc0',
+						centerColor: '#d4c4b4',
+						diagonalColor: '#ebe0d6'
 					},
-					watermark: {
-						text: 'HanziStroke.com',
-						alpha: 0.22,
-						fontSize: 12,
-						position: 'bottom-right'
-					},
+					watermark: { text: '', alpha: 0 },
 					animation: {
-						autoAnimate: targetType === drawNative.TYPE.ANIMATION,
-						loopAnimate: true,
-						strokeAnimationSpeed: 1.2,
-						delayBetweenStrokes: 400,
-						delayBetweenLoops: 1000
+						autoAnimate: isAnim,
+						loopAnimate: isAnim,
+						strokeAnimationSpeed: 0.55,
+						strokeDurationMs: 880,
+						delayBetweenStrokes: 280,
+						delayBetweenLoops: 900
 					},
 					test: {
 						testStrictOrder: true,
-						testDirectionWeight: 0.4,
+						testDirectionWeight: 0.32,
+						testScoreThreshold: 26,
+						showHintAfterMisses: 2,
 						onTestStatus: ({ index, status, data }) => {
-							vm.handleTestStatus(index, status, data)
-							const scoreText = typeof data.score === 'number' ? ` score=${data.score}` : ''
-							console.log(`[draw-native] test[${index}] ${status}${scoreText} mistakes=${data.totalMistakes}`)
+							vm.handleTestStatus(index, status, data || {})
 						}
 					}
 				})
+				if (typeof this.drawWriter.updateCanvasRect === 'function') {
+					this.drawWriter.updateCanvasRect()
+				}
 			} catch (e) {
 				this.strokeReady = false
-				console.warn('[draw-native] mountStrokeWriter 失败，已降级为静态文字显示')
-				console.error(e)
+				uni.showToast({ title: '该字暂不支持', icon: 'none' })
+				console.warn('[stroke-lab] mount failed', e)
 			}
 		},
 		startAnimation() {
-			if (!this.drawWriter || typeof this.drawWriter.startAnimation !== 'function') return
-			const ok = this.drawWriter.startAnimation()
-			console.log(`[draw-native] startAnimation -> ${ok}`)
+			if (this.drawWriter?.startAnimation) this.drawWriter.startAnimation()
 		},
 		pauseAnimation() {
-			if (!this.drawWriter || typeof this.drawWriter.pauseAnimation !== 'function') return
-			this.drawWriter.pauseAnimation()
-			console.log('[draw-native] pauseAnimation 调用完成')
+			if (this.drawWriter?.pauseAnimation) this.drawWriter.pauseAnimation()
 		},
 		resumeAnimation() {
-			if (!this.drawWriter || typeof this.drawWriter.resumeAnimation !== 'function') return
-			this.drawWriter.resumeAnimation()
-			console.log('[draw-native] resumeAnimation 调用完成')
+			if (this.drawWriter?.resumeAnimation) this.drawWriter.resumeAnimation()
 		},
 		restartAnimation() {
-			if (!this.drawWriter || typeof this.drawWriter.restartAnimation !== 'function') return
-			this.drawWriter.restartAnimation()
-			console.log('[draw-native] restartAnimation 调用完成')
+			if (this.drawWriter?.restartAnimation) this.drawWriter.restartAnimation()
 		},
 		drawNextStroke() {
-			if (!this.drawWriter || typeof this.drawWriter.drawNextStroke !== 'function') return
-			const ok = this.drawWriter.drawNextStroke(() => {
-				console.log('[draw-native] drawNextStroke 回调触发: 已到最后一笔')
-			})
-			console.log(`[draw-native] drawNextStroke -> ${ok}`)
-		},
-		testWordNotFound() {
-			try {
-				drawNative('ABC', { el: '#stroke-box', vm: this })
-			} catch (e) {
-				console.log(`[draw-native] 测试404完成: ${e.message}`)
+			if (this.drawWriter?.drawNextStroke) {
+				this.drawWriter.drawNextStroke(() => {})
 			}
 		},
 		resetTestPanel() {
@@ -315,8 +354,7 @@ export default {
 			this.testWrongAddedAt = 0
 		},
 		getPracticeChar() {
-			const pure = String(this.word || '').match(/[\u4e00-\u9fa5]/g)
-			return pure && pure.length ? pure[0] : ''
+			return String(this.word || '').match(/[\u4e00-\u9fff]/)?.[0] || ''
 		},
 		curriculumDims() {
 			const p = getCurriculumPrefs()
@@ -328,37 +366,33 @@ export default {
 			}
 		},
 		pushTestHistory(text) {
-			this.testHistory = [...this.testHistory, text].slice(-12)
+			this.testHistory = [...this.testHistory, text].slice(-10)
 		},
 		handleTestStatus(index, status, data = {}) {
 			const strokeNo = Number(index) + 1
 			if (status === 'correct') {
 				this.testFeedbackType = 'ok'
 				this.testFeedback = '✓'
-				this.pushTestHistory(`第${strokeNo}笔 ✓ 顺序正确`)
+				this.pushTestHistory(`第 ${strokeNo} 笔 ✓`)
 				return
 			}
 			if (status === 'mistake') {
 				const expectedNo = Number(data.expectedStroke) + 1
 				this.testFeedbackType = 'bad'
 				this.testFeedback = '✗'
-				this.pushTestHistory(`第${strokeNo}笔 ✗ 应写第${expectedNo}笔`)
+				this.pushTestHistory(`第 ${strokeNo} 笔 ✗ → 应收第 ${expectedNo} 笔`)
 				const now = Date.now()
-				// 同一次抬笔事件仅记一次错字，避免重复写库
 				if (now - this.testWrongAddedAt > 250) {
 					const targetChar = this.getPracticeChar()
-					if (targetChar) {
-						addCharWrongCount(targetChar, 1, this.curriculumDims())
-					}
+					if (targetChar) addCharWrongCount(targetChar, 1, this.curriculumDims())
 					this.testWrongAddedAt = now
 				}
 				return
 			}
 			if (status === 'complete') {
 				this.testFeedbackType = 'ok'
-				this.testFeedback = '✓✓'
+				this.testFeedback = '✓'
 				this.pushTestHistory('全部笔画通过')
-				uni.showToast({ title: '测试通过', icon: 'success' })
 			}
 		},
 		pickCanvasTouch(e) {
@@ -366,190 +400,310 @@ export default {
 			return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || null
 		},
 		onCanvasTouchStart(e) {
-			if (!this.drawWriter || typeof this.drawWriter.handleTouchStart !== 'function') return
+			if (!this.drawWriter?.handleTouchStart) return
 			const t = this.pickCanvasTouch(e)
 			if (t) this.drawWriter.handleTouchStart(t, e.detail)
 		},
 		onCanvasTouchMove(e) {
-			if (!this.drawWriter || typeof this.drawWriter.handleTouchMove !== 'function') return
+			if (!this.drawWriter?.handleTouchMove) return
 			const t = this.pickCanvasTouch(e)
 			if (t) this.drawWriter.handleTouchMove(t, e.detail)
 		},
 		onCanvasTouchEnd() {
-			if (!this.drawWriter || typeof this.drawWriter.handleTouchEnd !== 'function') return
-			this.drawWriter.handleTouchEnd()
+			if (this.drawWriter?.handleTouchEnd) this.drawWriter.handleTouchEnd()
 		}
 	}
 }
 </script>
 
-<style>
-.content {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: flex-start;
+<style scoped>
+.stroke-lab-page {
 	min-height: 100vh;
-	padding-top: 24rpx;
-	padding-bottom: 48rpx;
+	padding: 20rpx 24rpx 48rpx;
 	box-sizing: border-box;
-	background: var(--meng-page-bg);
+	background: linear-gradient(180deg, #fff8fb 0%, var(--meng-page-bg) 28%);
 }
 
-.vip-strip {
-	width: 92%;
-	display: flex;
-	align-items: center;
-	padding: 18rpx 22rpx;
-	margin-bottom: 28rpx;
-	border-radius: 16rpx;
-	background: linear-gradient(90deg, #3d4a5c 0%, #4a5d4a 50%, #5c6b4a 100%);
-	box-shadow: 0 6rpx 20rpx rgba(61, 74, 92, 0.25);
+.lab-card {
+	width: 100%;
+	border-radius: 24rpx;
+	background: var(--meng-card-solid);
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 8rpx 28rpx var(--meng-shadow);
+	box-sizing: border-box;
 }
 
-.vip-strip-icon {
-	margin-right: 12rpx;
-	font-size: 24rpx;
-	color: #e8d5a3;
-}
-
-.vip-strip-text {
-	flex: 1;
-	font-size: 24rpx;
-	color: #f5f2ea;
-	line-height: 1.35;
-}
-
-.vip-strip-arrow {
-	margin-left: 12rpx;
-	font-size: 36rpx;
-	color: rgba(255, 255, 255, 0.65);
-	line-height: 1;
-}
-
-.title-wrap {
-	margin-bottom: 24rpx;
-}
-
-.title {
-	font-size: 48rpx;
-	color: #2c3e50;
-	font-weight: 600;
-}
-
-.pinyin-strip {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-end;
-	flex-wrap: wrap;
-	margin-bottom: 20rpx;
-	gap: 10rpx 14rpx;
-}
-.pinyin-label {
-	font-size: 28rpx;
-	color: #57606a;
-	flex-shrink: 0;
-	line-height: 1.25;
-	font-weight: 600;
-}
-.pinyin-cells {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	align-items: flex-end;
-	gap: 10rpx;
-	flex: 1;
-	min-width: 0;
-}
-.pinyin-empty {
-	font-size: 30rpx;
-	color: #57606a;
-	line-height: 1.35;
-}
-
-.input-row {
-	width: 92%;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
+.lab-input-card {
+	padding: 20rpx 22rpx;
 	margin-bottom: 16rpx;
 }
 
-.input-row > * + * {
-	margin-left: 12rpx;
+.lab-input-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.lab-input-label {
+	flex-shrink: 0;
+	font-size: 28rpx;
+	font-weight: 600;
+	color: var(--meng-text-secondary);
 }
 
 .hanzi-input {
 	flex: 1;
-	height: 64rpx;
-	border: 1px solid #d9d9d9;
-	border-radius: 8rpx;
-	padding: 0 18rpx;
-	background: #fff;
-	font-size: 28rpx;
+	min-width: 0;
+	height: 72rpx;
+	padding: 0 20rpx;
+	font-size: 40rpx;
+	font-weight: 700;
+	text-align: center;
+	border-radius: 16rpx;
+	background: #faf8f5;
+	border: 1rpx solid var(--meng-border-warm);
+	color: var(--meng-text);
 }
 
-.control-row {
-	width: 92%;
+.lab-stage-card {
+	padding: 20rpx 18rpx 22rpx;
+	margin-bottom: 16rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.lab-canvas-shell {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 12rpx;
+	border-radius: 24rpx;
+	background: #fffefb;
+	border: 2rpx solid rgba(235, 227, 216, 0.95);
+	box-shadow: inset 0 2rpx 10rpx rgba(44, 36, 25, 0.04);
+}
+
+.stroke-canvas {
+	display: block;
+	margin: 0 auto;
+}
+
+.fallback-char {
+	font-size: 160rpx;
+	font-weight: 700;
+	color: var(--meng-text-muted);
+	line-height: 1;
+	padding: 40rpx 0;
+}
+
+.lab-stage-hint {
+	margin-top: 14rpx;
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
+	text-align: center;
+	line-height: 1.45;
+}
+
+.lab-test-badge {
+	margin-top: 12rpx;
+	width: 72rpx;
+	height: 72rpx;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.lab-test-badge--ok {
+	background: var(--meng-leaf-soft);
+}
+
+.lab-test-badge--bad {
+	background: #fff0f0;
+}
+
+.lab-test-badge-icon {
+	font-size: 40rpx;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.lab-test-badge--ok .lab-test-badge-icon {
+	color: #3d9a5c;
+}
+
+.lab-test-badge--bad .lab-test-badge-icon {
+	color: #d44;
+}
+
+.lab-mode-scroll {
+	width: 100%;
+	margin-bottom: 14rpx;
+	white-space: nowrap;
+}
+
+.lab-mode-row {
+	display: inline-flex;
+	flex-direction: row;
+	gap: 16rpx;
+	padding: 6rpx 4rpx;
+}
+
+.lab-mode-chip {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-width: 168rpx;
+	padding: 16rpx 20rpx 14rpx;
+	border-radius: 28rpx;
+	border: 3rpx solid rgba(255, 255, 255, 0.85);
+	box-shadow: 0 8rpx 0 rgba(44, 36, 25, 0.06), 0 10rpx 24rpx rgba(44, 36, 25, 0.08);
+}
+
+.lab-mode-chip--anim {
+	background: linear-gradient(165deg, #fff9e8 0%, #ffe8b8 100%);
+}
+
+.lab-mode-chip--write {
+	background: linear-gradient(165deg, #fff5f8 0%, #ffdce8 100%);
+}
+
+.lab-mode-chip--step {
+	background: linear-gradient(165deg, #eef8ff 0%, #d4ebff 100%);
+}
+
+.lab-chip-emoji {
+	font-size: 40rpx;
+	line-height: 1.1;
+	margin-bottom: 4rpx;
+}
+
+.lab-chip-text {
+	font-size: 24rpx;
+	font-weight: 800;
+	color: #6d5e52;
+}
+
+.lab-mode-chip--on {
+	transform: translateY(-4rpx);
+	border-color: rgba(255, 255, 255, 0.95);
+	box-shadow: 0 10rpx 0 rgba(255, 140, 90, 0.2), 0 14rpx 28rpx rgba(255, 120, 72, 0.22);
+}
+
+.lab-mode-chip--anim.lab-mode-chip--on {
+	background: linear-gradient(165deg, #ffe9a8 0%, #ffc84d 100%);
+}
+
+.lab-mode-chip--write.lab-mode-chip--on {
+	background: linear-gradient(165deg, #ffc8dc 0%, #ff9ec4 100%);
+	box-shadow: 0 10rpx 0 rgba(255, 120, 160, 0.18), 0 14rpx 28rpx rgba(255, 100, 140, 0.2);
+}
+
+.lab-mode-chip--step.lab-mode-chip--on {
+	background: linear-gradient(165deg, #b8e4ff 0%, #7ec8ff 100%);
+	box-shadow: 0 10rpx 0 rgba(80, 160, 220, 0.2), 0 14rpx 28rpx rgba(80, 150, 210, 0.22);
+}
+
+.lab-mode-chip--on .lab-chip-text {
+	color: #5a3d28;
+}
+
+.lab-tool-row {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
+	gap: 16rpx;
 	margin-bottom: 16rpx;
+	padding: 0 4rpx;
 }
 
-.control-row > button {
-	margin: 6rpx;
+.lab-pill {
+	min-width: 148rpx;
+	padding: 14rpx 16rpx 12rpx;
+	border-radius: 32rpx;
+	border: 3rpx solid rgba(255, 255, 255, 0.75);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 8rpx 0 rgba(44, 36, 25, 0.07), 0 10rpx 22rpx rgba(44, 36, 25, 0.1);
 }
 
-.test-panel {
-	width: 92%;
-	margin-bottom: 12rpx;
-	padding: 14rpx 18rpx;
-	background: #fff;
-	border-radius: 10rpx;
+.lab-pill--wide {
+	min-width: 200rpx;
+	flex: 1;
+	max-width: 280rpx;
 }
 
-.test-feedback {
-	font-size: 72rpx;
-	line-height: 1;
-	text-align: center;
+.lab-pill-emoji {
+	font-size: 36rpx;
+	line-height: 1.1;
+	margin-bottom: 4rpx;
+}
+
+.lab-pill-label {
+	font-size: 26rpx;
+	font-weight: 800;
+	color: rgba(44, 36, 25, 0.82);
+}
+
+.lab-pill--sun {
+	background: linear-gradient(165deg, #fff3c4 0%, #ffd45a 55%, #ffb84d 100%);
+}
+
+.lab-pill--leaf {
+	background: linear-gradient(165deg, #e8fbe8 0%, #a8e6b8 55%, #7fd49a 100%);
+}
+
+.lab-pill--lavender {
+	background: linear-gradient(165deg, #f3f0ff 0%, #ddd4ff 55%, #c5b8ff 100%);
+}
+
+.lab-pill--pink {
+	background: linear-gradient(165deg, #fff0f5 0%, #ffc8dc 55%, #ffaac8 100%);
+}
+
+.lab-pill--sun .lab-pill-label,
+.lab-pill--leaf .lab-pill-label {
+	color: #4a3d2a;
+}
+
+.lab-pill--lavender .lab-pill-label,
+.lab-pill--pink .lab-pill-label {
+	color: #5a4568;
+}
+
+.lab-log-card {
+	padding: 18rpx 22rpx;
+}
+
+.lab-log-title {
+	display: block;
+	font-size: 24rpx;
 	font-weight: 700;
+	color: var(--meng-text-secondary);
 	margin-bottom: 10rpx;
 }
 
-.test-feedback-ok {
-	color: #2e9f58;
-}
-
-.test-feedback-bad {
-	color: #d64545;
-}
-
-.test-order-title {
+.lab-log-item {
 	display: block;
 	font-size: 24rpx;
-	color: #6b7280;
-	margin-bottom: 8rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.5;
 }
 
-.test-order-item {
-	display: block;
-	font-size: 24rpx;
-	color: #2f3640;
-	line-height: 1.45;
+.lab-log-item--ok {
+	color: #3d9a5c;
+	font-weight: 600;
 }
 
-.stroke-canvas {
-	background: #fff;
-	border-radius: 12rpx;
-	margin-left: auto;
-	margin-right: auto;
-}
-
-.fallback-char {
-	font-size: 220rpx;
-	color: #2c3e50;
-	line-height: 1;
+.lab-log-item--bad {
+	color: #c44;
+	font-weight: 600;
 }
 </style>

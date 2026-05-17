@@ -1,120 +1,276 @@
 <template>
-	<view class="page">
-		<text class="title">每日一练</text>
-		<text class="sub">{{ dateLine }}</text>
-
-		<text v-if="poolSize === 0" class="empty-hint">
-			当前教材与字表下暂无生字。请先在「教材与进度」中切换年级/字表，或通过「课本同步学」选课学习。
-		</text>
-
-		<template v-else>
-			<view class="compact-head">
-				<text class="head-main">{{ dateKey }} · 第 {{ currentIndex + 1 }}/{{ items.length }} 字 · 今日共 {{ items.length }} 字</text>
-				<view class="head-meta">
-					<text class="head-chip">字表 {{ poolSize }}</text>
-					<text v-if="weakCount > 0" class="head-chip head-chip-warn">易错 {{ weakCount }}</text>
-				</view>
-				<view class="progress-dots">
-					<view
-						v-for="(_, i) in items"
-						:key="'dot-' + i"
-						class="dot"
-						:class="{ 'dot-on': i === currentIndex, 'dot-done': i < currentIndex }"
-					/>
-				</view>
+	<view class="daily-page">
+		<!-- <view class="daily-hero">
+			<image class="daily-hero-bg" src="/static/db.png" mode="aspectFill" />
+			<view class="daily-hero-sky" />
+			<view class="daily-hero-body">
+				<text class="daily-hero-title">每日一练</text>
+				<text class="daily-hero-sub">{{ volumeLabel }} · {{ headSubLine }}</text>
 			</view>
+		</view> -->
 
-			<view v-if="detailEntry" class="detail-card">
-				<!-- 田字格：默认 drawNative NORMAL（完整笔顺字形，等同动画末帧）；点「看笔顺」后换 ANIMATION -->
-				<view class="hero-row">
-					<view class="hero-left">
-						<view class="tianzi-wrap" :style="dailyStrokeWrapStyle">
-							<canvas
-								v-if="dailyStrokeReady && !dailyAnimFallback"
-								id="daily-stroke-box"
-								canvas-id="daily-stroke-box"
-								class="daily-stroke-canvas"
-								disable-scroll
-								:style="dailyStrokeCanvasStyle"
-							/>
-							<text v-else-if="dailyStrokeReady && dailyAnimFallback" class="char-fallback">{{ detailEntry.hanzi }}</text>
-							<text v-else class="char-fallback placeholder">{{ detailEntry.hanzi }}</text>
-						</view>
-						<view class="tianzi-actions">
-							<text class="link-stroke" @click.stop="replayDailyStroke">{{
-								dailyStrokeRevealed ? '重播笔顺' : '看笔顺动画'
-							}}</text>
-						</view>
+		<view class="daily-dock">
+			<view class="daily-dock-glass">
+				<view v-if="poolSize === 0" class="daily-empty">
+					<text class="daily-empty-emoji">📘</text>
+					<text class="daily-empty-title">暂无生字可练</text>
+					<text class="daily-empty-desc">切换年级字表，或通过课本同步学选课。</text>
+					<view class="daily-cta" @click="goCurriculum">
+						<text class="daily-cta-text">教材设置</text>
 					</view>
-					<view class="hero-right">
-						<text v-if="currentItem && currentItem.reason === 'weak'" class="weak-inline">易错</text>
-						<view v-if="!dailyPinyinRevealed" class="py-tap" @click.stop="onTapPlayPinyin">
-							<text class="py-tap-label">听拼音</text>
-							<text class="py-tap-hint">点这里播放并显示</text>
+					<view class="daily-cta daily-cta--ghost" @click="goTextbook">
+						<text class="daily-cta-text daily-cta-text--ghost">课本同步</text>
+					</view>
+				</view>
+
+				<template v-else>
+					<text v-if="focusLessonHint" class="daily-lesson-line clamp-1">学到：{{ focusLessonHint }}</text>
+
+					<scroll-view scroll-x class="seg-scroll" :show-scrollbar="false">
+						<view class="seg-row">
+							<view
+								v-for="seg in planSegments"
+								:key="seg.key"
+								class="seg-chip"
+								:class="{
+									'seg-chip--on': activeSegment === seg.key,
+									'seg-chip--empty': !seg.items.length
+								}"
+								@click="pickSegment(seg.key)"
+							>
+								<text class="seg-chip-text">{{ seg.title }} {{ seg.items.length }}</text>
+							</view>
 						</view>
-						<view v-else class="py-block" @click.stop="speakCurrentPinyin">
-							<view v-if="pinyinSyllableTokens.length" class="py-rows">
+					</scroll-view>
+					<text class="seg-hint">{{ activeSegmentSubtitle }}</text>
+
+					<view v-if="!segmentItems.length" class="daily-panel daily-panel-empty">
+						<text v-if="isWriteSegment">今日暂无练字推荐，可先完成复习或预习。</text>
+						<text v-else>这一段今天没有字，请切换其他标签。</text>
+					</view>
+
+					<template v-else>
+						<view class="daily-progress">
+							<text class="daily-progress-num">{{ currentIndex + 1 }}/{{ segmentItems.length }}</text>
+							<view class="daily-bar">
+								<view class="daily-bar-fill" :style="{ width: progressPercent }" />
+							</view>
+						</view>
+
+						<!-- 练字：内嵌田字格书写 -->
+						<view v-if="isWriteSegment && currentItem" class="daily-panel daily-panel--write">
+							<view class="daily-write-head">
+								<text class="daily-write-hanzi">{{ currentItem.hanzi }}</text>
+								<text v-if="writeItemPinyin" class="daily-write-py font-pinyin">{{ writeItemPinyin }}</text>
+							</view>
+							<write-practice-panel
+								ref="inlineWrite"
+								:key="'daily-write-' + currentIndex + '-' + currentItem.hanzi"
+								compact
+								:initial-hanzi="currentItem.hanzi"
+								:initial-pinyin="writeItemPinyin"
+								canvas-id="daily-write-canvas"
+							/>
+							<view class="daily-foot">
 								<view
-									v-for="(tok, ti) in pinyinSyllableTokens"
-									:key="'daily-py-' + ti"
-									class="py-row"
+									class="foot-btn"
+									:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
+									@click="goPrev"
 								>
-									<pinyin-four-lines-row class="py-core" :syllables="[tok]" size="xl" />
+									<text class="foot-btn-text">上一字</text>
+								</view>
+								<view class="foot-btn" @click="markLearned">
+									<text class="foot-btn-text">已学</text>
+								</view>
+								<view class="foot-btn" @click="markWrong">
+									<text class="foot-btn-text">易错</text>
+								</view>
+								<view
+									class="foot-btn foot-btn--primary"
+									:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
+									@click="goNext"
+								>
+									<text class="foot-btn-text foot-btn-text--on">下一字</text>
 								</view>
 							</view>
-							<text v-else class="py-plain font-pinyin py-plain-xl">{{ pinyinPlain }}</text>
 						</view>
-						<text v-if="detailFetchComplete" class="meta-line"
-							>部首 {{ detailEntry.radical }} · 结构 {{ detailEntry.structure }} · {{ detailEntry.strokes }} 画</text
-						>
-						<text v-else class="meta-line meta-pending">字义信息加载中…</text>
-						<text v-if="detailEntry.lessonHint" class="lesson-mini">{{ detailEntry.lessonHint }}</text>
+
+						<!-- 复习 / 预习 -->
+						<view v-else-if="detailEntry" class="daily-panel daily-panel--char">
+								<text
+									v-if="reasonLabel && !isWeakReason"
+									class="daily-tag"
+									:class="'daily-tag--' + currentItem.reason"
+									>{{ reasonLabel }}</text
+								>
+
+								<view class="daily-char-layout">
+									<view class="daily-stroke-box">
+										<text
+											v-if="isWeakReason"
+											class="daily-tag daily-tag--weak daily-tag--on-stroke"
+											>{{ reasonLabel }}</text
+										>
+										<hanzi-stroke-player
+											ref="strokePlayer"
+											canvas-id="daily-stroke-player"
+											:char="detailEntry.hanzi"
+											:display-pinyin="strokeDisplayPinyin"
+											:narrator="narrator"
+											:length="148"
+											:show-play-fab="true"
+											:stroke-audio-enabled="true"
+											:preview-only="true"
+											:hide-stroke-hint="strokeHintOnSide"
+											@animating-change="strokeAnimating = $event"
+											@stroke-index="onStrokeIndexChange"
+											@click-canvas="onTapPlayPinyin"
+										/>
+									</view>
+
+									<view class="daily-char-side">
+										<!-- 预习：直接展示正确读音并自动播放 -->
+										<view v-if="isPreviewSegment" class="daily-py-preview">
+											<text class="daily-py-preview-label">正确读音</text>
+											<view class="daily-py-show" @click.stop="speakCurrentPinyin">
+												<view v-if="pinyinSyllableTokens.length" class="py-rows">
+													<view
+														v-for="(tok, ti) in pinyinSyllableTokens"
+														:key="'daily-py-' + ti"
+														class="py-row"
+													>
+														<pinyin-four-lines-row class="py-core" :syllables="[tok]" size="lg" />
+													</view>
+												</view>
+												<text v-else class="py-plain font-pinyin">{{ pinyinPlain }}</text>
+											</view>
+											<view class="daily-py-replay" @click.stop="speakCurrentPinyin">
+												<text class="daily-py-replay-text">🔊 再听一遍</text>
+											</view>
+											<text v-if="dailyStrokeHint" class="daily-stroke-hint">{{ dailyStrokeHint }}</text>
+										</view>
+
+										<!-- 复习：多选拼音确认 -->
+										<view v-else-if="isReviewSegment" class="daily-py-quiz">
+											<text class="daily-py-quiz-prompt">哪个读音对？</text>
+											<view v-if="pinyinChoices.length" class="daily-py-options">
+												<view
+													v-for="opt in pinyinChoices"
+													:key="opt.id"
+													class="daily-py-opt"
+													:class="pinyinOptClass(opt)"
+													@click.stop="onPickPinyinOption(opt)"
+												>
+													<view class="daily-py-opt-inner">
+														<pinyin-four-lines-row
+															v-if="opt.syllables.length === 1"
+															class="py-core"
+															:syllables="opt.syllables"
+															size="md"
+														/>
+														<text v-else class="daily-py-opt-text font-pinyin">{{ opt.label }}</text>
+													</view>
+													<text v-if="pinyinOptionMark(opt)" class="daily-py-opt-mark">{{
+														pinyinOptionMark(opt) === 'ok' ? '✓' : '✗'
+													}}</text>
+												</view>
+											</view>
+											<text v-else class="daily-py-quiz-pending">读音加载中…</text>
+											<text v-if="pinyinQuizFeedback" class="daily-py-feedback">{{
+												pinyinQuizFeedback
+											}}</text>
+											<text v-if="dailyStrokeHint" class="daily-stroke-hint">{{ dailyStrokeHint }}</text>
+										</view>
+									</view>
+								</view>
+
+								<view
+									v-if="detailFetchComplete && dailyWordsList.length"
+									class="daily-words-block"
+								>
+									<!-- <text class="daily-words-label">组词</text> -->
+									<view class="daily-words-chips">
+										<text
+											v-for="(w, wi) in dailyWordsList"
+											:key="'daily-word-' + wi"
+											class="daily-word-chip"
+											>{{ w }}</text
+										>
+									</view>
+								</view>
+								
+								<view class="daily-quick-pair">
+									<view
+										class="quick-pill quick-pill--warm"
+										:class="{ 'quick-pill--on': strokeAnimating }"
+										@click.stop="toggleStrokeAnimation"
+									>
+										<text>{{ strokeAnimating ? '暂停笔顺' : '笔顺动画' }}</text>
+									</view>
+									<view class="quick-pill quick-pill--lavender" @click.stop="onTapPlayPinyin">
+										<text>听读音</text>
+									</view>
+								</view>
+
+								<text v-if="detailFetchComplete" class="daily-meta">{{ metaLine }}</text>
+								<text v-else class="daily-meta daily-meta--pending">加载中…</text>
+
+								<view v-if="hasDetailExtra" class="daily-extra">
+									<text v-if="detailEntry.strokeShapes" class="daily-extra-line clamp-1">{{
+										detailEntry.strokeShapes
+									}}</text>
+									<text v-if="detailEntry.strokeNames" class="daily-extra-sub clamp-1">{{
+										detailEntry.strokeNames
+									}}</text>
+									<text v-if="detailFetchComplete && detailEntry.explainText" class="daily-extra-line clamp-2">{{
+										detailEntry.explainText
+									}}</text>
+								</view>
+
+								<view class="daily-foot">
+									<view
+										class="foot-btn"
+										:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
+										@click="goPrev"
+									>
+										<text class="foot-btn-text">上一字</text>
+									</view>
+									<view class="foot-btn" @click="markLearned">
+										<text class="foot-btn-text">已学</text>
+									</view>
+									<view class="foot-btn" @click="markWrong">
+										<text class="foot-btn-text">易错</text>
+									</view>
+									<view
+										class="foot-btn foot-btn--primary"
+										:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
+										@click="goNext"
+									>
+										<text class="foot-btn-text foot-btn-text--on">下一字</text>
+									</view>
+								</view>
+						</view>
+
+						<view v-else class="daily-panel daily-panel-empty">
+							<text>加载中…</text>
+						</view>
+					</template>
+
+					<view v-if="!isWriteSegment" class="daily-tip">
+						<text class="daily-tip-text">🐼 {{ tipLine }}</text>
 					</view>
-				</view>
-
-				<view
-					v-if="dailyStrokeRevealed && (detailEntry.strokeShapes || detailEntry.strokeNames)"
-					class="dense-row stroke-dense"
-				>
-					<text class="dense-k">笔顺</text>
-					<view class="dense-v">
-						<text v-if="detailEntry.strokeShapes" class="dense-glyphs">{{ detailEntry.strokeShapes }}</text>
-						<text v-if="detailEntry.strokeNames" class="dense-names">{{ detailEntry.strokeNames }}</text>
-					</view>
-				</view>
-
-				<view v-if="detailFetchComplete && detailEntry.explainText" class="dense-row explain-dense">
-					<text class="dense-k">释义</text>
-					<text class="dense-v clamp-2">{{ detailEntry.explainText }}</text>
-				</view>
-
-				<view v-if="detailFetchComplete" class="dense-row words-dense">
-					<text class="dense-k">组词</text>
-					<text class="dense-v clamp-1">{{ wordsLine }}</text>
-				</view>
-
-				<view class="btn-bar">
-					<button class="btn-mini" size="mini" type="default" @click="markLearned">已学</button>
-					<button class="btn-mini" size="mini" type="warn" @click="markWrong">易错</button>
-					<button class="btn-mini" size="mini" type="default" @click="openFullDetail">详情</button>
-					<button class="btn-mini" size="mini" type="primary" :disabled="currentIndex >= items.length - 1" @click="goNext">下一字</button>
-				</view>
-				<view class="btn-bar btn-bar-sub">
-					<button class="btn-mini" size="mini" type="default" :disabled="currentIndex <= 0" @click="goPrev">上一字</button>
-					<button class="btn-mini" size="mini" type="default" @click="bumpShuffle">换一批</button>
-					<button class="btn-mini" size="mini" type="default" @click="goDictionary">查字</button>
-				</view>
+				</template>
 			</view>
-		</template>
-
-		<view v-if="poolSize > 0" class="foot-spacer" />
+		</view>
 	</view>
 </template>
 
 <script>
-import drawNative from '@/utils/draw-native.js'
-import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
-import { buildDailyTrainingQueue, countWeakInDailyItems } from '@/services/daily-training-service.js'
+import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
+import {
+	buildDailyTrainingPlan,
+	dailyReasonLabel
+} from '@/services/daily-training-service.js'
 import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import {
@@ -122,74 +278,176 @@ import {
 	DICTIONARY_LOCAL_PINYIN_OPTS
 } from '@/utils/dictionary-pinyin-speak.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import {
+	stopStrokeOrderAudio,
+	getCncharStrokeNameList
+} from '@/utils/stroke-order-audio.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
+import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
+import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
+import WritePracticePanel from '@/pages/literacy/write-practice.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
-
-/** 田字格略小，便于一屏容纳拼音与说明 */
-const DAILY_STROKE_LENGTH = 118
+import { buildDailyReviewPinyinChoices } from '@/utils/daily-pinyin-quiz.js'
 
 export default {
 	components: {
-		PinyinFourLinesRow
+		PinyinFourLinesRow,
+		HanziStrokePlayer,
+		WritePracticePanel
 	},
 	data() {
 		return {
+			plan: null,
 			dateKey: '',
 			poolSize: 0,
-			items: [],
-			weakCount: 0,
-			shuffleSalt: 0,
+			focusLessonHint: '',
+			activeSegment: 'review',
 			currentIndex: 0,
-			/** 当前字的查字结果（getDictionaryEntry） */
 			detailEntry: null,
 			narrator: 'kid',
 			dictPinyinPlaying: false,
-			dailyStrokeReady: false,
-			dailyAnimFallback: false,
-			dailyDrawWriter: null,
-			dailyStrokeMountGen: 0,
-			dailyStrokeAttachTimer: null,
-			dailyWordNotFoundRegistered: false,
-			/** 用户点「听拼音」后才显示大字拼音 */
-			dailyPinyinRevealed: false,
-			/** 用户点「看笔顺动画」后才显示笔顺画布与笔顺分解 */
-			dailyStrokeRevealed: false,
-			/** 字典详情是否已拉取完成（避免切换字时部首/释义等闪空白） */
-			detailFetchComplete: false
+			detailFetchComplete: false,
+			strokeAnimating: false,
+			dailyStrokeIndex: 0,
+			dailyStrokeNames: [],
+			pinyinChoices: [],
+			pinyinCorrect: '',
+			pinyinQuizPassed: false,
+			pinyinPickId: '',
+			pinyinQuizFeedback: ''
 		}
 	},
 	computed: {
-		dateLine() {
-			if (!this.dateKey) return ''
-			return `今日 ${this.dateKey} · 与当前教材偏好一致`
+		volumeLabel() {
+			return formatGradeSemesterLabel(getCurriculumPrefs())
+		},
+		planSegments() {
+			return this.plan?.segments || []
+		},
+		segmentItems() {
+			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
+			return seg?.items || []
+		},
+		activeSegmentSubtitle() {
+			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
+			return seg?.subtitle || ''
+		},
+		headSubLine() {
+			if (!this.dateKey && !this.plan?.stats) return '复习 · 预习 · 练字'
+			const parts = []
+			if (this.dateKey) parts.push(this.dateKey)
+			const st = this.plan?.stats
+			if (st) {
+				const bits = []
+				if (st.review + st.weak > 0) bits.push(`复习${st.review + st.weak}`)
+				if (st.preview > 0) bits.push(`预习${st.preview}`)
+				if (st.write > 0) bits.push(`练字${st.write}`)
+				if (bits.length) parts.push(bits.join(' '))
+			}
+			return parts.join(' · ')
+		},
+		isPreviewSegment() {
+			return this.activeSegment === 'preview'
+		},
+		strokeHintOnSide() {
+			return this.isPreviewSegment || this.isReviewSegment
+		},
+		dailyStrokeHint() {
+			if (!this.strokeHintOnSide || !this.dailyStrokeNames.length) return ''
+			const label = this.dailyStrokeNames[this.dailyStrokeIndex]
+			if (!label) return ''
+			return `第 ${this.dailyStrokeIndex + 1} 笔 · ${label}`
+		},
+		isReviewSegment() {
+			return this.activeSegment === 'review'
+		},
+		isWriteSegment() {
+			return this.activeSegment === 'write'
+		},
+		writeItemPinyin() {
+			const it = this.currentItem
+			if (!it || !it.pinyin) return ''
+			return String(it.pinyin).replace(/\s+/g, ' ').trim()
+		},
+		tipLine() {
+			if (this.isWriteSegment) return '按住田字格，按笔顺写完每一笔'
+			if (this.activeSegment === 'preview') return '先听正确读音，再看笔顺怎么写'
+			return '点对的拼音，再记一记这个字'
+		},
+		dailyQuizPoolItems() {
+			const items = []
+			const seen = new Set()
+			const push = (it) => {
+				const h = String(it?.hanzi || '').trim().charAt(0)
+				if (!h || seen.has(h)) return
+				seen.add(h)
+				items.push(it)
+			}
+			for (const seg of this.planSegments) {
+				for (const it of seg.items || []) push(it)
+			}
+			return items
+		},
+		progressPercent() {
+			if (!this.segmentItems.length) return '0%'
+			const pct = Math.round(((this.currentIndex + 1) / this.segmentItems.length) * 100)
+			return `${Math.min(100, Math.max(0, pct))}%`
+		},
+		metaLine() {
+			const e = this.detailEntry
+			if (!e) return ''
+			const bits = []
+			if (e.radical) bits.push(`部首 ${e.radical}`)
+			if (e.structure) bits.push(e.structure)
+			if (e.strokes) bits.push(`${e.strokes} 画`)
+			return bits.length ? bits.join(' · ') : '—'
+		},
+		hasDetailExtra() {
+			const e = this.detailEntry
+			if (!e) return false
+			if (e.strokeShapes || e.strokeNames) return true
+			if (this.detailFetchComplete && e.explainText) return true
+			return false
 		},
 		currentItem() {
-			return this.items[this.currentIndex] || null
+			return this.segmentItems[this.currentIndex] || null
+		},
+		reasonLabel() {
+			return this.currentItem ? dailyReasonLabel(this.currentItem.reason) : ''
+		},
+		isWeakReason() {
+			return this.currentItem?.reason === 'weak'
+		},
+		strokeDisplayPinyin() {
+			return String(this.detailEntry?.pinyin || '').replace(/[()（）]/g, '').trim()
+		},
+		/** 当前字组词，最多 5 个（来自查字详情） */
+		dailyWordsList() {
+			const raw = this.detailEntry?.words
+			if (!Array.isArray(raw) || !raw.length) return []
+			const out = []
+			const seen = Object.create(null)
+			for (const w of raw) {
+				const k = String(w || '').trim()
+				if (!k || k === '暂无组词' || seen[k]) continue
+				seen[k] = 1
+				out.push(k)
+				if (out.length >= 5) break
+			}
+			return out
 		},
 		pinyinPlain() {
-			const t = String(this.detailEntry?.pinyin || '').replace(/[()（）]/g, '').trim()
+			const t = this.strokeDisplayPinyin
 			return t || '—'
 		},
 		pinyinSyllableTokens() {
 			const py = this.detailEntry?.pinyin || ''
 			const tokens = splitPinyinDisplayTokens(py)
 			if (tokens.length) return tokens
-			const s = String(py || '').trim().replace(/[()（）]/g, '').trim()
+			const s = this.strokeDisplayPinyin
 			if (s && s !== '—' && s !== '-') return [s]
 			return []
-		},
-		wordsLine() {
-			const w = this.detailEntry?.words
-			return Array.isArray(w) && w.length ? w.join(' / ') : '暂无组词'
-		},
-		dailyStrokeCanvasStyle() {
-			const px = DAILY_STROKE_LENGTH + 30
-			return { width: px + 'px', height: px + 'px', display: 'block' }
-		},
-		dailyStrokeWrapStyle() {
-			const px = DAILY_STROKE_LENGTH + 30
-			return { width: px + 'px', height: px + 'px' }
 		}
 	},
 	async onShow() {
@@ -197,64 +455,205 @@ export default {
 		await this.reload()
 	},
 	onHide() {
-		stopLocalPinyinAudio()
-		this.teardownDailyStroke({ resetReady: true })
+		this.teardownMedia()
 	},
 	onUnload() {
-		stopLocalPinyinAudio()
-		this.teardownDailyStroke({ resetReady: true })
+		this.teardownMedia()
 	},
 	methods: {
+		teardownMedia() {
+			stopLocalPinyinAudio()
+			stopStrokeOrderAudio()
+			this.stopStrokePlayer()
+		},
+		refreshDailyStrokeNames() {
+			const h = this.detailEntry?.hanzi
+			if (!h) {
+				this.dailyStrokeNames = []
+				this.dailyStrokeIndex = 0
+				return
+			}
+			this.dailyStrokeNames = getCncharStrokeNameList(h)
+			this.dailyStrokeIndex = 0
+		},
+		onStrokeIndexChange(idx) {
+			if (!this.strokeHintOnSide) return
+			const n = Number(idx)
+			this.dailyStrokeIndex = Number.isFinite(n) && n >= 0 ? n : 0
+		},
+		stopInlineWrite() {
+			const w = this.$refs.inlineWrite
+			if (w && typeof w.stopAllPracticeAudio === 'function') {
+				w.stopAllPracticeAudio()
+			}
+		},
+		stopStrokePlayer() {
+			this.stopInlineWrite()
+			const p = this.$refs.strokePlayer
+			if (p && typeof p.stopAnimation === 'function') {
+				p.stopAnimation()
+			}
+			this.strokeAnimating = false
+		},
+		toggleStrokeAnimation() {
+			const p = this.$refs.strokePlayer
+			if (p && typeof p.toggleAnimation === 'function') {
+				p.toggleAnimation()
+				return
+			}
+			uni.showToast({ title: '笔顺暂不可用', icon: 'none' })
+		},
+		goCurriculum() {
+			uni.navigateTo({ url: '/pages/settings/curriculum' })
+		},
+		goTextbook() {
+			startTextbookLearning()
+		},
+		pickSegment(key) {
+			const seg = this.planSegments.find((s) => s.key === key)
+			if (!seg || !seg.items.length) {
+				uni.showToast({ title: '这一段今天没有字', icon: 'none' })
+				return
+			}
+			if (key === this.activeSegment) return
+			this.stopStrokePlayer()
+			this.activeSegment = key
+			this.currentIndex = 0
+			if (key !== 'write') {
+				void this.loadCurrentDetail()
+			} else {
+				this.detailEntry = null
+			}
+		},
+		pickFirstSegmentWithItems() {
+			for (const key of ['review', 'preview', 'write']) {
+				const seg = this.planSegments.find((s) => s.key === key)
+				if (seg?.items?.length) {
+					this.activeSegment = key
+					this.currentIndex = 0
+					return
+				}
+			}
+			this.activeSegment = 'review'
+			this.currentIndex = 0
+		},
 		async reload() {
 			const p = getCurriculumPrefs()
-			const plan = await buildDailyTrainingQueue(p, {
-				limit: 10,
-				shuffleSalt: this.shuffleSalt
-			})
+			const plan = await buildDailyTrainingPlan(p)
+			this.plan = plan
 			this.dateKey = plan.dateKey
 			this.poolSize = plan.poolSize
-			this.items = plan.items
-			this.weakCount = countWeakInDailyItems(plan.items)
-			if (this.currentIndex >= this.items.length) {
-				this.currentIndex = Math.max(0, this.items.length - 1)
+			this.focusLessonHint = plan.focusLessonHint || ''
+			this.pickFirstSegmentWithItems()
+			if (this.activeSegment !== 'write') {
+				await this.loadCurrentDetail()
+			} else {
+				this.stopStrokePlayer()
+				this.detailEntry = null
 			}
-			await this.loadCurrentDetail()
-		},
-		bumpShuffle() {
-			this.shuffleSalt += 1
-			this.currentIndex = 0
-			void this.reload()
 		},
 		async goNext() {
-			if (this.currentIndex >= this.items.length - 1) return
+			if (this.isReviewSegment && this.pinyinChoices.length && !this.pinyinQuizPassed) {
+				uni.showToast({ title: '请先点选正确读音', icon: 'none' })
+				return
+			}
+			if (this.currentIndex >= this.segmentItems.length - 1) return
+			this.stopStrokePlayer()
 			this.currentIndex += 1
-			await this.loadCurrentDetail()
+			if (!this.isWriteSegment) {
+				await this.loadCurrentDetail()
+			}
 		},
 		async goPrev() {
 			if (this.currentIndex <= 0) return
+			this.stopStrokePlayer()
 			this.currentIndex -= 1
-			await this.loadCurrentDetail()
+			if (!this.isWriteSegment) {
+				await this.loadCurrentDetail()
+			}
+		},
+		resetPinyinQuiz() {
+			this.pinyinChoices = []
+			this.pinyinCorrect = ''
+			this.pinyinQuizPassed = false
+			this.pinyinPickId = ''
+			this.pinyinQuizFeedback = ''
+		},
+		setupReviewPinyinChoices() {
+			const it = this.currentItem
+			if (!it || !this.detailEntry) {
+				this.resetPinyinQuiz()
+				return
+			}
+			const target = {
+				hanzi: this.detailEntry.hanzi,
+				pinyin: this.detailEntry.pinyin || it.pinyin
+			}
+			const { correct, choices } = buildDailyReviewPinyinChoices(target, this.dailyQuizPoolItems)
+			this.pinyinCorrect = correct
+			this.pinyinChoices = choices
+			this.pinyinQuizPassed = !choices.length
+			this.pinyinPickId = ''
+			this.pinyinQuizFeedback = choices.length ? '点一个你认为对的读音' : ''
+		},
+		pinyinOptClass(opt) {
+			if (!this.pinyinPickId) return ''
+			if (opt.id !== this.pinyinPickId) {
+				if (this.pinyinQuizPassed && opt.isCorrect) return 'daily-py-opt--ok'
+				return ''
+			}
+			return opt.isCorrect ? 'daily-py-opt--ok' : 'daily-py-opt--bad'
+		},
+		pinyinOptionMark(opt) {
+			if (!this.pinyinPickId || opt.id !== this.pinyinPickId) {
+				if (this.pinyinQuizPassed && opt.isCorrect) return 'ok'
+				return ''
+			}
+			return opt.isCorrect ? 'ok' : 'bad'
+		},
+		async onPickPinyinOption(opt) {
+			if (!opt || this.pinyinQuizPassed) return
+			this.pinyinPickId = opt.id
+			await speakDictionaryEntryPinyin({
+				hanzi: this.detailEntry.hanzi,
+				fallbackPinyin: opt.label,
+				narrator: this.narrator,
+				...DICTIONARY_LOCAL_PINYIN_OPTS
+			})
+			if (opt.isCorrect) {
+				this.pinyinQuizPassed = true
+				this.pinyinQuizFeedback = '对了！就是这个读音'
+				uni.showToast({ title: '读对了', icon: 'success', duration: 1200 })
+			} else {
+				this.pinyinQuizFeedback = `再试试，正确是「${this.pinyinCorrect}」`
+				uni.showToast({ title: '再想想', icon: 'none' })
+				recordCharWrong(this.detailEntry.hanzi, 1, getCurriculumPrefs())
+			}
+		},
+		applySegmentPinyinMode() {
+			if (!this.detailEntry || this.activeSegment === 'write') return
+			if (this.isPreviewSegment) {
+				this.resetPinyinQuiz()
+				this.$nextTick(() => {
+					setTimeout(() => {
+						void this.speakCurrentPinyin()
+					}, 420)
+				})
+			} else if (this.isReviewSegment) {
+				this.setupReviewPinyinChoices()
+			} else {
+				this.resetPinyinQuiz()
+			}
 		},
 		async loadCurrentDetail() {
 			const it = this.currentItem
-			if (!it || !it.hanzi) {
-				this.teardownDailyStroke({ resetReady: true })
-				this.dailyPinyinRevealed = false
-				this.dailyStrokeRevealed = false
+			if (!it || !it.hanzi || this.activeSegment === 'write') {
+				this.resetPinyinQuiz()
 				this.detailFetchComplete = false
 				this.detailEntry = null
 				return
 			}
-			const prevH = String(this.detailEntry?.hanzi || '')
-				.trim()
-				.charAt(0)
-			const nextH = String(it.hanzi)
-				.trim()
-				.charAt(0)
-			const keepCanvasSlot = !!(this.dailyStrokeReady && prevH && prevH === nextH)
-			this.teardownDailyStroke({ resetReady: !keepCanvasSlot })
-			this.dailyPinyinRevealed = false
-			this.dailyStrokeRevealed = false
+			this.resetPinyinQuiz()
 			this.detailFetchComplete = false
 			this.detailEntry = this.buildDetailStubFromItem(it)
 			try {
@@ -264,7 +663,8 @@ export default {
 					const pyFromRow = it.pinyin != null ? String(it.pinyin).replace(/\s+/g, ' ').trim() : ''
 					this.detailEntry = {
 						...entry,
-						pinyin: pyFromRow || entry.pinyin || ''
+						pinyin: pyFromRow || entry.pinyin || '',
+						lessonHint: it.lesson_hint != null ? String(it.lesson_hint) : entry.lessonHint || ''
 					}
 					this.detailFetchComplete = true
 				} else {
@@ -274,13 +674,9 @@ export default {
 				console.warn('[daily] loadCurrentDetail', e)
 				this.detailEntry = null
 			} finally {
-				if (this.detailEntry?.hanzi && !this.dailyStrokeRevealed) {
-					const c = String(this.detailEntry.hanzi).trim().charAt(0)
-					this.$nextTick(() => {
-						this.$nextTick(() => {
-							this.mountDailyPreviewWriter(c)
-						})
-					})
+				if (this.detailEntry?.hanzi) {
+					this.refreshDailyStrokeNames()
+					this.applySegmentPinyinMode()
 				}
 			}
 		},
@@ -300,161 +696,9 @@ export default {
 				words: []
 			}
 		},
-		registerDailyWordNotFoundOnce() {
-			if (this.dailyWordNotFoundRegistered) return
-			drawNative.onWordNotFound(() => {})
-			this.dailyWordNotFoundRegistered = true
-		},
-		destroyDailyDrawWriterOnly() {
-			if (this.dailyDrawWriter && typeof this.dailyDrawWriter.destroy === 'function') {
-				this.dailyDrawWriter.destroy()
-			}
-			this.dailyDrawWriter = null
-		},
-		teardownDailyStroke(opts = {}) {
-			const resetReady = opts.resetReady !== false
-			if (this.dailyStrokeAttachTimer) {
-				clearTimeout(this.dailyStrokeAttachTimer)
-				this.dailyStrokeAttachTimer = null
-			}
-			this.dailyStrokeMountGen++
-			if (resetReady) {
-				this.dailyStrokeReady = false
-			}
-			this.dailyAnimFallback = false
-			this.destroyDailyDrawWriterOnly()
-		},
-		dailyDrawSharedOpts(vm) {
-			return {
-				vm,
-				style: {
-					length: DAILY_STROKE_LENGTH,
-					charInsetRatio: 0.15,
-					strokeColor: '#2c3e50',
-					outlineColor: '#d5d5d5',
-					currentColor: '#e74c3c'
-				},
-				line: {
-					show: true,
-					borderColor: '#d7d7d7',
-					centerColor: '#cfcfcf',
-					diagonalColor: '#e2e2e2'
-				},
-				watermark: {
-					text: 'HanziStroke.com',
-					alpha: 0.22,
-					fontSize: 10,
-					position: 'bottom-right'
-				},
-				test: { onTestStatus: () => {} }
-			}
-		},
-		startDailyStrokeReveal() {
-			if (!this.detailEntry?.hanzi) return
-			this.dailyStrokeRevealed = true
-			this.$nextTick(() => {
-				this.playDailyStrokeAnimation()
-			})
-		},
 		async onTapPlayPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
-			this.dailyPinyinRevealed = true
 			await this.speakCurrentPinyin()
-		},
-		playDailyStrokeAnimation() {
-			const c = String(this.detailEntry?.hanzi || '').trim().charAt(0)
-			if (!c) return
-			if (typeof drawNative !== 'function') {
-				uni.showToast({ title: '当前环境暂不支持笔顺', icon: 'none' })
-				return
-			}
-			this.registerDailyWordNotFoundOnce()
-			this.dailyStrokeReady = true
-			this.dailyAnimFallback = false
-			this.destroyDailyDrawWriterOnly()
-			if (this.dailyStrokeAttachTimer) {
-				clearTimeout(this.dailyStrokeAttachTimer)
-				this.dailyStrokeAttachTimer = null
-			}
-			const token = ++this.dailyStrokeMountGen
-			const attach = () => {
-				this.dailyStrokeAttachTimer = null
-				if (token !== this.dailyStrokeMountGen) return
-				this.mountDailyStrokeWriter(c)
-			}
-			this.$nextTick(() => {
-				this.$nextTick(() => {
-					this.dailyStrokeAttachTimer = setTimeout(attach, 48)
-				})
-			})
-		},
-		mountDailyPreviewWriter(char) {
-			if (!char || typeof drawNative !== 'function') {
-				this.dailyStrokeReady = true
-				this.dailyAnimFallback = true
-				return
-			}
-			this.registerDailyWordNotFoundOnce()
-			this.dailyAnimFallback = false
-			this.destroyDailyDrawWriterOnly()
-			if (this.dailyStrokeAttachTimer) {
-				clearTimeout(this.dailyStrokeAttachTimer)
-				this.dailyStrokeAttachTimer = null
-			}
-			const token = ++this.dailyStrokeMountGen
-			const attach = () => {
-				this.dailyStrokeAttachTimer = null
-				if (token !== this.dailyStrokeMountGen) return
-				const vm = this
-				const base = this.dailyDrawSharedOpts(vm)
-				try {
-					this.dailyDrawWriter = drawNative(char, {
-						...base,
-						el: '#daily-stroke-box',
-						type: drawNative.TYPE.NORMAL
-					})
-					this.dailyStrokeReady = true
-					this.dailyAnimFallback = false
-				} catch (e) {
-					console.warn('[daily] preview stroke mount failed', e)
-					this.dailyDrawWriter = null
-					this.dailyStrokeReady = true
-					this.dailyAnimFallback = true
-				}
-			}
-			this.$nextTick(() => {
-				this.$nextTick(() => {
-					this.dailyStrokeAttachTimer = setTimeout(attach, 48)
-				})
-			})
-		},
-		mountDailyStrokeWriter(char) {
-			if (typeof drawNative !== 'function') {
-				this.dailyStrokeReady = true
-				this.dailyAnimFallback = true
-				return
-			}
-			const vm = this
-			const base = this.dailyDrawSharedOpts(vm)
-			try {
-				this.dailyDrawWriter = drawNative(char, {
-					...base,
-					el: '#daily-stroke-box',
-					type: drawNative.TYPE.ANIMATION,
-					animation: {
-						autoAnimate: true,
-						loopAnimate: true,
-						strokeAnimationSpeed: 1.15,
-						delayBetweenStrokes: 400,
-						delayBetweenLoops: 1000
-					}
-				})
-			} catch (e) {
-				console.warn('[daily] stroke mount failed', e)
-				this.dailyDrawWriter = null
-				this.dailyAnimFallback = true
-				this.dailyStrokeReady = true
-			}
 		},
 		async speakCurrentPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
@@ -471,316 +715,651 @@ export default {
 			}
 		},
 		markLearned() {
-			if (!this.detailEntry?.hanzi) return
-			recordCharLearned(this.detailEntry.hanzi, getCurriculumPrefs())
+			const h = this.detailEntry?.hanzi || this.currentItem?.hanzi
+			if (!h) return
+			recordCharLearned(h, getCurriculumPrefs())
 			uni.showToast({ title: '已加入学过字库', icon: 'success' })
 		},
 		markWrong() {
-			if (!this.detailEntry?.hanzi) return
-			recordCharWrong(this.detailEntry.hanzi, 1, getCurriculumPrefs())
+			const h = this.detailEntry?.hanzi || this.currentItem?.hanzi
+			if (!h) return
+			recordCharWrong(h, 1, getCurriculumPrefs())
 			uni.showToast({ title: '已加入易错字', icon: 'none' })
-		},
-		openFullDetail() {
-			if (!this.detailEntry?.hanzi) return
-			const hanzi = encodeURIComponent(this.detailEntry.hanzi)
-			const py = this.detailEntry.pinyin ? encodeURIComponent(this.detailEntry.pinyin) : ''
-			const lesson = this.detailEntry.lessonHint ? encodeURIComponent(this.detailEntry.lessonHint) : ''
-			uni.navigateTo({
-				url: `/pages/char/detail?hanzi=${hanzi}&pinyin=${py}&lesson=${lesson}`
-			})
-		},
-		replayDailyStroke() {
-			if (!this.dailyStrokeRevealed) {
-				this.startDailyStrokeReveal()
-				return
-			}
-			if (this.dailyDrawWriter && typeof this.dailyDrawWriter.restartAnimation === 'function') {
-				this.dailyDrawWriter.restartAnimation()
-				return
-			}
-			this.playDailyStrokeAnimation()
-		},
-		goDictionary() {
-			uni.switchTab({ url: '/pages/dictionary/index' })
 		}
 	}
 }
 </script>
 
 <style scoped>
-.page {
+.daily-page {
 	min-height: 100vh;
-	padding: 20rpx 24rpx 24rpx;
-	background: var(--meng-page-bg);
-	box-sizing: border-box;
-}
-.title {
-	display: block;
-	font-size: 32rpx;
-	font-weight: 700;
-	color: var(--meng-text);
-	margin-bottom: 4rpx;
-}
-.sub {
-	display: block;
-	font-size: 20rpx;
-	color: #8a8278;
-	margin-bottom: 10rpx;
-}
-.empty-hint {
-	display: block;
-	font-size: 24rpx;
-	color: #8b4513;
-	line-height: 1.55;
-	background: #fff4de;
-	padding: 16rpx;
-	border-radius: 12rpx;
-	margin-bottom: 16rpx;
-}
-.compact-head {
-	margin-bottom: 10rpx;
-}
-.head-main {
-	display: block;
-	font-size: 22rpx;
-	color: #5a534c;
-	line-height: 1.35;
-	margin-bottom: 6rpx;
-}
-.head-meta {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 8rpx;
-	margin-bottom: 6rpx;
+	flex-direction: column;
+	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 32%, var(--meng-page-bg) 100%);
 }
-.head-chip {
-	font-size: 20rpx;
-	color: #5a6b4a;
-	background: #e8f0e4;
-	padding: 4rpx 12rpx;
-	border-radius: 999rpx;
-}
-.head-chip-warn {
-	background: #ffe4d6;
-	color: #a14c2a;
-}
-.progress-dots {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 8rpx;
-}
-.dot {
-	width: 12rpx;
-	height: 12rpx;
-	border-radius: 50%;
-	background: #e0dcd4;
-}
-.dot-on {
-	background: #ff9800;
-	transform: scale(1.12);
-}
-.dot-done {
-	background: #a5d6a7;
-}
-.detail-card {
-	background: #fff;
-	border-radius: 16rpx;
-	padding: 16rpx 16rpx 14rpx;
-	margin-bottom: 0;
-	box-shadow: 0 6rpx 20rpx rgba(44, 36, 25, 0.07);
-}
-.hero-row {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	gap: 14rpx;
-	margin-bottom: 10rpx;
-}
-.hero-left {
+
+.daily-hero {
+	position: relative;
 	flex-shrink: 0;
+	height: 200rpx;
+	overflow: hidden;
+}
+
+.daily-hero-bg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.daily-hero-sky {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: linear-gradient(
+		180deg,
+		rgba(255, 220, 235, 0.45) 0%,
+		rgba(255, 245, 250, 0.15) 70%,
+		transparent 100%
+	);
+	pointer-events: none;
+}
+
+.daily-hero-body {
+	position: relative;
+	z-index: 2;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 16rpx 32rpx;
+	box-sizing: border-box;
 }
-.hero-right {
+
+.daily-hero-title {
+	font-size: 38rpx;
+	font-weight: 800;
+	color: #fff;
+	text-shadow: 0 4rpx 16rpx rgba(200, 80, 120, 0.45);
+	letter-spacing: 4rpx;
+}
+
+.daily-hero-sub {
+	margin-top: 8rpx;
+	font-size: 22rpx;
+	color: rgba(255, 255, 255, 0.95);
+	text-shadow: 0 2rpx 8rpx rgba(160, 60, 90, 0.35);
+	text-align: center;
+	line-height: 1.35;
+}
+
+.daily-dock {
+	flex: 1;
+	margin-top: -28rpx;
+	padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+.daily-dock-glass {
+	margin: 0 20rpx;
+	padding: 22rpx 20rpx 18rpx;
+	border-radius: 36rpx 36rpx 28rpx 28rpx;
+	background: rgba(255, 255, 255, 0.9);
+	border: 2rpx solid rgba(255, 255, 255, 0.95);
+	box-shadow:
+		0 -12rpx 48rpx rgba(255, 150, 180, 0.1),
+		0 16rpx 40rpx var(--meng-shadow);
+}
+
+.daily-lesson-line {
+	display: block;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	margin-bottom: 12rpx;
+}
+
+.seg-scroll {
+	width: 100%;
+	margin-bottom: 8rpx;
+}
+
+.seg-row {
+	display: flex;
+	flex-direction: row;
+	white-space: nowrap;
+	padding: 4rpx 0;
+}
+
+.seg-chip {
+	display: inline-flex;
+	padding: 12rpx 24rpx;
+	margin-right: 12rpx;
+	border-radius: 999rpx;
+	background: rgba(255, 240, 248, 0.92);
+	border: 2rpx solid rgba(255, 180, 200, 0.22);
+}
+
+.seg-chip--on {
+	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	border-color: var(--meng-chip-active-border);
+	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.16);
+}
+
+.seg-chip--empty {
+	opacity: 0.42;
+}
+
+.seg-chip-text {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #8a6a78;
+}
+
+.seg-chip--on .seg-chip-text {
+	color: #c44d6a;
+}
+
+.seg-hint {
+	display: block;
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
+	margin-bottom: 14rpx;
+	line-height: 1.35;
+}
+
+.daily-progress {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 14rpx;
+	margin-bottom: 12rpx;
+}
+
+.daily-progress-num {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #c44d6a;
+	flex-shrink: 0;
+}
+
+.daily-bar {
+	flex: 1;
+	height: 8rpx;
+	border-radius: 999rpx;
+	background: var(--meng-border);
+	overflow: hidden;
+}
+
+.daily-bar-fill {
+	height: 100%;
+	border-radius: 999rpx;
+	background: linear-gradient(90deg, var(--meng-accent-from) 0%, #ff8aab 100%);
+	transition: width 0.2s ease;
+}
+
+.daily-panel {
+	margin-bottom: 12rpx;
+}
+
+.daily-panel--char {
+	padding: 4rpx 0 0;
+}
+
+.daily-panel-empty {
+	padding: 28rpx 12rpx;
+	font-size: 26rpx;
+	color: var(--meng-text-secondary);
+	text-align: center;
+	line-height: 1.5;
+}
+
+.daily-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 20rpx 8rpx;
+	text-align: center;
+}
+
+.daily-empty-emoji {
+	font-size: 64rpx;
+	margin-bottom: 12rpx;
+}
+
+.daily-empty-title {
+	font-size: 30rpx;
+	font-weight: 700;
+	color: var(--meng-text);
+	margin-bottom: 10rpx;
+}
+
+.daily-empty-desc {
+	font-size: 26rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.5;
+	margin-bottom: 24rpx;
+}
+
+.daily-cta {
+	width: 100%;
+	height: 84rpx;
+	border-radius: 999rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 14rpx;
+	background: linear-gradient(145deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	box-shadow: 0 10rpx 28rpx var(--meng-shadow-warm);
+}
+
+.daily-cta--ghost {
+	background: rgba(255, 240, 248, 0.95);
+	border: 2rpx solid rgba(255, 180, 200, 0.35);
+	box-shadow: none;
+}
+
+.daily-cta-text {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #fff;
+}
+
+.daily-cta-text--ghost {
+	color: #c44d6a;
+}
+
+.daily-tag {
+	display: inline-block;
+	font-size: 20rpx;
+	font-weight: 600;
+	padding: 4rpx 12rpx;
+	border-radius: 999rpx;
+	margin-bottom: 10rpx;
+}
+
+.daily-tag--weak {
+	color: #b84a28;
+	background: #fff4ec;
+}
+
+.daily-tag--review {
+	color: #3d6b4a;
+	background: var(--meng-leaf-soft);
+}
+
+.daily-tag--preview {
+	color: #5a6b8a;
+	background: #eef3ff;
+}
+
+.daily-char-layout {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 16rpx;
+	margin-bottom: 14rpx;
+}
+
+.daily-stroke-box {
+	position: relative;
+	flex-shrink: 0;
+	padding: 8rpx;
+	border-radius: 20rpx;
+	background: #fffaf6;
+	border: 2rpx solid rgba(235, 227, 216, 0.9);
+	box-shadow: inset 0 2rpx 8rpx rgba(44, 36, 25, 0.04);
+}
+
+.daily-tag--on-stroke {
+	position: absolute;
+	top: 4rpx;
+	right: 4rpx;
+	z-index: 5;
+	margin: 0;
+	box-shadow: 0 2rpx 10rpx rgba(184, 74, 40, 0.12);
+}
+
+.daily-char-side {
 	flex: 1;
 	min-width: 0;
-	padding-top: 2rpx;
+	padding-top: 8rpx;
 }
-.weak-inline {
-	display: inline-block;
-	font-size: 18rpx;
-	color: #c45c26;
-	background: #fff0e6;
-	padding: 2rpx 10rpx;
-	border-radius: 6rpx;
-	margin-bottom: 6rpx;
+
+.daily-py-preview {
+	width: 100%;
 }
-.py-tap {
-	padding: 12rpx 14rpx;
-	margin-bottom: 8rpx;
-	background: #f3f6f0;
-	border-radius: 10rpx;
-	border: 1rpx dashed #b8c9ae;
-}
-.py-tap-label {
+
+.daily-py-preview-label {
 	display: block;
-	font-size: 28rpx;
+	font-size: 22rpx;
 	font-weight: 600;
 	color: #3d6b4a;
-	margin-bottom: 4rpx;
+	margin-bottom: 8rpx;
 }
-.py-tap-hint {
+
+.daily-py-show {
+	width: 100%;
+}
+
+.daily-py-replay {
+	margin-top: 12rpx;
+	padding: 10rpx 16rpx;
+	border-radius: 999rpx;
+	background: rgba(255, 240, 248, 0.95);
+	border: 1rpx solid rgba(255, 180, 200, 0.35);
+	display: inline-flex;
+}
+
+.daily-py-replay-text {
+	font-size: 24rpx;
+	color: #c44d6a;
+	font-weight: 600;
+}
+
+.daily-stroke-hint {
 	display: block;
-	font-size: 20rpx;
-	color: #8a8278;
-	line-height: 1.3;
+	margin-top: 14rpx;
+	font-size: 24rpx;
+	line-height: 1.45;
+	color: var(--meng-text-muted);
+	font-weight: 500;
 }
-.py-block {
-	margin-bottom: 6rpx;
+
+.daily-py-quiz {
+	width: 100%;
 }
+
+.daily-py-quiz-prompt {
+	display: block;
+	font-size: 26rpx;
+	font-weight: 700;
+	color: var(--meng-text);
+	margin-bottom: 12rpx;
+}
+
+.daily-py-quiz-pending {
+	font-size: 24rpx;
+	color: var(--meng-text-muted);
+}
+
+.daily-py-options {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+}
+
+.daily-py-opt {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12rpx 14rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 240, 248, 0.6);
+	border: 2rpx solid rgba(255, 180, 200, 0.28);
+}
+
+.daily-py-opt--ok {
+	background: var(--meng-leaf-soft);
+	border-color: rgba(107, 174, 125, 0.45);
+}
+
+.daily-py-opt--bad {
+	background: #fff4ec;
+	border-color: rgba(255, 140, 90, 0.45);
+}
+
+.daily-py-opt-inner {
+	flex: 1;
+	min-width: 0;
+}
+
+.daily-py-opt-text {
+	font-size: 30rpx;
+	line-height: 1.25;
+	color: var(--meng-text);
+}
+
+.daily-py-opt-mark {
+	font-size: 28rpx;
+	font-weight: 800;
+	margin-left: 10rpx;
+	flex-shrink: 0;
+}
+
+.daily-py-feedback {
+	display: block;
+	margin-top: 12rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.4;
+}
+
 .py-rows {
 	display: flex;
 	flex-direction: column;
-	gap: 2rpx;
+	gap: 4rpx;
 }
+
 .py-row {
 	width: 100%;
 }
+
 .py-core {
 	width: 100%;
 }
+
 .py-plain {
-	font-size: 28rpx;
-	color: #3d6b4a;
-	line-height: 1.25;
-}
-.py-plain-xl {
-	font-size: 56rpx;
+	font-size: 44rpx;
 	line-height: 1.2;
+	color: #3d6b4a;
 }
-.meta-line {
-	display: block;
-	font-size: 28rpx;
-	color: #6d4c41;
-	line-height: 1.35;
-	margin-bottom: 4rpx;
-}
-.meta-pending {
-	color: #9a9288;
-	font-weight: 400;
-}
-.lesson-mini {
-	display: block;
-	font-size: 20rpx;
-	color: #9a9288;
-	line-height: 1.3;
-}
-.tianzi-wrap {
-	position: relative;
-	border-radius: 10rpx;
-	overflow: hidden;
-	background: #faf8f5;
-}
-.daily-stroke-canvas {
-	display: block;
-	margin: 0 auto;
-}
-.char-fallback {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 100%;
-	height: 100%;
-	font-size: 72rpx;
-	color: #c4bbb0;
-}
-.char-fallback.placeholder {
-	opacity: 0.65;
-}
-.tianzi-actions {
+
+.daily-quick-pair {
 	display: flex;
 	flex-direction: row;
-	align-items: center;
-	justify-content: center;
+	flex-wrap: wrap;
 	gap: 12rpx;
-	margin-top: 4rpx;
+	margin-bottom: 14rpx;
 }
-.link-stroke {
-	font-size: 22rpx;
-	color: #5d4037;
-	text-decoration: underline;
-}
-.dense-row {
+
+.quick-pill {
+	flex: 1;
+	min-width: calc(50% - 8rpx);
+	height: 64rpx;
+	border-radius: 999rpx;
 	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	gap: 10rpx;
-	padding: 6rpx 0;
-	border-top: 1rpx solid #f0ebe3;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 6rpx 16rpx rgba(44, 36, 25, 0.08);
 }
-.stroke-dense {
-	border-top: none;
-	padding-top: 0;
+
+.quick-pill text {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.95);
 }
-.dense-k {
-	flex-shrink: 0;
-	width: 56rpx;
+
+.quick-pill--warm {
+	background: linear-gradient(160deg, #ffe9a8 0%, #ffd060 100%);
+}
+
+.quick-pill--warm.quick-pill--on {
+	background: linear-gradient(160deg, #ffb3c8 0%, #ff8aab 100%);
+}
+
+.quick-pill--lavender {
+	background: linear-gradient(160deg, #e8e4ff 0%, #cfc8f5 100%);
+}
+
+.quick-pill--lavender text {
+	color: #5a5280;
+}
+
+.daily-words-block {
+	margin-bottom: 14rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 252, 248, 0.95);
+	border: 1rpx solid rgba(235, 227, 216, 0.85);
+}
+
+.daily-words-label {
+	display: block;
 	font-size: 22rpx;
 	font-weight: 700;
-	color: #6d4c41;
-	line-height: 1.35;
+	color: var(--meng-text-secondary);
+	margin-bottom: 10rpx;
 }
-.dense-v {
-	flex: 1;
-	min-width: 0;
-	font-size: 32rpx;
-	color: #5d4037;
-	line-height: 1.38;
+
+.daily-words-chips {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 10rpx;
 }
-.dense-glyphs {
-	display: block;
-	font-size: 36rpx;
+
+.daily-word-chip {
+	padding: 8rpx 18rpx;
+	border-radius: 999rpx;
+	font-size: 26rpx;
+	font-weight: 600;
 	color: var(--meng-text);
-	line-height: 1.35;
-	margin-bottom: 2rpx;
+	background: #fff;
+	border: 1rpx solid rgba(200, 190, 175, 0.55);
 }
-.dense-names {
+
+.daily-meta {
 	display: block;
-	font-size: 20rpx;
-	color: #6d4c41;
-	line-height: 1.35;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.4;
+	padding-top: 12rpx;
+	border-top: 1rpx solid var(--meng-border);
 }
+
+.daily-meta--pending {
+	color: var(--meng-text-muted);
+}
+
+.daily-extra {
+	padding-top: 10rpx;
+}
+
+.daily-extra-line {
+	display: block;
+	font-size: 28rpx;
+	color: var(--meng-text);
+	line-height: 1.4;
+	margin-top: 6rpx;
+}
+
+.daily-extra-sub {
+	display: block;
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
+	margin-top: 4rpx;
+}
+
+.daily-panel--write {
+	padding: 12rpx 14rpx 14rpx;
+	background: transparent;
+	box-shadow: none;
+	border: none;
+}
+
+.daily-write-head {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	justify-content: center;
+	gap: 14rpx;
+	margin-bottom: 8rpx;
+}
+
+.daily-write-hanzi {
+	font-size: 44rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+	line-height: 1;
+}
+
+.daily-write-py {
+	font-size: 28rpx;
+	color: var(--meng-text-secondary);
+}
+
+.daily-panel--write .daily-foot {
+	margin-top: 14rpx;
+}
+
+.daily-foot {
+	display: flex;
+	flex-direction: row;
+	gap: 10rpx;
+	margin-top: 16rpx;
+}
+
+.foot-btn {
+	flex: 1;
+	height: 72rpx;
+	border-radius: 999rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 240, 248, 0.95);
+	border: 2rpx solid rgba(255, 180, 200, 0.28);
+}
+
+.foot-btn--primary {
+	background: linear-gradient(145deg, #ffb3c8 0%, #ff8aab 50%, #ff6b9d 100%);
+	border-color: transparent;
+	box-shadow: 0 8rpx 22rpx rgba(255, 100, 150, 0.28);
+}
+
+.foot-btn--disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.foot-btn-text {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #c44d6a;
+}
+
+.foot-btn-text--on {
+	color: #fff;
+}
+
+.daily-tip {
+	margin-top: 8rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 20rpx;
+	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	border: 1rpx solid rgba(255, 200, 180, 0.35);
+}
+
+.daily-tip-text {
+	font-size: 24rpx;
+	color: var(--meng-tip-text);
+	line-height: 1.45;
+}
+
 .clamp-1 {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 1;
+	line-clamp: 1;
 	overflow: hidden;
 }
+
 .clamp-2 {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
+	line-clamp: 2;
 	overflow: hidden;
-}
-.btn-bar {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 8rpx;
-	margin-top: 8rpx;
-}
-.btn-bar-sub {
-	margin-top: 6rpx;
-}
-.btn-mini {
-	margin: 6rpx;
-	flex: 1;
-	min-width: 22%;
-}
-.foot-spacer {
-	height: 8rpx;
 }
 </style>

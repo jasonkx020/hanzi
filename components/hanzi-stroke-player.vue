@@ -19,7 +19,9 @@
 				<text class="play-fab-icon">{{ animating ? '⏸' : '▶' }}</text>
 			</view>
 		</view>
-		<text v-if="currentStrokeLabel" class="stroke-hint">第 {{ strokeIndex + 1 }} 笔 · {{ currentStrokeLabel }}</text>
+		<text v-if="!hideStrokeHint && currentStrokeLabel" class="stroke-hint">
+			第 {{ strokeIndex + 1 }} 笔 · {{ currentStrokeLabel }}
+		</text>
 	</view>
 </template>
 
@@ -80,6 +82,11 @@ export default {
 		previewOnly: {
 			type: Boolean,
 			default: true
+		},
+		/** 为 true 时不显示组件内笔画提示（由父页自行布局） */
+		hideStrokeHint: {
+			type: Boolean,
+			default: false
 		},
 		charInsetRatio: {
 			type: Number,

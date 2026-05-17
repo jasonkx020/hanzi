@@ -12,6 +12,7 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import {
 	playOpusForDisplayPinyin,
 	playPinyinLocalAudioSequence,
+	sleepUnlessCancelled,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
 
@@ -51,10 +52,16 @@ export async function playStrokeSyllableSequence(syllables, options = {}) {
 		? syllables.map((s) => String(s || '').trim()).filter(Boolean)
 		: []
 	if (!list.length) return false
+	if (typeof options.isCancelled === 'function' && options.isCancelled()) return false
 
 	const narrator = options.narrator
+	const seqOpts = {
+		narrator,
+		isCancelled: options.isCancelled,
+		useTone1Fallback: options.useTone1Fallback
+	}
 	if (list.length === 1) {
-		return playOpusForDisplayPinyin(list[0], { narrator, gapMs: 0 })
+		return playOpusForDisplayPinyin(list[0], { ...seqOpts, gapMs: 0 })
 	}
 
 	const compoundGapMs =
@@ -65,9 +72,8 @@ export async function playStrokeSyllableSequence(syllables, options = {}) {
 				: STROKE_COMPOUND_GAP_MS
 
 	return playPinyinLocalAudioSequence(list, {
-		narrator,
-		gapMs: compoundGapMs,
-		useTone1Fallback: options.useTone1Fallback
+		...seqOpts,
+		gapMs: compoundGapMs
 	})
 }
 
@@ -145,6 +151,11 @@ export function formatStrokeGuidancePhrase(strokeIndexZeroBased, label) {
  * @param {string} label
  */
 export async function playStrokeGuidanceAudio(strokeIndexZeroBased, label, options = {}) {
+	const playGen = _strokeGuidancePlayGen
+	const aborted = () =>
+		playGen !== _strokeGuidancePlayGen ||
+		(typeof options.isCancelled === 'function' && options.isCancelled())
+
 	const strokeNo = Number(strokeIndexZeroBased) + 1
 	const prefix = buildOrdinalStrokePrefixSyllables(strokeNo)
 	const strokeSyl = resolveStrokeLabelSyllables(label)
@@ -152,23 +163,27 @@ export async function playStrokeGuidanceAudio(strokeIndexZeroBased, label, optio
 	const gapMs = options.gapMs != null ? options.gapMs : 95
 	const pauseMs =
 		options.pauseBeforeStrokeMs != null ? options.pauseBeforeStrokeMs : 220
+	const seqBase = {
+		narrator,
+		gapMs,
+		isCancelled: aborted,
+		useTone1Fallback: options.useTone1Fallback
+	}
+
+	if (aborted()) return false
 
 	let ok = false
 	if (prefix.length) {
-		ok =
-			(await playStrokeSyllableSequence(prefix, {
-				narrator,
-				gapMs,
-				useTone1Fallback: options.useTone1Fallback
-			})) || ok
+		ok = (await playStrokeSyllableSequence(prefix, seqBase)) || ok
 	}
+	if (aborted()) return ok
 	if (!strokeSyl.length) return ok
-	await new Promise((r) => setTimeout(r, pauseMs))
+	if (!(await sleepUnlessCancelled(pauseMs, aborted))) return ok
+	if (aborted()) return ok
 	const okStroke = await playStrokeSyllableSequence(strokeSyl, {
-		narrator,
+		...seqBase,
 		gapMs: options.strokeGapMs != null ? options.strokeGapMs : gapMs,
-		compoundGapMs: options.compoundGapMs,
-		useTone1Fallback: options.useTone1Fallback
+		compoundGapMs: options.compoundGapMs
 	})
 	return ok || okStroke
 }
@@ -224,10 +239,13 @@ export async function playStrokeOrderAudioAt(strokeIndex, hanzi, options = {}) {
 /** 笔画读音串行队列（不阻塞 canvas 动画，仅保证笔与笔之间读音不叠在一起） */
 let _audioQueueTail = Promise.resolve()
 let _audioQueueGen = 0
+/** 写字引导「N 笔 + 笔画名」播放代次（换字时与队列一并作废） */
+let _strokeGuidancePlayGen = 0
 
 /** 新开一字或停止动画时清空队列 */
 export function resetStrokeAudioQueue() {
 	_audioQueueGen += 1
+	_strokeGuidancePlayGen += 1
 	_audioQueueTail = Promise.resolve()
 	stopLocalPinyinAudio()
 }

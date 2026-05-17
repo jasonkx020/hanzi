@@ -120,7 +120,7 @@ import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-trai
 import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
-import { buildDailyTrainingQueue, countWeakInDailyItems } from '@/services/daily-training-service.js'
+import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
 
 export default {
@@ -180,16 +180,10 @@ export default {
 			const p = getCurriculumPrefs()
 			const learned = countLearnedCharsForCurriculumPrefs(p)
 			try {
-				const plan = await buildDailyTrainingQueue(p, { limit: 10 })
-				const weakIn = countWeakInDailyItems(plan.items)
-				if (!plan.poolSize) {
-					this.dailyDesc = '暂无生字，可切换年级或去课本选课'
-					this.dailyBtnLabel = '去设置'
-				} else {
-					this.dailyBtnLabel = '开始练习'
-					const tail = weakIn ? `含 ${weakIn} 个易错复习` : '已按易错优先排好'
-					this.dailyDesc = `已学 ${learned} 字 · 今日 ${plan.items.length} 字 · ${tail}`
-				}
+				const plan = await buildDailyTrainingPlan(p)
+				const summary = formatDailyPlanHomeSummary(plan, learned)
+				this.dailyDesc = summary.desc
+				this.dailyBtnLabel = summary.btnLabel
 			} catch (e) {
 				console.warn('[home] daily plan', e)
 				this.dailyDesc = '今日练习加载失败'

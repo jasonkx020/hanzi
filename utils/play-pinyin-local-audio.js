@@ -123,6 +123,20 @@ export function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** 可中断等待（换字 / 取消引导时避免停顿结束后仍开播） */
+export async function sleepUnlessCancelled(ms, isCancelled) {
+	const total = Math.max(0, Number(ms) || 0)
+	const step = 40
+	let left = total
+	while (left > 0) {
+		if (typeof isCancelled === 'function' && isCancelled()) return false
+		const chunk = Math.min(step, left)
+		await sleep(chunk)
+		left -= chunk
+	}
+	return !(typeof isCancelled === 'function' && isCancelled())
+}
+
 /**
  * 先试无调 opus，再试一声（可选）；任一成功返回 true。
  * @param {boolean} useTone1Fallback 整体认读 / 拼读练习等与格子逻辑一致
@@ -207,8 +221,10 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 	let tokens = splitPinyinDisplayTokens(raw)
 	if (!tokens.length) tokens = [raw]
 	const gapMs = opts.gapMs != null ? opts.gapMs : 100
+	const isCancelled = opts.isCancelled
 	let anyOk = false
 	for (let i = 0; i < tokens.length; i++) {
+		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
 		const sym = String(tokens[i] || '').trim()
 		if (!sym) continue
 		let played = false
@@ -234,7 +250,9 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 			logHanziSpeak(played ? 'lesson.display_pinyin.tts_ok' : 'lesson.display_pinyin.tts_fail', { sym })
 		}
 		if (played) anyOk = true
-		if (i < tokens.length - 1 && gapMs > 0) await sleep(gapMs)
+		if (i < tokens.length - 1 && gapMs > 0) {
+			if (!(await sleepUnlessCancelled(gapMs, isCancelled))) return anyOk
+		}
 	}
 	return anyOk
 }
@@ -308,6 +326,7 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const gapMs = opts.gapMs != null ? opts.gapMs : 0
 	const useTone1Fallback = opts.useTone1Fallback !== false
+	const isCancelled = opts.isCancelled
 
 	stopLocalPinyinAudio()
 	const inner = uni.createInnerAudioContext()
@@ -343,6 +362,10 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 		}
 
 		const playSymbolAt = (idx) => {
+			if (typeof isCancelled === 'function' && isCancelled()) {
+				if (_chainAbort) _chainAbort()
+				return
+			}
 			if (aborted || idx >= list.length) {
 				finishAll()
 				return
@@ -352,13 +375,23 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 
 			const advance = () => {
 				if (aborted) return
+				if (typeof isCancelled === 'function' && isCancelled()) {
+					if (_chainAbort) _chainAbort()
+					return
+				}
 				symIndex = idx + 1
 				if (symIndex >= list.length) {
 					finishAll()
 					return
 				}
 				if (gapMs > 0) {
-					setTimeout(() => playSymbolAt(symIndex), gapMs)
+					setTimeout(() => {
+						if (typeof isCancelled === 'function' && isCancelled()) {
+							if (_chainAbort) _chainAbort()
+							return
+						}
+						playSymbolAt(symIndex)
+					}, gapMs)
 				} else {
 					playSymbolAt(symIndex)
 				}
