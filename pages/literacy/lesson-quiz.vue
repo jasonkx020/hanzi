@@ -2,7 +2,7 @@
 	<view class="page quiz-page">
 		<view v-if="phase === 'quiz'" class="run-shell">
 			<view class="top-bar">
-				<image class="top-logo" src="/static/logo.png" mode="aspectFit" />
+				<image class="top-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 				<view class="top-meta">
 					<text class="top-progress">小测 {{ qIndex + 1 }}/{{ totalQ }}</text>
 					<text class="top-lesson">{{ lessonTitle }}</text>
@@ -110,7 +110,7 @@
 		</view>
 
 		<view v-else class="done-shell">
-			<image class="done-logo" src="/static/logo.png" mode="aspectFit" />
+			<image class="done-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 			<text class="done-emoji">{{ quizJustPassed ? '🎉' : '💪' }}</text>
 			<text class="done-title">小测完成</text>
 			<text class="done-score">答对 {{ score }} / {{ totalQ }} 题</text>
@@ -152,6 +152,7 @@ import {
 	firstHanzi,
 	normDisplayPinyin
 } from '@/utils/lesson-quiz-plan.js'
+import { MENG_VOICE, playMengmengVoice } from '@/utils/mengmeng-voice.js'
 
 function filterValidPlan(plan, pool) {
 	return (plan || []).filter((item) => {
@@ -449,6 +450,9 @@ export default {
 			this.passNeed = need
 			const passed = totalQ > 0 && score >= need
 			this.quizJustPassed = passed
+			if (passed) {
+				playMengmengVoice(MENG_VOICE.LESSON_QUIZ_PASS, { debounceMs: 400 }).catch(() => {})
+			}
 			const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.lessonTitle)
 			const d = this.curriculumDims()
 			recordLessonQuizAttempt({
@@ -482,7 +486,7 @@ export default {
 	padding-bottom: env(safe-area-inset-bottom);
 	background: linear-gradient(
 		180deg,
-		#ffe8f2 0%,
+		var(--meng-cream) 0%,
 		#fff6fa 28%,
 		var(--meng-page-bg, #f6f3ec) 100%
 	);

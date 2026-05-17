@@ -1,9 +1,10 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view class="bar">
 			<text class="bar-text">{{ summary }}</text>
 		</view>
-		<view class="placeholder">
+		<view class="placeholder meng-card">
+			<meng-avatar pose="book" size="md" />
 			<text class="p-title">教材目录与课次</text>
 			<text class="p-desc">当前共 {{ chars.length }} 字，按 lesson_hint 自动分组。</text>
 			<button type="primary" size="mini" @click="goSettings">筛选条件</button>
@@ -26,8 +27,10 @@
 <script>
 import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
+import MengAvatar from '@/components/meng-avatar.vue'
 
 export default {
+	components: { MengAvatar },
 	data() {
 		return {
 			summary: '',
@@ -64,31 +67,28 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	background: var(--meng-page-bg);
-	padding: 24rpx;
 	box-sizing: border-box;
 }
 
 .bar {
 	padding: 16rpx 20rpx;
-	background: #fffef9;
-	border-radius: 12rpx;
+	background: var(--meng-card-solid);
+	border-radius: 16rpx;
 	margin-bottom: 24rpx;
+	border: 1rpx solid var(--meng-border);
 }
 
 .bar-text {
 	font-size: 24rpx;
-	color: #4a453f;
+	color: var(--meng-text-secondary);
 }
 
 .placeholder {
 	padding: 48rpx 32rpx;
-	background: #fff;
-	border-radius: 20rpx;
 	display: flex;
 	flex-direction: column;
-	align-items: flex-start;
+	align-items: center;
+	text-align: center;
 }
 
 .placeholder > *:not(:first-child) {

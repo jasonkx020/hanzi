@@ -1,12 +1,15 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view class="hero" @longpress="debugResetVip">
+			<meng-avatar pose="wave" size="sm" />
+			<view class="hero-copy">
 			<text class="hero-badge">{{ vipActive ? '会员生效中' : '家长专享' }}</text>
 			<text class="hero-title">开通会员，系统化陪伴孩子识字</text>
 			<text class="hero-sub">付费说明面向监护人展示；学习内容适龄、无诱导打赏。</text>
 			<view v-if="vipActive" class="hero-expire">
 				<text class="expire-label">当前到期日</text>
 				<text class="expire-val">{{ expireText }}</text>
+			</view>
 			</view>
 		</view>
 
@@ -68,6 +71,7 @@
 
 <script>
 import { VIP_PLANS, VIP_COMPARE } from '@/constants/vip-products.js'
+import MengAvatar from '@/components/meng-avatar.vue'
 import {
 	isVipActive,
 	getVipExpireDateText,
@@ -77,6 +81,7 @@ import {
 } from '@/utils/vip.js'
 
 export default {
+	components: { MengAvatar },
 	data() {
 		return {
 			plans: VIP_PLANS,
@@ -132,14 +137,20 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	padding: 32rpx 28rpx 80rpx;
-	background: linear-gradient(180deg, var(--meng-page-bg) 0%, #efeae3 40%, #e3ded4 100%);
 	box-sizing: border-box;
 }
 
 .hero {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 16rpx;
 	margin-bottom: 24rpx;
+}
+
+.hero-copy {
+	flex: 1;
+	min-width: 0;
 }
 
 .hero-badge {
@@ -188,11 +199,12 @@ export default {
 }
 
 .card {
-	background: #fffef9;
-	border-radius: 20rpx;
+	background: var(--meng-card-solid);
+	border-radius: 24rpx;
 	padding: 28rpx;
 	margin-bottom: 24rpx;
-	box-shadow: 0 8rpx 28rpx rgba(44, 36, 25, 0.06);
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 8rpx 28rpx var(--meng-shadow);
 }
 
 .notice {

@@ -163,6 +163,14 @@ import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
 import { buildWritePracticeCharPool } from '@/utils/write-practice-char-pool.js'
+import {
+	MENG_VOICE,
+	playMengmengVoice,
+	playMengmengVoiceOnce,
+	stopMengmengVoice,
+	waitForMengmengVoiceIdle
+} from '@/utils/mengmeng-voice.js'
+import { LESSON_AUDIO_GAP_MS, sleepMs } from '@/utils/lesson-mode-audio.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
@@ -191,8 +199,14 @@ export default {
 		canvasId: {
 			type: String,
 			default: 'write-practice-canvas'
+		},
+		/** 播放萌萌语音提示（每日一练内嵌建议开启） */
+		mengVoice: {
+			type: Boolean,
+			default: false
 		}
 	},
+	emits: ['compact-complete'],
 	data() {
 		return {
 			hanzi: '人',
@@ -303,11 +317,19 @@ export default {
 		if (this.compact) return
 		this.bootstrap()
 	},
+	onShow() {
+		if (this.compact) return
+		playMengmengVoiceOnce(MENG_VOICE.STROKE_WELCOME, 'meng_voice_write_practice_welcome', {
+			debounceMs: 480
+		}).catch(() => {})
+	},
 	onUnload() {
 		this.stopAllPracticeAudio()
+		stopMengmengVoice()
 	},
 	onHide() {
 		this.stopAllPracticeAudio()
+		stopMengmengVoice()
 	},
 	methods: {
 		curriculumDims() {
@@ -404,6 +426,7 @@ export default {
 		},
 		/** 换字、演示、离开页：停音 + 取消挂载 + 销毁 writer */
 		stopAllPracticeAudio() {
+			stopMengmengVoice()
 			this.demoPlaying = false
 			this.stopPracticePlayback()
 			if (this.attachTimer != null) {
@@ -542,13 +565,26 @@ export default {
 		/** 内嵌模式：用户点击后播放当前应收笔画提示 */
 		playCompactStrokeHint() {
 			if (this.completed || this.demoPlaying || this.introBusy) return
+			const voiceId = this.compact ? MENG_VOICE.DAILY_STROKE_HINT : MENG_VOICE.STROKE_HINT_PLAY
 			this.cancelWriteIntro()
 			const gen = ++this.introGen
 			this.introBusy = true
 			this.applyCompactStrokeGuideVisual(this.activeStroke)
-			this.beginStrokeGuidance(this.activeStroke, gen).finally(() => {
-				if (gen === this.introGen) this.introBusy = false
-			})
+			const run = async () => {
+				try {
+					await this.playMengVoiceIf(voiceId, { minGapMs: 700 })
+					await waitForMengmengVoiceIdle()
+					await sleepMs(LESSON_AUDIO_GAP_MS)
+					await this.beginStrokeGuidance(this.activeStroke, gen)
+				} finally {
+					if (gen === this.introGen) this.introBusy = false
+				}
+			}
+			run()
+		},
+		playMengVoiceIf(id, opts) {
+			if (this.compact && !this.mengVoice) return Promise.resolve(false)
+			return playMengmengVoice(id, opts).catch(() => false)
 		},
 		compactToast() {
 			/* 每日一练内嵌：不弹 Toast，避免打断书写 */
@@ -556,12 +592,15 @@ export default {
 		handleTestStatus(index, status, data = {}) {
 			const strokeNo = Number(index) + 1
 			if (status === 'correct') {
-				if (!this.compact) {
+				if (this.compact) {
+					this.playMengVoiceIf(MENG_VOICE.DAILY_STROKE_OK, { minGapMs: 900 })
+				} else {
 					this.feedbackType = 'ok'
 					this.feedbackText =
 						strokeNo >= this.strokeTotal
 							? `第 ${strokeNo} 笔写对了`
 							: `第 ${strokeNo} 笔写对了，请写第 ${strokeNo + 1} 笔`
+					this.playMengVoiceIf(MENG_VOICE.STROKE_WRITE_OK, { minGapMs: 900 })
 				}
 				this.activeStroke = strokeNo
 				if (!this.compact) this.pushHistory(`第 ${strokeNo} 笔 ✓`)
@@ -610,6 +649,10 @@ export default {
 					uni.showToast({ title: '再试一次', icon: 'none', duration: 1500 })
 				} else {
 					this.compactToast(expectedPhrase ? `应写${expectedPhrase}` : '再试一次')
+					this.playMengVoiceIf(
+						this.compact ? MENG_VOICE.DAILY_STROKE_WRONG : MENG_VOICE.STROKE_WRITE_WRONG,
+						{ minGapMs: 800 }
+					)
 				}
 				if (Number.isFinite(data.expectedStroke) && data.expectedStroke >= 0) {
 					if (this.compact) {
@@ -635,7 +678,10 @@ export default {
 				this.activeStroke = this.strokeTotal
 				if (this.compact) {
 					this.compactToast('全部写对了', 'success')
+					this.playMengVoiceIf(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 })
+					this.$emit('compact-complete')
 				} else {
+					this.playMengVoiceIf(MENG_VOICE.STROKE_ALL_DONE, { minGapMs: 2000 })
 					this.feedbackType = 'ok'
 					this.feedbackText = '全部笔画写对了，笔顺正确！'
 					this.pushHistory('✓ 全部通过')
@@ -782,6 +828,7 @@ export default {
 		},
 		showStrokeDemo() {
 			if (this.demoPlaying || this.completed) return
+			this.playMengVoiceIf(MENG_VOICE.STROKE_MODE_ANIM, { minGapMs: 1500 })
 			this.stopAllPracticeAudio()
 			this.mountDemoWriter()
 		},
@@ -870,7 +917,12 @@ export default {
 	min-height: 100vh;
 	padding: 24rpx 24rpx 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #ffeef5 0%, #fff8fb 35%, var(--meng-page-bg) 100%);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 35%,
+		var(--meng-page-bg) 100%
+	);
 }
 
 .page--embedded {

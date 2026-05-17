@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<text class="hint">与生字库字段一致：版本 ID、年级册别（含幼小衔接 grade=0）、字表偏好。「幼小衔接·课标300基本字」对应教育部《义务教育语文课程标准》附录「识字、写字教学基本字表」。</text>
 
 		<view class="field">
@@ -107,9 +107,6 @@ export default {
 
 <style scoped>
 .page {
-	padding: 28rpx;
-	min-height: 100vh;
-	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 

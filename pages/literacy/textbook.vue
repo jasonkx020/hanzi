@@ -83,7 +83,7 @@
 		</view>
 
 		<view class="foot-tip">
-			<text class="foot-icon">🐼</text>
+			<image class="foot-icon-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 			<text class="foot-msg">点一课进入字卡听读音；点封面可换年级册别。</text>
 		</view>
 		</view>
@@ -402,7 +402,12 @@ export default {
 	min-height: 100vh;
 	padding: 0 0 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 32%, var(--meng-page-bg, #f6f3ec) 100%);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 32%,
+		var(--meng-page-bg) 100%
+	);
 }
 
 /* —— 顶区（对齐首页 Hero 粉奶油氛围）—— */
@@ -766,10 +771,11 @@ export default {
 	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }
 
-.foot-icon {
-	font-size: 30rpx;
+.foot-icon-img {
+	width: 44rpx;
+	height: 44rpx;
 	margin-right: 10rpx;
-	line-height: 1.4;
+	flex-shrink: 0;
 }
 
 .foot-msg {

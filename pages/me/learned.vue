@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view v-if="rows.length === 0" class="empty">
 			<text class="empty-title">暂无记录</text>
 			<text class="empty-tip">在生字详情中「标记已学过」后，会出现在这里；进度保存在本机存储。</text>
@@ -48,9 +48,6 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	background: var(--meng-page-bg);
-	padding: 24rpx;
 	box-sizing: border-box;
 }
 

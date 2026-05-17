@@ -1,49 +1,47 @@
 <template>
 	<view class="page home-page tab-root-page" :style="tabPageStyle">
-		<!-- 顶部插画区 -->
 		<view class="hero">
-			<image class="hero-bg" src="/static/db.png" mode="aspectFill" />
+			<image class="hero-bg" :src="assets.heroBg" mode="aspectFill" />
 			<view class="hero-sky" />
-			<view class="hero-float hero-float--l" />
-			<view class="hero-float hero-float--r" />
 
 			<view class="hero-toolbar">
 				<view class="hero-circle-btn" @click="goSettings">
 					<text class="hero-circle-icon">⚙️</text>
 				</view>
-				<view class="hero-circle-btn" @click="goVip">
+				<view class="hero-circle-btn hero-circle-btn--vip" @click="goVip">
 					<text class="hero-circle-icon">🔔</text>
+					<view v-if="vipActive" class="hero-vip-dot" />
 				</view>
 			</view>
 
 			<view class="hero-brand">
 				<text class="hero-brand-title">萌萌识字</text>
+				<text class="hero-brand-tag">和萌萌一起学汉字</text>
 			</view>
 
 			<view class="hero-mascot-wrap">
-				<image
-					v-if="!mascotFallback"
-					class="hero-mascot"
-					src="/static/images/yuwen_youxiao.jpg"
-					mode="aspectFit"
-					@error="mascotFallback = true"
+				<meng-avatar
+					:pose="heroMascotPose"
+					size="xl"
+					custom-class="hero-mascot"
+					@error="onMascotError"
 				/>
-				<text v-else class="hero-mascot-fallback">🐰</text>
 			</view>
 
-			<view class="hero-dots">
-				<view
-					v-for="(slide, i) in heroSlides"
-					:key="i"
-					class="hero-dot"
-					:class="{ 'hero-dot--on': heroDotIndex === i }"
-					@click="heroDotIndex = i"
-				/>
+			<view class="hero-foot">
+				<view class="hero-dots">
+					<view
+						v-for="(slide, i) in heroSlides"
+						:key="i"
+						class="hero-dot"
+						:class="{ 'hero-dot--on': heroDotIndex === i }"
+						@click="heroDotIndex = i"
+					/>
+				</view>
+				<text class="hero-caption">{{ heroSlides[heroDotIndex] }}</text>
 			</view>
-			<text class="hero-caption">{{ heroSlides[heroDotIndex] }}</text>
 		</view>
 
-		<!-- 底部玻璃操作区 -->
 		<view class="dock">
 			<view class="dock-glass">
 				<scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
@@ -60,49 +58,74 @@
 					</view>
 				</scroll-view>
 
+				<view class="daily-banner" @click="goDaily">
+					<image class="daily-banner-bg" :src="assets.entry.daily" mode="aspectFit" />
+					<view class="daily-banner-body">
+						<view class="daily-banner-text">
+							<text class="daily-banner-kicker">今日推荐</text>
+							<text class="daily-banner-title">每日一练</text>
+							<text class="daily-banner-desc clamp-2">{{ dailyDesc }}</text>
+						</view>
+						<view class="daily-banner-btn">
+							<text class="daily-banner-btn-text">{{ dailyBtnLabel }}</text>
+						</view>
+					</view>
+				</view>
+
 				<view class="cta-row">
 					<view class="cta-btn cta-btn--write" @click="goWritePractice">
-						<view class="cta-icon-wrap cta-icon-wrap--write">
-							<text class="cta-emoji">✏️</text>
+						<view class="cta-icon-ring">
+							<image class="cta-icon-img" :src="assets.entry.strokeLab" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col">
 							<text class="cta-label">写字练习</text>
-							<text class="cta-sub">按笔顺在田字格写</text>
+							<text class="cta-sub">笔顺田字格</text>
 						</view>
 					</view>
 					<view class="cta-btn cta-btn--pinyin" @click="goPinyin">
-						<view class="cta-icon-wrap cta-icon-wrap--pinyin">
-							<text class="cta-emoji">📖</text>
+						<view class="cta-icon-ring">
+							<image class="cta-icon-img" :src="assets.tab.learnActive" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col">
 							<text class="cta-label">拼音学习</text>
-							<text class="cta-sub">学拼音与拼读</text>
+							<text class="cta-sub">跟读与拼读</text>
 						</view>
 					</view>
 				</view>
 
 				<view class="quick-grid">
-					<view class="quick-tile quick-tile--green" @click="goTextbook">
-						<text class="quick-emoji">📘</text>
+					<view class="quick-tile" @click="goTextbook">
+						<view class="quick-icon-ring quick-icon-ring--green">
+							<image class="quick-icon" :src="assets.entry.textbook" mode="aspectFit" />
+						</view>
 						<text class="quick-label">课本同步</text>
 					</view>
-					<view class="quick-tile quick-tile--yellow" @click="goGame">
-						<text class="quick-emoji">🎈</text>
-						<text class="quick-label">趣味闯关</text>
+					<view class="quick-tile" @click="goGame">
+						<view class="quick-icon-ring quick-icon-ring--yellow">
+							<image class="quick-icon" :src="assets.entry.game" mode="aspectFit" />
+						</view>
+						<text class="quick-label">气球营</text>
 					</view>
-					<view class="quick-tile quick-tile--blue" @click="goDaily">
-						<text class="quick-emoji">⭐</text>
-						<text class="quick-label">每日一练</text>
-					</view>
-					<view class="quick-tile quick-tile--lavender" @click="goDictionary">
-						<text class="quick-emoji">🔍</text>
+					<view class="quick-tile" @click="goDictionary">
+						<view class="quick-icon-ring quick-icon-ring--sky">
+							<image class="quick-icon" :src="assets.tab.catalogActive" mode="aspectFit" />
+						</view>
 						<text class="quick-label">查字</text>
+					</view>
+					<view class="quick-tile" @click="goSettings">
+						<view class="quick-icon-ring quick-icon-ring--cream">
+							<image class="quick-icon" :src="assets.logoIcon" mode="aspectFit" />
+						</view>
+						<text class="quick-label">教材</text>
 					</view>
 				</view>
 
 				<view class="dock-tip">
-					<text class="dock-tip-text">🐼 {{ encourageText }}</text>
-					<text v-if="textbookVolumeLabel" class="dock-tip-sub">{{ textbookVolumeLabel }} · {{ dailyDesc }}</text>
+					<meng-avatar pose="happy" size="xs" />
+					<view class="dock-tip-col">
+						<text class="dock-tip-text">{{ encourageText }}</text>
+						<text v-if="textbookVolumeLabel" class="dock-tip-sub">{{ textbookVolumeLabel }}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -122,11 +145,23 @@ import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel } from
 import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
 import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import MengAvatar from '@/components/meng-avatar.vue'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import {
+	MENG_VOICE,
+	playMengmengVoice,
+	playMengmengVoiceOnce,
+	stopMengmengVoice
+} from '@/utils/mengmeng-voice.js'
+
+const HERO_POSES = ['wave', 'book', 'happy']
 
 export default {
+	components: { MengAvatar },
 	mixins: [tabMain],
 	data() {
 		return {
+			assets: MENG_ASSETS,
 			summary: '',
 			vipActive: false,
 			encourageText: '',
@@ -135,7 +170,8 @@ export default {
 			textbookVolumeLabel: '',
 			mascotFallback: false,
 			heroDotIndex: 0,
-			heroSlides: ['🌟 今日推荐：学完3课得勋章', '跟着课本，轻松识字', '边玩边练，每天进步一点点'],
+			heroSlides: ['跟着课本，轻松识字', '边玩边练，每天进步一点点', '和萌萌一起认字'],
+			_welcomeTimer: null,
 			curriculumTabs: [
 				{
 					key: 'preschool',
@@ -168,11 +204,52 @@ export default {
 			]
 		}
 	},
+	computed: {
+		heroMascotPose() {
+			if (this.mascotFallback) return 'book'
+			return HERO_POSES[this.heroDotIndex % HERO_POSES.length] || 'wave'
+		}
+	},
+	watch: {
+		heroDotIndex() {
+			this.mascotFallback = false
+		}
+	},
+	onReady() {
+		this.scheduleWelcomeVoice()
+	},
 	onShow() {
 		this.setTabBarIndex(0)
 		this.refresh()
+		this.scheduleWelcomeVoice()
+	},
+	onHide() {
+		if (this._welcomeTimer != null) {
+			clearTimeout(this._welcomeTimer)
+			this._welcomeTimer = null
+		}
+		stopMengmengVoice()
 	},
 	methods: {
+		scheduleWelcomeVoice() {
+			if (this._welcomeTimer != null) {
+				clearTimeout(this._welcomeTimer)
+			}
+			// App 首屏：等页面与音频上下文就绪后再播，避免 onShow 过早或被 onHide 打断
+			this._welcomeTimer = setTimeout(() => {
+				this._welcomeTimer = null
+				playMengmengVoiceOnce(MENG_VOICE.GLOBAL_WELCOME, 'meng_voice_once_global_welcome_v2', {
+					debounceMs: 0
+				}).then((ok) => {
+					if (!ok) {
+						console.warn('[home] global_welcome not played')
+					}
+				})
+			}, 520)
+		},
+		onMascotError() {
+			this.mascotFallback = true
+		},
 		async refresh() {
 			this.summary = getCurriculumSummary()
 			this.textbookVolumeLabel = formatGradeSemesterLabel(getCurriculumPrefs())
@@ -186,14 +263,14 @@ export default {
 				this.dailyBtnLabel = summary.btnLabel
 			} catch (e) {
 				console.warn('[home] daily plan', e)
-				this.dailyDesc = '今日练习加载失败'
+				this.dailyDesc = '今日练习加载失败，点我重试'
 				this.dailyBtnLabel = '重试'
 			}
 			this.encourageText = buildEncourageText({ remain: 5 })
 			this.heroSlides = [
-				'🌟 今日推荐：学完3课得勋章',
 				this.dailyDesc,
-				`🐼 ${this.encourageText}`
+				this.encourageText,
+				`${this.textbookVolumeLabel} · 跟着课本轻松识字`
 			]
 			this.heroDotIndex = 0
 		},
@@ -222,6 +299,7 @@ export default {
 			uni.switchTab({ url: '/pages/dictionary/index' })
 		},
 		goWritePractice() {
+			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
 			startWritePractice()
 		},
 		goTextbook() {
@@ -235,6 +313,7 @@ export default {
 				uni.navigateTo({ url: '/pages/settings/curriculum' })
 				return
 			}
+			playMengmengVoice(MENG_VOICE.HOME_DAILY, { debounceMs: 200 }).catch(() => {})
 			startDailyTraining()
 		}
 	}
@@ -244,26 +323,22 @@ export default {
 <style scoped>
 .home-page {
 	min-height: 100vh;
-	padding-left: 0;
-	padding-right: 0;
 	display: flex;
 	flex-direction: column;
-	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 38%, #f6f3ec 100%);
+	background: var(--meng-page-bg);
 }
 
-/* —— Hero —— */
 .hero {
 	position: relative;
 	flex: 1;
-	min-height: 380rpx;
-	max-height: 56vh;
+	min-height: 400rpx;
+	max-height: 52vh;
 	overflow: hidden;
 }
 
 .hero-bg {
 	position: absolute;
-	left: 0;
-	top: 0;
+	inset: 0;
 	width: 100%;
 	height: 100%;
 	z-index: 0;
@@ -275,36 +350,11 @@ export default {
 	z-index: 1;
 	background: linear-gradient(
 		180deg,
-		rgba(255, 220, 235, 0.35) 0%,
-		rgba(255, 245, 250, 0.12) 55%,
+		rgba(255, 248, 240, 0.35) 0%,
+		rgba(255, 252, 248, 0.08) 55%,
 		rgba(255, 255, 255, 0) 100%
 	);
 	pointer-events: none;
-}
-
-.hero-float {
-	position: absolute;
-	z-index: 2;
-	border-radius: 50%;
-	opacity: 0.55;
-	pointer-events: none;
-}
-
-.hero-float--l {
-	width: 120rpx;
-	height: 72rpx;
-	left: 8%;
-	top: 28%;
-	background: rgba(255, 255, 255, 0.75);
-	filter: blur(2px);
-}
-
-.hero-float--r {
-	width: 96rpx;
-	height: 56rpx;
-	right: 12%;
-	top: 22%;
-	background: rgba(255, 210, 230, 0.8);
 }
 
 .hero-toolbar {
@@ -312,37 +362,60 @@ export default {
 	z-index: 4;
 	display: flex;
 	justify-content: space-between;
-	padding: 8rpx 28rpx 0;
+	padding: 4rpx 24rpx 0;
 }
 
 .hero-circle-btn {
-	width: 72rpx;
-	height: 72rpx;
+	position: relative;
+	width: 68rpx;
+	height: 68rpx;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.92);
+	background: rgba(255, 255, 255, 0.88);
+	border: 1rpx solid rgba(255, 255, 255, 0.95);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 8rpx 24rpx rgba(255, 120, 160, 0.22);
+	box-shadow: 0 6rpx 20rpx var(--meng-shadow);
 }
 
 .hero-circle-icon {
-	font-size: 32rpx;
+	font-size: 30rpx;
+}
+
+.hero-vip-dot {
+	position: absolute;
+	top: 10rpx;
+	right: 10rpx;
+	width: 14rpx;
+	height: 14rpx;
+	border-radius: 50%;
+	background: var(--meng-accent-solid);
+	border: 2rpx solid #fff;
 }
 
 .hero-brand {
 	position: relative;
 	z-index: 4;
 	text-align: center;
-	margin-top: 4rpx;
+	padding: 0 32rpx;
 }
 
 .hero-brand-title {
-	font-size: 40rpx;
+	display: block;
+	font-size: 44rpx;
 	font-weight: 800;
-	color: #fff;
-	text-shadow: 0 4rpx 16rpx rgba(200, 80, 120, 0.45);
-	letter-spacing: 4rpx;
+	color: var(--meng-chocolate);
+	letter-spacing: 6rpx;
+	text-shadow: 0 2rpx 0 rgba(255, 255, 255, 0.8);
+}
+
+.hero-brand-tag {
+	display: block;
+	margin-top: 6rpx;
+	font-size: 22rpx;
+	font-weight: 600;
+	color: var(--meng-text-secondary);
+	letter-spacing: 2rpx;
 }
 
 .hero-mascot-wrap {
@@ -350,78 +423,67 @@ export default {
 	z-index: 3;
 	flex: 1;
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	justify-content: center;
-	min-height: 240rpx;
-	margin-top: -8rpx;
+	min-height: 260rpx;
+	padding-bottom: 8rpx;
 }
 
 .hero-mascot {
-	width: 320rpx;
-	height: 320rpx;
-	filter: drop-shadow(0 16rpx 32rpx rgba(255, 130, 170, 0.35));
+	filter: drop-shadow(0 20rpx 36rpx rgba(92, 61, 46, 0.18));
 }
 
-.hero-mascot-fallback {
-	font-size: 160rpx;
-	line-height: 1;
-	filter: drop-shadow(0 12rpx 24rpx rgba(255, 130, 170, 0.3));
+.hero-foot {
+	position: relative;
+	z-index: 4;
+	padding-bottom: 48rpx;
 }
 
 .hero-dots {
-	position: relative;
-	z-index: 4;
 	display: flex;
 	justify-content: center;
-	gap: 12rpx;
-	margin-top: 8rpx;
+	gap: 10rpx;
 }
 
 .hero-dot {
-	width: 12rpx;
-	height: 12rpx;
+	width: 10rpx;
+	height: 10rpx;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.45);
+	background: rgba(92, 61, 46, 0.2);
 }
 
 .hero-dot--on {
-	width: 28rpx;
+	width: 26rpx;
 	border-radius: 8rpx;
-	background: #fff;
-	box-shadow: 0 2rpx 8rpx rgba(255, 100, 140, 0.35);
+	background: var(--meng-accent-solid);
 }
 
 .hero-caption {
-	position: relative;
-	z-index: 4;
 	display: block;
 	text-align: center;
 	font-size: 22rpx;
-	color: rgba(255, 255, 255, 0.95);
-	padding: 10rpx 48rpx 20rpx;
-	text-shadow: 0 2rpx 8rpx rgba(160, 60, 90, 0.35);
+	color: var(--meng-text-secondary);
+	padding: 10rpx 40rpx 0;
+	line-height: 1.4;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-/* —— 底部玻璃面板 —— */
 .dock {
 	position: relative;
 	z-index: 5;
 	flex-shrink: 0;
-	margin-top: -36rpx;
+	margin-top: -44rpx;
 }
 
 .dock-glass {
-	margin: 0 20rpx;
-	padding: 28rpx 24rpx 20rpx;
-	border-radius: 40rpx 40rpx 28rpx 28rpx;
-	background: rgba(255, 255, 255, 0.88);
-	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow:
-		0 -12rpx 48rpx rgba(255, 150, 180, 0.12),
-		0 16rpx 40rpx rgba(44, 36, 25, 0.06);
+	margin: 0 16rpx;
+	padding: 24rpx 22rpx 18rpx;
+	border-radius: 36rpx 36rpx 28rpx 28rpx;
+	background: var(--meng-glass-bg);
+	border: 2rpx solid var(--meng-glass-border);
+	box-shadow: 0 -8rpx 40rpx var(--meng-shadow), 0 12rpx 36rpx var(--meng-shadow);
 	/* #ifdef H5 */
 	backdrop-filter: blur(24px);
 	/* #endif */
@@ -429,47 +491,135 @@ export default {
 
 .grade-scroll {
 	width: 100%;
-	margin-bottom: 22rpx;
+	margin-bottom: 20rpx;
 }
 
 .grade-row {
 	display: flex;
 	flex-direction: row;
 	white-space: nowrap;
-	padding: 4rpx 0;
 }
 
 .grade-chip {
 	display: inline-flex;
-	padding: 12rpx 26rpx;
-	margin-right: 14rpx;
+	padding: 10rpx 24rpx;
+	margin-right: 12rpx;
 	border-radius: 999rpx;
-	background: rgba(255, 240, 248, 0.9);
-	border: 2rpx solid rgba(255, 180, 200, 0.25);
+	background: var(--meng-card-solid);
+	border: 2rpx solid var(--meng-border);
 }
 
 .grade-chip--on {
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
-	border-color: rgba(255, 120, 160, 0.45);
-	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.2);
+	background: var(--meng-chip-active-bg);
+	border-color: var(--meng-chip-active-border);
+	box-shadow: 0 4rpx 14rpx var(--meng-shadow-warm);
 }
 
 .grade-chip-text {
 	font-size: 24rpx;
-	color: #8a6a78;
+	color: var(--meng-text-muted);
 	font-weight: 500;
 }
 
 .grade-chip--on .grade-chip-text {
-	color: #c44d6a;
+	color: var(--meng-tab-active-text);
 	font-weight: 700;
+}
+
+/* 每日一练主卡片 */
+.daily-banner {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	min-height: 152rpx;
+	margin-bottom: 20rpx;
+	padding: 20rpx 20rpx 20rpx 0;
+	border-radius: 28rpx;
+	background: linear-gradient(135deg, #fff6ec 0%, #ffe8d4 48%, #ffd4b8 100%);
+	border: 2rpx solid rgba(232, 122, 74, 0.22);
+	box-shadow: 0 10rpx 28rpx var(--meng-shadow-warm);
+	overflow: hidden;
+}
+
+.daily-banner-bg {
+	position: absolute;
+	left: -8rpx;
+	bottom: -12rpx;
+	width: 200rpx;
+	height: 200rpx;
+	opacity: 0.92;
+	pointer-events: none;
+}
+
+.daily-banner-body {
+	position: relative;
+	z-index: 1;
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+	padding-left: 168rpx;
+	min-width: 0;
+}
+
+.daily-banner-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.daily-banner-kicker {
+	display: block;
+	font-size: 20rpx;
+	font-weight: 700;
+	color: var(--meng-accent-solid);
+	letter-spacing: 2rpx;
+}
+
+.daily-banner-title {
+	display: block;
+	font-size: 34rpx;
+	font-weight: 800;
+	color: var(--meng-chocolate);
+	margin-top: 4rpx;
+}
+
+.daily-banner-desc {
+	display: block;
+	margin-top: 6rpx;
+	font-size: 22rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.4;
+}
+
+.clamp-2 {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
+.daily-banner-btn {
+	flex-shrink: 0;
+	padding: 14rpx 22rpx;
+	border-radius: 999rpx;
+	background: linear-gradient(145deg, var(--meng-accent-from), var(--meng-accent-to));
+	box-shadow: 0 6rpx 16rpx var(--meng-shadow-warm);
+}
+
+.daily-banner-btn-text {
+	font-size: 24rpx;
+	font-weight: 800;
+	color: #fff;
+	white-space: nowrap;
 }
 
 .cta-row {
 	display: flex;
 	flex-direction: row;
-	gap: 20rpx;
-	margin-bottom: 24rpx;
+	gap: 16rpx;
+	margin-bottom: 20rpx;
 }
 
 .cta-btn {
@@ -477,66 +627,70 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	justify-content: center;
-	gap: 14rpx;
-	height: 100rpx;
-	border-radius: 999rpx;
-	box-shadow:
-		0 10rpx 28rpx rgba(255, 120, 80, 0.28),
-		inset 0 2rpx 0 rgba(255, 255, 255, 0.35);
+	gap: 12rpx;
+	padding: 18rpx 16rpx;
+	border-radius: 24rpx;
+	box-shadow: 0 6rpx 20rpx var(--meng-shadow);
 }
 
 .cta-btn--write {
-	background: linear-gradient(145deg, #ffc85a 0%, #ff9a3d 48%, #ff7b4a 100%);
+	background: linear-gradient(145deg, var(--meng-accent-from), var(--meng-accent-to));
 }
 
 .cta-btn--pinyin {
-	background: linear-gradient(145deg, #ffb3c8 0%, #ff8aab 50%, #ff6b9d 100%);
-	box-shadow: 0 10rpx 28rpx rgba(255, 100, 150, 0.32);
+	background: linear-gradient(145deg, var(--meng-leaf-soft) 0%, #c8e8d4 100%);
+	border: 1rpx solid rgba(126, 200, 160, 0.35);
 }
 
-.cta-icon-wrap {
-	width: 52rpx;
-	height: 52rpx;
-	border-radius: 16rpx;
-	background: rgba(255, 255, 255, 0.28);
+.cta-icon-ring {
+	width: 56rpx;
+	height: 56rpx;
+	border-radius: 18rpx;
+	background: rgba(255, 255, 255, 0.55);
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	flex-shrink: 0;
 }
 
-.cta-emoji {
-	font-size: 30rpx;
+.cta-icon-img {
+	width: 40rpx;
+	height: 40rpx;
 }
 
 .cta-text-col {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 2rpx;
+	flex: 1;
+	min-width: 0;
 }
 
 .cta-label {
-	font-size: 30rpx;
+	font-size: 28rpx;
 	font-weight: 800;
+	color: var(--meng-chocolate);
+}
+
+.cta-btn--write .cta-label,
+.cta-btn--write .cta-sub {
 	color: #fff;
-	letter-spacing: 1rpx;
-	text-shadow: 0 2rpx 6rpx rgba(180, 60, 40, 0.2);
 }
 
 .cta-sub {
+	display: block;
+	margin-top: 2rpx;
 	font-size: 20rpx;
-	font-weight: 600;
-	color: rgba(255, 255, 255, 0.88);
-	text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.12);
+	color: var(--meng-text-secondary);
+	font-weight: 500;
+}
+
+.cta-btn--write .cta-sub {
+	color: rgba(255, 255, 255, 0.9);
 }
 
 .quick-grid {
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
-	gap: 16rpx;
-	margin-bottom: 20rpx;
+	gap: 12rpx;
+	margin-bottom: 18rpx;
 }
 
 .quick-tile {
@@ -544,67 +698,76 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	padding: 16rpx 6rpx 14rpx;
+	border-radius: 22rpx;
+	background: var(--meng-card-solid);
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 4rpx 16rpx var(--meng-shadow);
+}
+
+.quick-icon-ring {
+	width: 64rpx;
+	height: 64rpx;
+	border-radius: 20rpx;
+	display: flex;
+	align-items: center;
 	justify-content: center;
-	padding: 20rpx 8rpx 18rpx;
-	border-radius: 28rpx;
-	box-shadow:
-		0 8rpx 20rpx rgba(44, 36, 25, 0.08),
-		inset 0 2rpx 0 rgba(255, 255, 255, 0.5);
-}
-
-.quick-tile--green {
-	background: linear-gradient(160deg, #b8e8c8 0%, #7fd49a 100%);
-}
-
-.quick-tile--yellow {
-	background: linear-gradient(160deg, #ffe9a8 0%, #ffd060 100%);
-}
-
-.quick-tile--blue {
-	background: linear-gradient(160deg, #b8dcff 0%, #7eb8ff 100%);
-}
-
-.quick-tile--lavender {
-	background: linear-gradient(160deg, #f0eeff 0%, #ddd8f5 100%);
-}
-
-.quick-emoji {
-	font-size: 40rpx;
 	margin-bottom: 8rpx;
+}
+
+.quick-icon-ring--green {
+	background: var(--meng-leaf-soft);
+}
+
+.quick-icon-ring--yellow {
+	background: #fff4d8;
+}
+
+.quick-icon-ring--sky {
+	background: #e8f4fc;
+}
+
+.quick-icon-ring--cream {
+	background: var(--meng-banner-soft);
+}
+
+.quick-icon {
+	width: 48rpx;
+	height: 48rpx;
 }
 
 .quick-label {
 	font-size: 22rpx;
 	font-weight: 700;
-	color: rgba(44, 36, 25, 0.75);
-}
-
-.quick-tile--green .quick-label,
-.quick-tile--yellow .quick-label,
-.quick-tile--blue .quick-label {
-	color: rgba(255, 255, 255, 0.95);
-	text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.12);
+	color: var(--meng-text-secondary);
 }
 
 .dock-tip {
-	padding: 16rpx 18rpx;
-	border-radius: 20rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
-	border: 1rpx solid rgba(255, 200, 180, 0.35);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 18rpx;
+	background: var(--meng-tip-bg);
+	border: 1rpx solid var(--meng-border-warm);
+}
+
+.dock-tip-col {
+	flex: 1;
+	min-width: 0;
 }
 
 .dock-tip-text {
-	display: block;
 	font-size: 24rpx;
-	color: #7a5f2a;
+	color: var(--meng-tip-text);
 	line-height: 1.45;
 }
 
 .dock-tip-sub {
 	display: block;
-	margin-top: 6rpx;
+	margin-top: 4rpx;
 	font-size: 22rpx;
-	color: #9c8a7a;
-	line-height: 1.4;
+	color: var(--meng-text-muted);
 }
 </style>

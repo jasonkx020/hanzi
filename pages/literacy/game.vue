@@ -2,7 +2,7 @@
 	<view class="page">
 		<!-- 营地大厅 -->
 		<view v-if="phase === 'lobby'" class="lobby">
-			<text class="lobby-emoji">🐼</text>
+			<image class="lobby-mascot" src="/static/mengmeng/ip/balloon.png" mode="aspectFit" />
 			<text class="lobby-balloon" aria-hidden="true">🎈</text>
 			<text class="lobby-title">萌萌的气球营</text>
 			<text class="lobby-lead">听一听、把汉字和拼音配一对，帮萌萌收集小星星～</text>
@@ -22,7 +22,7 @@
 		<!-- 耳朵捉字 -->
 		<view v-else-if="phase === 'play'" class="play">
 			<view class="play-head">
-				<text class="play-mascot">🐼</text>
+				<image class="play-mascot-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 				<view class="play-head-text">
 					<text class="play-tag">气球关</text>
 					<text class="play-step">第 {{ qIndex + 1 }} / {{ totalQ }} 关</text>
@@ -585,9 +585,9 @@ export default {
 	padding-top: 36rpx;
 }
 
-.lobby-emoji {
-	font-size: 88rpx;
-	line-height: 1;
+.lobby-mascot {
+	width: 200rpx;
+	height: 200rpx;
 	margin-bottom: 8rpx;
 }
 
@@ -686,9 +686,17 @@ export default {
 	margin-bottom: 16rpx;
 }
 
-.play-mascot {
+.play-mascot-img {
+	width: 72rpx;
+	height: 72rpx;
+	margin-right: 14rpx;
+	flex-shrink: 0;
+}
+
+.play-mascot-star {
 	font-size: 52rpx;
 	margin-right: 14rpx;
+	line-height: 1;
 }
 
 .play-head-text {

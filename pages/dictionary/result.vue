@@ -13,87 +13,100 @@
 		</view>
 
 		<scroll-view scroll-y class="page-scroll">
-			<!-- 田字格 + 吉祥物 + 笔顺播放 -->
-			<view class="hero-block">
-				<view class="hero-mascot-wrap" aria-hidden="true">
-					<image
-						v-if="mascotImgOk"
-						class="hero-mascot"
-						src="/static/db.png"
-						mode="aspectFit"
-						@error="mascotImgOk = false"
-					/>
-					<text v-else class="hero-mascot-fallback">🐰</text>
+			<!-- 左缘：部首/结构/笔画；右侧区域：田字格居中 -->
+			<view class="hero-section">
+				<view class="hero-meta-col">
+					<view class="meta-side-card">
+						<text class="meta-side-k">部首</text>
+						<text class="meta-side-v">{{ ext.radical || '—' }}</text>
+					</view>
+					<view class="meta-side-card">
+						<text class="meta-side-k">结构</text>
+						<text class="meta-side-v">{{ ext.structure || '—' }}</text>
+					</view>
+					<view class="meta-side-card">
+						<text class="meta-side-k">笔画</text>
+						<text class="meta-side-v meta-side-v--num">{{ ext.strokes ?? '—' }}</text>
+					</view>
+					<view class="meta-side-card meta-side-card--tap" @click.stop="toggleStrokePlayer">
+						<text class="meta-side-k">笔顺</text>
+						<text class="meta-side-v meta-side-v--action">{{
+							resultStrokeAnimating ? '暂停' : '动画'
+						}}</text>
+					</view>
 				</view>
-				<view class="hero-tianzi-card">
-					<hanzi-stroke-player
-						ref="strokePlayer"
-						canvas-id="result-stroke-box"
-						:char="displayHanzi"
-						:display-pinyin="pinyin"
-						:narrator="narrator"
-						:length="168"
-						:show-play-fab="true"
-						:stroke-audio-enabled="true"
-						@animating-change="onStrokeAnimatingChange"
-						@click-canvas="speakCurrentPinyin"
-					/>
+				<view class="hero-stage">
+					<view class="hero-center">
+						<view class="hero-tianzi-wrap" :style="tianziUnifiedStyle">
+						<view class="hero-tianzi-unified">
+							<view class="tianzi-pinyin-row">
+								<view class="tianzi-pinyin-edge" @click.stop="speakCurrentPinyin">
+									<pinyin-four-lines-row
+										v-if="pinyinRowSyllables.length"
+										class="pinyin-edge-full"
+										:syllables="pinyinRowSyllables"
+										size="md"
+									/>
+									<text v-else class="pinyin-edge-plain font-pinyin">{{ pinyinPlain }}</text>
+								</view>
+								<view
+									class="tianzi-speak-btn"
+									:class="{ 'tianzi-speak-btn--playing': dictPinyinPlaying }"
+									role="button"
+									aria-label="听读音"
+									@click.stop="speakCurrentPinyin"
+								>
+									<image
+										v-if="showLabaImg"
+										:key="'laba-' + labaImgSrcIndex"
+										class="tianzi-speak-img"
+										:src="labaImgSrc"
+										mode="aspectFit"
+										:show-menu-by-longpress="false"
+										@error="onLabaImgError"
+									/>
+									<image
+										v-else
+										class="tianzi-speak-img tianzi-speak-img--fallback"
+										:src="labaFallbackIconSrc"
+										mode="aspectFit"
+									/>
+									<!-- <text class="tianzi-speak-label">听读音</text> -->
+								</view>
+							</view>
+							<view class="hero-tianzi-body" @click="speakCurrentPinyin">
+								<hanzi-stroke-player
+									ref="strokePlayer"
+									canvas-id="result-stroke-box"
+									:char="displayHanzi"
+									:display-pinyin="pinyin"
+									:narrator="narrator"
+									:length="tianziLength"
+									:show-play-fab="false"
+									:stroke-audio-enabled="true"
+									:hide-stroke-hint="true"
+									@animating-change="onStrokeAnimatingChange"
+									@click-canvas="speakCurrentPinyin"
+								/>
+							</view>
+						</view>
+						</view>
+					</view>
 				</view>
 			</view>
 
-			<!-- 主拼音 -->
-			<view class="pinyin-block" @click="speakCurrentPinyin">
-				<view v-if="pinyinSyllableTokens.length" class="pinyin-tokens">
-					<view
-						v-for="(tok, ti) in pinyinSyllableTokens"
-						:key="'hero-py-' + ti"
-						class="pinyin-token-row"
-					>
-						<pinyin-four-lines-row class="pinyin-token-core" :syllables="[tok]" size="md" />
-					</view>
-				</view>
-				<text v-else class="pinyin-plain font-pinyin">{{ pinyinPlain }}</text>
+			<view v-if="hasStrokeAnalysis" class="stroke-analysis-full">
+				<!-- <text class="stroke-analysis-title">笔顺分解</text> -->
+				<text v-if="ext.strokeShapes" class="stroke-analysis-glyphs">{{ ext.strokeShapes }}</text>
+				<text v-if="ext.strokeNames" class="stroke-analysis-names">{{ ext.strokeNames }}</text>
 			</view>
 
-			<!-- 属性横向芯片 -->
-			<scroll-view scroll-x class="meta-scroll" :show-scrollbar="false" enable-flex>
-				<view class="meta-scroll-inner">
-					<view
-						v-for="(chip, idx) in metaChips"
-						:key="chip.key"
-						class="meta-chip"
-						:class="{ 'meta-chip-active': idx === 0 }"
-					>
-						<text class="meta-chip-py font-pinyin">{{ chip.pyHint }}</text>
-						<text class="meta-chip-val">{{ chip.value }}</text>
-						<text class="meta-chip-label">{{ chip.label }}</text>
-					</view>
-				</view>
-			</scroll-view>
+			<view v-if="ext.tradForm" class="trad-row">
+				<text class="trad-k">繁体</text>
+				<text class="trad-v">{{ ext.tradForm }}</text>
+			</view>
 
 			<text v-if="lessonHint" class="lesson-line">课次：{{ lessonHint }}</text>
-
-			<!-- 快捷操作 -->
-			<view class="quick-actions">
-				<view class="quick-wide" @click="toggleStrokePlayer">
-					<text class="quick-wide-text">部首 · {{ ext.radical }}</text>
-					<text class="quick-wide-arrow">›</text>
-				</view>
-				<view class="quick-pair">
-					<view class="quick-pill pill-warm" @click="toggleStrokePlayer">
-						<text>{{ resultStrokeAnimating ? '停笔顺' : '笔顺动画' }}</text>
-					</view>
-					<view class="quick-pill pill-leaf" @click="speakCurrentPinyin">
-						<text>听读音</text>
-					</view>
-				</view>
-			</view>
-
-			<view v-if="ext.strokeShapes || ext.strokeNames" class="info-card info-stroke">
-				<text class="info-card-title">笔顺分解</text>
-				<text v-if="ext.strokeShapes" class="info-glyphs">{{ ext.strokeShapes }}</text>
-				<text v-if="ext.strokeNames" class="info-names">{{ ext.strokeNames }}</text>
-			</view>
 
 			<view v-if="ext.explainText" class="info-card info-explain">
 				<text class="info-card-title">释义</text>
@@ -117,7 +130,7 @@
 							v-for="ch in sameLesson"
 							:key="'s-' + ch"
 							class="reco-card reco-card-same"
-							@click="goOther(ch)"
+							@click="onPickRecoChar(ch)"
 						>
 							<view class="reco-avatar">
 								<text class="reco-avatar-emoji">🐰</text>
@@ -129,7 +142,7 @@
 							v-for="ch in similarChars"
 							:key="'p-' + ch"
 							class="reco-card reco-card-sim"
-							@click="goOther(ch)"
+							@click="onPickRecoChar(ch)"
 						>
 							<view class="reco-avatar reco-avatar-sim">
 								<text class="reco-avatar-emoji">🐰</text>
@@ -165,6 +178,11 @@ import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import cnchar from '@/utils/cnchar-setup.js'
+import {
+	MENG_ASSETS,
+	buildMengAssetSrcCandidates,
+	resolveMengAssetUrl
+} from '@/utils/mengmeng-assets.js'
 
 export default {
 	components: {
@@ -174,7 +192,10 @@ export default {
 	data() {
 		return {
 			statusBarPx: 0,
-			mascotImgOk: true,
+			assets: MENG_ASSETS,
+			/** 听读音图 src 候选下标（App 逐级重试） */
+			labaImgSrcIndex: 0,
+			labaImgFailed: false,
 			narrator: 'kid',
 			dictPinyinPlaying: false,
 			hanzi: '',
@@ -192,10 +213,45 @@ export default {
 			},
 			sameLesson: [],
 			similarChars: [],
-			resultStrokeAnimating: false
+			resultStrokeAnimating: false,
+			/** 与 hanzi-stroke-player 默认 length 一致，用于统一拼音/田字格宽度 */
+			tianziLength: 168
 		}
 	},
 	computed: {
+		tianziShellPx() {
+			return this.tianziLength + 30
+		},
+		tianziUnifiedStyle() {
+			return {
+				width: `${this.tianziShellPx}px`,
+				maxWidth: '100%'
+			}
+		},
+		pinyinRowSyllables() {
+			if (this.pinyinSyllableTokens.length) return this.pinyinSyllableTokens
+			const s = this.pinyinPlain
+			if (s && s !== '—' && s !== '-') return [s]
+			return []
+		},
+		hasStrokeAnalysis() {
+			return !!(this.ext.strokeShapes || this.ext.strokeNames)
+		},
+		labaImgSrcList() {
+			return buildMengAssetSrcCandidates(MENG_ASSETS.laba)
+		},
+		labaImgSrc() {
+			const list = this.labaImgSrcList
+			if (!list.length) return MENG_ASSETS.laba
+			const i = Math.min(this.labaImgSrcIndex, list.length - 1)
+			return list[i]
+		},
+		showLabaImg() {
+			return !this.labaImgFailed
+		},
+		labaFallbackIconSrc() {
+			return resolveMengAssetUrl(MENG_ASSETS.laba)
+		},
 		navBarStyle() {
 			return { paddingTop: this.statusBarPx + 'px' }
 		},
@@ -227,18 +283,6 @@ export default {
 			if (w.length === 1 && w[0] === '暂无组词') return ''
 			return w.join(' / ')
 		},
-		metaChips() {
-			const py = this.pinyinPlain
-			const chips = [
-				{ key: 'radical', label: '部首', value: this.ext.radical || '—', pyHint: py },
-				{ key: 'structure', label: '结构', value: this.ext.structure || '—', pyHint: py },
-				{ key: 'strokes', label: '笔画', value: String(this.ext.strokes ?? '—'), pyHint: py }
-			]
-			if (this.ext.tradForm) {
-				chips.push({ key: 'trad', label: '繁体', value: this.ext.tradForm, pyHint: py })
-			}
-			return chips
-		}
 	},
 	onLoad(query) {
 		try {
@@ -250,6 +294,7 @@ export default {
 		const hanzi = query.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const pinyin = query.pinyin ? decodeURIComponent(query.pinyin) : ''
 		const lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
+		this.resetLabaImgSrc()
 		this.loadResultPage({ hanzi, pinyin, lessonHint })
 	},
 	onShow() {
@@ -264,6 +309,19 @@ export default {
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	methods: {
+		resetLabaImgSrc() {
+			this.labaImgSrcIndex = 0
+			this.labaImgFailed = false
+		},
+		onLabaImgError(e) {
+			const list = this.labaImgSrcList
+			if (this.labaImgSrcIndex < list.length - 1) {
+				this.labaImgSrcIndex += 1
+				return
+			}
+			this.labaImgFailed = true
+			console.warn('[result] laba.png load failed', this.labaImgSrc, e)
+		},
 		onStrokeAnimatingChange(v) {
 			this.resultStrokeAnimating = !!v
 		},
@@ -276,12 +334,24 @@ export default {
 			})
 		},
 		goBack() {
+			this.navigateBackAfterAction()
+		},
+		navigateBackAfterAction() {
+			stopLocalPinyinAudio()
 			const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
 			if (pages.length > 1) {
-				uni.navigateBack()
+				uni.navigateBack({ delta: 1 })
 				return
 			}
 			uni.switchTab({ url: '/pages/dictionary/index' })
+		},
+		markCurrentAsLearned() {
+			const h = String(this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) return false
+			recordCharLearned(h, getCurriculumPrefs())
+			return true
 		},
 		async loadResultPage(payload) {
 			const hanzi = String(payload.hanzi || '').trim()
@@ -336,6 +406,7 @@ export default {
 						strokeNames: '',
 						tradForm: ''
 					}
+			this.resetLabaImgSrc()
 			this.hanzi = hanzi
 			this.pinyin = pinyin
 			this.lessonHint = lessonHint
@@ -365,27 +436,45 @@ export default {
 			}
 		},
 		markLearned() {
-			if (!this.hanzi) return
-			recordCharLearned(this.hanzi, getCurriculumPrefs())
-			uni.showToast({ title: '已加入学过字库', icon: 'success' })
+			if (!this.markCurrentAsLearned()) return
+			uni.showToast({ title: '已加入学过字库', icon: 'success', duration: 1000 })
+			setTimeout(() => this.navigateBackAfterAction(), 450)
 		},
 		markWrong() {
-			if (!this.hanzi) return
-			recordCharWrong(this.hanzi, 1, getCurriculumPrefs())
-			uni.showToast({ title: '已加入易错字', icon: 'none' })
+			const h = String(this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) return
+			recordCharWrong(h, 1, getCurriculumPrefs())
+			uni.showToast({ title: '已加入易错字', icon: 'none', duration: 1000 })
+			setTimeout(() => this.navigateBackAfterAction(), 450)
 		},
-		async goOther(ch) {
-			const c = String(ch || '').trim().charAt(0)
-			if (!c || c === this.hanzi) return
+		async onPickRecoChar(ch) {
+			const c = String(ch || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!c) return
+			const prev = String(this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (prev) {
+				recordCharLearned(prev, getCurriculumPrefs())
+			}
 			stopLocalPinyinAudio()
+			if (c === prev) {
+				uni.showToast({ title: '已标为已学', icon: 'success', duration: 1000 })
+				setTimeout(() => this.navigateBackAfterAction(), 450)
+				return
+			}
 			await this.loadResultPage({
 				hanzi: c,
 				pinyin: '',
 				lessonHint: this.lessonHint
 			})
-			await new Promise((resolve) => {
-				this.$nextTick(() => resolve())
-			})
+			if (prev) {
+				uni.showToast({ title: `「${prev}」已学，正在看「${c}」`, icon: 'none', duration: 1400 })
+			}
+			await this.$nextTick()
 			await this.speakCurrentPinyin()
 		}
 	}
@@ -397,7 +486,7 @@ export default {
 	height: 100vh;
 	min-height: 100vh;
 	background: var(--meng-page-bg);
-	background-image: url('/static/db.png');
+	background-image: url('/static/mengmeng/hero-bg.png');
 	background-size: cover;
 	background-position: center top;
 	background-repeat: no-repeat;
@@ -467,126 +556,266 @@ export default {
 	box-sizing: border-box;
 }
 
-/* 田字格区 */
-.hero-block {
-	position: relative;
+/* 整行：左缘属性列 + 右侧田字格舞台 */
+.hero-section {
+	width: 100%;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: row;
-	align-items: flex-end;
-	justify-content: center;
-	padding: 28rpx 24rpx 8rpx;
+	align-items: flex-start;
 	min-height: 320rpx;
 }
 
-.hero-mascot-wrap {
-	position: absolute;
-	left: 16rpx;
-	bottom: 24rpx;
-	width: 140rpx;
-	height: 140rpx;
-	z-index: 2;
-	pointer-events: none;
-}
-
-.hero-mascot {
-	width: 100%;
-	height: 100%;
-}
-
-.hero-mascot-fallback {
-	font-size: 100rpx;
-	line-height: 1;
-}
-
-.hero-tianzi-card {
-	position: relative;
-	background: var(--meng-card-solid);
-	border-radius: 28rpx;
-	padding: 20rpx;
-	box-shadow: 0 12rpx 36rpx var(--meng-shadow);
-	border: 2rpx solid rgba(255, 255, 255, 0.9);
-}
-
-/* 拼音 */
-.pinyin-block {
-	margin: 8rpx 28rpx 16rpx;
-	padding: 16rpx 20rpx;
-	background: rgba(255, 255, 255, 0.88);
-	border-radius: 20rpx;
-	border: 1rpx solid var(--meng-border);
-}
-
-.pinyin-tokens {
+.hero-meta-col {
+	flex-shrink: 0;
+	align-self: stretch;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	gap: 8rpx;
+	align-items: stretch;
+	justify-content: flex-start;
+	gap: 10rpx;
+	padding-top: 56rpx;
+	padding-left: env(safe-area-inset-left, 0px);
+	padding-right: 0;
+	margin: 0;
 }
 
-.pinyin-token-row {
-	width: 100%;
-	display: flex;
-	justify-content: center;
-}
-
-.pinyin-plain {
-	display: block;
+.meta-side-card {
+	width: 100rpx;
+	padding: 12rpx 10rpx 12rpx 8rpx;
+	border-radius: 0 18rpx 18rpx 0;
+	background: linear-gradient(145deg, #fff8f0, #fffef9);
+	border: 1rpx solid rgba(255, 154, 69, 0.28);
+	border-left: none;
+	box-shadow: 4rpx 6rpx 16rpx var(--meng-shadow);
+	box-sizing: border-box;
 	text-align: center;
+}
+
+.meta-side-k {
+	display: block;
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
+	margin-bottom: 6rpx;
+}
+
+.meta-side-v {
+	display: block;
 	font-size: 36rpx;
+	font-weight: 700;
 	color: var(--meng-text);
+	line-height: 1.2;
+	word-break: break-all;
 }
 
-/* 属性芯片 */
-.meta-scroll {
-	width: 100%;
-	white-space: nowrap;
-	margin-bottom: 12rpx;
+.meta-side-v--num {
+	font-size: 40rpx;
+	font-variant-numeric: tabular-nums;
 }
 
-.meta-scroll-inner {
+.meta-side-card--tap:active {
+	opacity: 0.88;
+	transform: scale(0.98);
+}
+
+.meta-side-v--action {
+	font-size: 30rpx;
+	letter-spacing: 0.02em;
+}
+
+.hero-stage {
+	flex: 1;
+	min-width: 0;
 	display: flex;
 	flex-direction: row;
-	padding: 0 24rpx 8rpx;
-	gap: 16rpx;
-}
-
-.meta-chip {
-	flex-shrink: 0;
-	width: 148rpx;
-	padding: 14rpx 12rpx;
-	border-radius: 18rpx;
-	background: rgba(255, 255, 255, 0.9);
-	border: 2rpx solid var(--meng-border);
-	text-align: center;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 24rpx 20rpx 12rpx 4rpx;
 	box-sizing: border-box;
 }
 
-.meta-chip-active {
-	background: var(--meng-leaf-soft);
-	border-color: var(--meng-leaf);
+.hero-center {
+	position: relative;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding-right: 12rpx;
+	padding-bottom: 8rpx;
+	box-sizing: border-box;
 }
 
-.meta-chip-py {
-	display: block;
-	font-size: 20rpx;
-	color: var(--meng-text-muted);
-	margin-bottom: 4rpx;
+.hero-tianzi-wrap {
+	position: relative;
+	flex-shrink: 0;
+	box-sizing: border-box;
+}
+
+.hero-tianzi-unified {
+	position: relative;
+	width: 100%;
+	background: var(--meng-card-solid);
+	border-radius: 28rpx;
+	box-shadow: 0 12rpx 36rpx var(--meng-shadow);
+	border: 2rpx solid rgba(255, 255, 255, 0.9);
 	overflow: hidden;
-	text-overflow: ellipsis;
+	box-sizing: border-box;
 }
 
-.meta-chip-val {
+.tianzi-pinyin-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	width: 100%;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #fffef9 0%, #fff8f0 100%);
+	border-bottom: 2rpx solid #e8d5c8;
+}
+
+.tianzi-speak-btn {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 96rpx;
+	padding: 6rpx 10rpx 4rpx 4rpx;
+	background: transparent;
+	border: none;
+}
+
+.tianzi-speak-btn--playing .tianzi-speak-img {
+	animation: tianzi-speak-pulse 0.85s ease-in-out infinite;
+}
+
+@keyframes tianzi-speak-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.06);
+	}
+}
+
+.tianzi-speak-img {
+	width: 80rpx;
+	height: 80rpx;
 	display: block;
+}
+
+.tianzi-speak-img--fallback {
+	opacity: 0.92;
+}
+
+.tianzi-speak-label {
+	margin-top: 0;
+	font-size: 18rpx;
+	font-weight: 700;
+	color: var(--meng-tab-active-text);
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.tianzi-pinyin-edge {
+	flex: 1;
+	min-width: 0;
+	padding: 8rpx 0 6rpx 4rpx;
+	box-sizing: border-box;
+}
+
+.pinyin-edge-full {
+	width: 100%;
+	display: block;
+}
+
+.pinyin-edge-plain {
+	display: block;
+	text-align: center;
+	font-size: 30rpx;
+	line-height: 1.2;
+	color: var(--meng-text);
+	padding: 12rpx 8rpx;
+}
+
+.hero-tianzi-body {
+	padding: 6rpx;
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.hero-tianzi-body :deep(.hanzi-stroke-player) {
+	width: 100%;
+}
+
+.hero-tianzi-body :deep(.tianzi-shell) {
+	margin: 0 auto;
+}
+
+/* 笔顺分解：通栏全宽 */
+.stroke-analysis-full {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 20rpx 28rpx 24rpx;
+	margin: 0 0 8rpx;
+	background: #f9fbe7;
+	border-top: 2rpx solid #c5e1a5;
+	border-bottom: 2rpx solid #c5e1a5;
+}
+
+.stroke-analysis-title {
+	display: block;
+	font-size: 26rpx;
+	font-weight: 700;
+	color: var(--meng-text);
+	margin-bottom: 12rpx;
+}
+
+.stroke-analysis-glyphs {
+	display: block;
+	width: 100%;
+	font-size: 30rpx;
+	color: var(--meng-text);
+	letter-spacing: 0.14em;
+	line-height: 1.5;
+	word-break: break-all;
+	text-align: center;
+	margin-bottom: 8rpx;
+}
+
+.stroke-analysis-names {
+	display: block;
+	width: 100%;
+	font-size: 26rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.55;
+	word-break: break-all;
+	text-align: center;
+}
+
+.trad-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	margin: 0 28rpx 12rpx;
+	padding: 12rpx 20rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 255, 255, 0.88);
+	border: 1rpx solid var(--meng-border);
+}
+
+.trad-k {
+	font-size: 24rpx;
+	color: var(--meng-text-muted);
+}
+
+.trad-v {
 	font-size: 32rpx;
 	font-weight: 700;
 	color: var(--meng-text);
-	margin-bottom: 4rpx;
-}
-
-.meta-chip-label {
-	display: block;
-	font-size: 22rpx;
-	color: var(--meng-text-secondary);
 }
 
 .lesson-line {
@@ -601,33 +830,14 @@ export default {
 	margin: 0 24rpx 20rpx;
 }
 
-.quick-wide {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	padding: 22rpx 24rpx;
-	margin-bottom: 14rpx;
-	border-radius: 20rpx;
-	background: linear-gradient(90deg, #fff8f0, #ffece0);
-	border: 1rpx solid rgba(255, 154, 69, 0.35);
-}
-
-.quick-wide-text {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: var(--meng-tab-active-text);
-}
-
-.quick-wide-arrow {
-	font-size: 36rpx;
-	color: var(--meng-accent-solid);
-}
-
 .quick-pair {
 	display: flex;
 	flex-direction: row;
 	gap: 16rpx;
+}
+
+.quick-pair--single .quick-pill {
+	flex: 1;
 }
 
 .quick-pill {
@@ -657,11 +867,6 @@ export default {
 	border-radius: 20rpx;
 	background: rgba(255, 255, 255, 0.92);
 	border: 1rpx solid var(--meng-border);
-}
-
-.info-stroke {
-	background: #f9fbe7;
-	border-color: #c5e1a5;
 }
 
 .info-explain {

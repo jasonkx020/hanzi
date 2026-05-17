@@ -1,5 +1,5 @@
 /**
- * 每日一练 · 复习段拼音多选 / 预习正确音展示
+ * 每日一练 · 复习段拼音多选
  */
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'

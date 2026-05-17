@@ -46,6 +46,7 @@ import { schedulePinyinFontLoad } from '@/utils/pinyin-font-loader.js'
 
 <style>
 @import './static/styles/app-theme.css';
+@import './static/styles/meng-page.css';
 @import './static/styles/pinyin-font.css';
 	/* 页面底色与 App 回弹露底同色 */
 	page {
@@ -57,7 +58,7 @@ import { schedulePinyinFontLoad } from '@/utils/pinyin-font-loader.js'
 
 	/* Tab 主页面底部留白，避免内容被自定义 tabBar 遮挡 */
 	.tab-root-page {
-		padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
+		padding-bottom: calc(168rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
 	}
 

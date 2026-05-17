@@ -1,0 +1,118 @@
+/**
+ * 萌萌识字 · 二级页面通用布局（配合 app-theme.css）
+ */
+.meng-page-shell {
+	min-height: 100vh;
+	box-sizing: border-box;
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 36%,
+		var(--meng-page-bg) 100%
+	);
+}
+
+.meng-page-pad {
+	padding: 24rpx 28rpx calc(32rpx + env(safe-area-inset-bottom));
+	box-sizing: border-box;
+}
+
+.meng-card {
+	background: var(--meng-card-solid);
+	border-radius: 24rpx;
+	padding: 28rpx;
+	margin-bottom: 24rpx;
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 8rpx 28rpx var(--meng-shadow);
+	box-sizing: border-box;
+}
+
+.meng-card--soft {
+	background: var(--meng-card);
+}
+
+.meng-section-label {
+	display: block;
+	font-size: 24rpx;
+	font-weight: 700;
+	color: var(--meng-text-muted);
+	margin: 8rpx 0 16rpx;
+	letter-spacing: 2rpx;
+}
+
+.meng-list {
+	background: var(--meng-card-solid);
+	border-radius: 24rpx;
+	overflow: hidden;
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 8rpx 24rpx var(--meng-shadow);
+}
+
+.meng-list-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 28rpx 24rpx;
+	font-size: 30rpx;
+	color: var(--meng-text);
+	border-bottom: 1rpx solid var(--meng-border);
+}
+
+.meng-list-item:last-child {
+	border-bottom: none;
+}
+
+.meng-list-arrow {
+	font-size: 36rpx;
+	color: var(--meng-text-muted);
+	line-height: 1;
+}
+
+.meng-sub-hero {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+	padding: 24rpx 28rpx;
+	margin-bottom: 24rpx;
+	overflow: hidden;
+}
+
+.meng-sub-hero__bg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.meng-sub-hero__overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: var(--meng-hero-overlay);
+}
+
+.meng-sub-hero__body {
+	position: relative;
+	z-index: 2;
+	flex: 1;
+	min-width: 0;
+}
+
+.meng-sub-hero__title {
+	display: block;
+	font-size: 34rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+}
+
+.meng-sub-hero__sub {
+	display: block;
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.45;
+}

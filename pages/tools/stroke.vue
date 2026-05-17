@@ -1,5 +1,12 @@
 <template>
 	<view class="stroke-lab-page">
+		<view class="lab-hero">
+			<meng-avatar pose="book" size="sm" />
+			<view class="lab-hero-text">
+				<text class="lab-hero-title">笔顺实验室</text>
+				<text class="lab-hero-sub">看笔顺、分步写、练一练</text>
+			</view>
+		</view>
 		<view class="lab-card lab-input-card">
 			<view class="lab-input-row">
 				<text class="lab-input-label">要练的字</text>
@@ -120,6 +127,8 @@
 import drawNative from '@/utils/draw-native.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
+import MengAvatar from '@/components/meng-avatar.vue'
+import { MENG_VOICE, playMengmengVoice, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
 
 const STROKE_DRAW_LENGTH = 200
 
@@ -130,6 +139,7 @@ const LAB_DRAW_MODE = {
 }
 
 export default {
+	components: { MengAvatar },
 	data() {
 		return {
 			word: '人',
@@ -160,6 +170,9 @@ export default {
 			}
 		}
 	},
+	onShow() {
+		playMengmengVoice(MENG_VOICE.STROKE_WELCOME, { debounceMs: 500 }).catch(() => {})
+	},
 	onLoad(query) {
 		const fromHanzi = query?.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const fromWord = query?.word ? decodeURIComponent(query.word) : ''
@@ -176,7 +189,11 @@ export default {
 		this.registerWordNotFoundHook()
 		this.runDraw(LAB_DRAW_MODE[this.labMode] || 'animation')
 	},
+	onHide() {
+		stopMengmengVoice()
+	},
 	onUnload() {
+		stopMengmengVoice()
 		if (this.strokeAttachTimer) {
 			clearTimeout(this.strokeAttachTimer)
 			this.strokeAttachTimer = null
@@ -197,6 +214,13 @@ export default {
 			if (this.labMode === mode) return
 			this.labMode = mode
 			this.runDraw(LAB_DRAW_MODE[mode] || 'animation')
+			const voiceId =
+				mode === 'test'
+					? MENG_VOICE.STROKE_MODE_WRITE
+					: mode === 'animation'
+						? MENG_VOICE.STROKE_MODE_ANIM
+						: ''
+			if (voiceId) playMengmengVoice(voiceId, { debounceMs: 300 }).catch(() => {})
 		},
 		pickLastHanziFromInput(raw) {
 			const all = String(raw || '').match(/[\u4e00-\u9fff]/g)
@@ -344,6 +368,7 @@ export default {
 		},
 		drawNextStroke() {
 			if (this.drawWriter?.drawNextStroke) {
+				playMengmengVoice(MENG_VOICE.STROKE_HINT_PLAY, { minGapMs: 700 }).catch(() => {})
 				this.drawWriter.drawNextStroke(() => {})
 			}
 		},
@@ -374,6 +399,7 @@ export default {
 				this.testFeedbackType = 'ok'
 				this.testFeedback = '✓'
 				this.pushTestHistory(`第 ${strokeNo} 笔 ✓`)
+				playMengmengVoice(MENG_VOICE.STROKE_WRITE_OK, { minGapMs: 900 }).catch(() => {})
 				return
 			}
 			if (status === 'mistake') {
@@ -387,12 +413,14 @@ export default {
 					if (targetChar) addCharWrongCount(targetChar, 1, this.curriculumDims())
 					this.testWrongAddedAt = now
 				}
+				playMengmengVoice(MENG_VOICE.STROKE_WRITE_WRONG, { minGapMs: 800 }).catch(() => {})
 				return
 			}
 			if (status === 'complete') {
 				this.testFeedbackType = 'ok'
 				this.testFeedback = '✓'
 				this.pushTestHistory('全部笔画通过')
+				playMengmengVoice(MENG_VOICE.STROKE_ALL_DONE, { minGapMs: 2000 }).catch(() => {})
 			}
 		},
 		pickCanvasTouch(e) {
@@ -421,7 +449,40 @@ export default {
 	min-height: 100vh;
 	padding: 20rpx 24rpx 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #fff8fb 0%, var(--meng-page-bg) 28%);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 28%,
+		var(--meng-page-bg) 100%
+	);
+}
+
+.lab-hero {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+	margin-bottom: 16rpx;
+	padding: 8rpx 4rpx;
+}
+
+.lab-hero-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.lab-hero-title {
+	display: block;
+	font-size: 34rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+}
+
+.lab-hero-sub {
+	display: block;
+	margin-top: 6rpx;
+	font-size: 22rpx;
+	color: var(--meng-text-muted);
 }
 
 .lab-card {

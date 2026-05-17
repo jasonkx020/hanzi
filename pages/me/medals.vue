@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view class="card">
 			<text class="title">勋章墙</text>
 			<text class="desc">根据学习数据自动点亮勋章。</text>
@@ -34,7 +34,7 @@ export default {
 }
 </script>
 <style scoped>
-.page { min-height: 100vh; padding: 24rpx; background: var(--meng-page-bg); }
+.page { box-sizing: border-box; }
 .card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .title { display: block; font-size: 32rpx; font-weight: 700; color: var(--meng-text); margin-bottom: 10rpx; }
 .desc { display: block; font-size: 25rpx; color: #6b6560; }

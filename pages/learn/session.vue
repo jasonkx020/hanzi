@@ -1,13 +1,18 @@
 <template>
-	<view class="page">
-		<text class="title">学习</text>
-		<text class="desc">学习主入口已迁移到每日一练模块，点击进入新架构页面。</text>
-		<button type="primary" @click="goDaily">进入每日一练</button>
+	<view class="page meng-page-shell meng-page-pad">
+		<view class="card meng-card">
+			<meng-avatar pose="book" size="md" />
+			<text class="title">学习</text>
+			<text class="desc">学习主入口已迁移到每日一练模块，点击进入新架构页面。</text>
+			<button type="primary" @click="goDaily">进入每日一练</button>
+		</view>
 	</view>
 </template>
 
 <script>
+import MengAvatar from '@/components/meng-avatar.vue'
 export default {
+	components: { MengAvatar },
 	methods: {
 		goDaily() {
 			uni.navigateTo({ url: '/pages/literacy/daily' })
@@ -18,10 +23,14 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	padding: 32rpx;
-	background: var(--meng-page-bg);
 	box-sizing: border-box;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
 }
 
 .title {

@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view class="card">
 			<text class="title">家长管理</text>
 			<text class="desc">学习时长、提醒时间、护眼与家长验证配置。</text>

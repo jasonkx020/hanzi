@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view class="card head">
 			<text class="title">家长报告</text>
 			<text class="desc">统计基于本机当前教材设置，不会上传服务器。</text>
@@ -139,9 +139,6 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	padding: 24rpx;
-	background: var(--meng-page-bg);
 	box-sizing: border-box;
 }
 

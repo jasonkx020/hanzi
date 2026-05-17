@@ -197,30 +197,30 @@
 		"color": "#7A7E83",
 		"selectedColor": "#b84a28",
 		"borderStyle": "white",
-		"backgroundColor": "#ffffff",
+		"backgroundColor": "#fffdf8",
 		"list": [
 			{
 				"pagePath": "pages/home/home",
 				"iconPath": "static/tab/home.png",
-				"selectedIconPath": "static/tab/home.png",
+				"selectedIconPath": "static/tab/home-active.png",
 				"text": "识字"
 			},
 			{
 				"pagePath": "pages/pinyin/index",
 				"iconPath": "static/tab/learn.png",
-				"selectedIconPath": "static/tab/learn.png",
+				"selectedIconPath": "static/tab/learn-active.png",
 				"text": "拼音"
 			},
 			{
 				"pagePath": "pages/dictionary/index",
 				"iconPath": "static/tab/catalog.png",
-				"selectedIconPath": "static/tab/catalog.png",
+				"selectedIconPath": "static/tab/catalog-active.png",
 				"text": "查字"
 			},
 			{
 				"pagePath": "pages/me/me",
 				"iconPath": "static/tab/me.png",
-				"selectedIconPath": "static/tab/me.png",
+				"selectedIconPath": "static/tab/me-active.png",
 				"text": "我的"
 			}
 		]

@@ -1,0 +1,43 @@
+/**
+ * 萌萌识字 · 各页可 @import 的通用块（非 scoped）
+ */
+.meng-page-bg {
+	background-color: var(--meng-page-bg);
+	min-height: 100vh;
+	box-sizing: border-box;
+}
+
+.meng-glass-card {
+	border-radius: 32rpx;
+	background: var(--meng-glass-bg);
+	border: 2rpx solid var(--meng-glass-border);
+	box-shadow: 0 12rpx 40rpx var(--meng-shadow);
+}
+
+.meng-hero-strip {
+	position: relative;
+	overflow: hidden;
+	min-height: 160rpx;
+}
+
+.meng-hero-strip__bg {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.meng-hero-strip__overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: var(--meng-hero-overlay);
+	pointer-events: none;
+}
+
+.meng-hero-strip__body {
+	position: relative;
+	z-index: 2;
+}

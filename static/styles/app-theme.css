@@ -1,6 +1,6 @@
 /**
- * 萌萌识字 · 全局主题（对齐 static/logo.png：熊猫黑白、积木暖橙渐变、奶油字感、小花绿叶点缀）
- * 由 App.vue 引入；页面/组件样式中优先使用 var(--meng-*)，与 pages.json / manifest 中底色 #F6F3EC 保持一致。
+ * 萌萌识字 · 全局主题（对齐萌萌小狗 IP：奶油毛、巧克力耳、暖橙主色）
+ * 由 App.vue 引入；与 pages.json / manifest 底色 #F6F3EC 保持一致。
  */
 page {
 	--meng-page-bg: #f6f3ec;
@@ -11,25 +11,40 @@ page {
 	--meng-text-muted: #8a8076;
 	--meng-border: #ebe3d8;
 	--meng-border-warm: #e3d9c8;
-	/* 主操作：logo 积木橙 → 珊瑚红，略降饱和 */
-	--meng-accent-from: #ff9a45;
-	--meng-accent-to: #ff5c38;
-	--meng-accent-solid: #ff8a4c;
-	--meng-chip-active-bg: #fff0e0;
-	--meng-chip-active-border: rgba(255, 107, 66, 0.42);
+	--meng-cream: #fff8f0;
+	--meng-chocolate: #5c3d2e;
+	--meng-pink-blush: #f5c4c8;
+	--meng-pink-paw: #f5b8c8;
+	/* 主操作：暖橙渐变 */
+	--meng-accent-from: #ffb86a;
+	--meng-accent-to: #e87a4a;
+	--meng-accent-solid: #e87a4a;
+	--meng-chip-active-bg: #fff0e6;
+	--meng-chip-active-border: rgba(232, 122, 74, 0.42);
 	--meng-banner-soft: #fff6ec;
 	--meng-tip-bg: #fff4e8;
 	--meng-tip-text: #7a5f2a;
-	--meng-blush: #ffdce4;
-	--meng-leaf: #6bae7d;
+	--meng-blush: #f5c4c8;
+	--meng-leaf: #7ec8a0;
 	--meng-leaf-soft: #e8f4ec;
+	--meng-sky: #b8dcf0;
 	--meng-shadow: rgba(44, 36, 25, 0.07);
-	--meng-shadow-warm: rgba(255, 120, 72, 0.22);
-	/* 底部 Tab：选中态偏暖，与 logo 主色呼应 */
-	--meng-tab-bar-bg: #fffdf8;
+	--meng-shadow-warm: rgba(232, 122, 74, 0.22);
+	--meng-tab-bar-bg: rgba(255, 253, 248, 0.96);
+	--meng-tab-bar-shadow: 0 -4rpx 32rpx rgba(44, 36, 25, 0.1);
+	--meng-tab-float-radius: 28rpx;
 	--meng-tab-warm-from: #fff8f0;
 	--meng-tab-warm-to: #ffece0;
-	--meng-tab-active-border: rgba(255, 107, 66, 0.38);
+	--meng-tab-active-border: rgba(232, 122, 74, 0.38);
 	--meng-tab-active-text: #b84a28;
 	--meng-tab-inactive-text: #9c958c;
+	--meng-tab-icon-size: 52rpx;
+	--meng-hero-overlay: linear-gradient(
+		180deg,
+		rgba(255, 248, 240, 0.15) 0%,
+		rgba(255, 252, 248, 0.05) 55%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	--meng-glass-bg: rgba(255, 252, 248, 0.92);
+	--meng-glass-border: rgba(255, 255, 255, 0.95);
 }

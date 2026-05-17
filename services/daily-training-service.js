@@ -1,5 +1,5 @@
 /**
- * 每日一练：围绕课文进度 — 复习巩固、预习新字、写字表练字。
+ * 每日一练：围绕课文进度 — 复习巩固、写字表练字。
  * 同一自然日 + 教材偏好 + shuffleSalt 下队列可复现。
  */
 
@@ -13,7 +13,7 @@ import {
 } from '@/utils/user-progress-storage.js'
 
 /** @typedef {'weak'|'review'|'preview'|'write'} DailyReason */
-/** @typedef {'review'|'preview'|'write'} DailySegmentKey */
+/** @typedef {'review'|'write'} DailySegmentKey */
 
 /**
  * @typedef {object} DailyTrainingItem
@@ -39,17 +39,15 @@ import {
  * @property {string} seed
  * @property {number} poolSize
  * @property {string|null} focusLessonHint 当前进度课（第一课未学完或最后一课）
- * @property {string|null} previewLessonHint 预习来源课
  * @property {DailySegment[]} segments
- * @property {DailyTrainingItem[]} items 认读流：复习 + 预习（不含练字列表重复）
- * @property {{ weak: number, review: number, preview: number, write: number }} stats
+ * @property {DailyTrainingItem[]} items 认读流：复习（不含练字列表重复）
+ * @property {{ weak: number, review: number, write: number }} stats
  */
 
 const DEFAULT_LIMITS = {
 	weak: 3,
 	reviewFromPrev: 2,
 	reviewRefresh: 2,
-	preview: 4,
 	write: 3,
 	readTotal: 10
 }
@@ -181,14 +179,12 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		seed,
 		poolSize: 0,
 		focusLessonHint: null,
-		previewLessonHint: null,
 		segments: [
 			{ key: 'review', title: '复习', subtitle: '巩固易错与近期课文', items: [] },
-			{ key: 'preview', title: '预习', subtitle: '认读即将学习的新字', items: [] },
 			{ key: 'write', title: '练字', subtitle: '按笔顺写一写', items: [] }
 		],
 		items: [],
-		stats: { weak: 0, review: 0, preview: 0, write: 0 }
+		stats: { weak: 0, review: 0, write: 0 }
 	})
 
 	if (!poolSize) return emptyPlan()
@@ -208,29 +204,11 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 
 	const focus = lessons[focusIdx] || null
 	const prev = focusIdx > 0 ? lessons[focusIdx - 1] : null
-	const next = focusIdx < lessons.length - 1 ? lessons[focusIdx + 1] : null
 
 	const focusHint = focus?.hint || null
-	let previewHint = focusHint
-	const previewCandidates = []
-
-	if (focus) {
-		for (const r of focus.rows) {
-			const h = firstHanzi(r.hanzi)
-			if (h && !isLearned(h)) previewCandidates.push(r)
-		}
-	}
-	if (previewCandidates.length < 2 && next) {
-		previewHint = next.hint
-		for (const r of next.rows) {
-			const h = firstHanzi(r.hanzi)
-			if (h && !isLearned(h)) previewCandidates.push(r)
-		}
-	}
 
 	const seen = new Set()
 	const reviewItems = []
-	const previewItems = []
 	const writeItems = []
 
 	for (const wr of listWrongOftenCharsForCurriculumPrefs(p, 40)) {
@@ -273,18 +251,6 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		}
 	}
 
-	const previewSorted = sortRowsByDailySeed(
-		previewCandidates.filter((r) => {
-			const h = firstHanzi(r.hanzi)
-			return h && !seen.has(h)
-		}),
-		`${seed}:preview`
-	)
-	for (const r of previewSorted) {
-		if (previewItems.length >= limits.preview) break
-		uniqueItemsPush(previewItems, rowToItem(r, 'preview', 'preview'), seen)
-	}
-
 	const writePool = []
 	for (const r of rows) {
 		if (r.list_type === LIST_TYPE.XIEZI) writePool.push(r)
@@ -302,7 +268,7 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		}
 	}
 	if (writeItems.length < limits.write) {
-		for (const it of [...previewItems, ...reviewItems]) {
+		for (const it of reviewItems) {
 			if (writeItems.length >= limits.write) break
 			const row = byHanzi.get(it.hanzi)
 			if (row?.list_type === LIST_TYPE.XIEZI) {
@@ -318,10 +284,6 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		if (readItems.length >= readCap) break
 		readItems.push(it)
 	}
-	for (const it of previewItems) {
-		if (readItems.length >= readCap) break
-		if (!readItems.some((x) => x.hanzi === it.hanzi)) readItems.push(it)
-	}
 
 	const segments = [
 		{
@@ -329,12 +291,6 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 			title: '复习',
 			subtitle: focusHint ? `巩固 · 学到「${focusHint}」前后` : '巩固易错与已学字',
 			items: reviewItems
-		},
-		{
-			key: 'preview',
-			title: '预习',
-			subtitle: previewHint ? `新字 · ${previewHint}` : '认读还没学过的字',
-			items: previewItems
 		},
 		{
 			key: 'write',
@@ -349,20 +305,18 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		seed,
 		poolSize,
 		focusLessonHint: focusHint,
-		previewLessonHint: previewHint,
 		segments,
 		items: readItems,
 		stats: {
 			weak: reviewItems.filter((i) => i.reason === 'weak').length,
 			review: reviewItems.filter((i) => i.reason !== 'weak').length,
-			preview: previewItems.length,
 			write: writeItems.length
 		}
 	}
 }
 
 /**
- * 兼容旧接口：扁平认读队列（复习 + 预习）
+ * 兼容旧接口：扁平认读队列（复习）
  */
 export async function buildDailyTrainingQueue(prefs, options = {}) {
 	const plan = await buildDailyTrainingPlan(prefs, options)
@@ -388,7 +342,6 @@ export function formatDailyPlanHomeSummary(plan, learnedCount = 0) {
 	const { stats } = plan
 	const parts = []
 	if (stats.review + stats.weak > 0) parts.push(`复习 ${stats.review + stats.weak}`)
-	if (stats.preview > 0) parts.push(`预习 ${stats.preview}`)
 	if (stats.write > 0) parts.push(`练字 ${stats.write}`)
 	const tail = parts.length ? parts.join(' · ') : '今日任务已排好'
 	const learnedBit = learnedCount > 0 ? `已学 ${learnedCount} 字 · ` : ''

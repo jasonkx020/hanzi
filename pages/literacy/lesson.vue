@@ -22,7 +22,7 @@
 
 		<view class="lesson-sheet">
 		<view v-if="followPhase === 'active'" class="follow-reading-bar">
-			<image class="follow-reading-bar-logo" src="/static/logo.png" mode="aspectFit" />
+			<image class="follow-reading-bar-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 			<view class="follow-reading-bar-text">
 				<text class="follow-reading-label">跟读 · 第 {{ followIdx + 1 }}/{{ lessonChars.length }} 字</text>
 				<text class="follow-reading-sub">点跳动 logo 停止 · 点「点重听」可重听</text>
@@ -59,7 +59,7 @@
 				<image
 					class="follow-mascot"
 					:class="mascotJumping ? 'follow-mascot--jump' : ''"
-					src="/static/logo.png"
+					src="/static/mengmeng/logo-icon.png"
 					mode="aspectFit"
 				/>
 				<text class="follow-mascot-stop" @tap.stop="onMascotTapStop">点我停止</text>
@@ -99,15 +99,15 @@
 			<text class="empty-text">本课暂无生字数据，请在「课本同步学」或教材设置中检查课次与字库。</text>
 		</view>
 
-		<view class="panda-tip">
-			<text class="panda-emoji">🐼</text>
-			<text class="panda-msg">{{ followTipText }}</text>
+		<view class="meng-tip">
+			<meng-avatar pose="happy" size="xs" />
+			<text class="meng-tip-msg">{{ followTipText }}</text>
 		</view>
 		</view>
 
 		<view v-if="followPhase === 'done'" class="follow-done-mask">
 			<view class="follow-done-card">
-				<image class="follow-done-logo" src="/static/logo.png" mode="aspectFit" />
+				<image class="follow-done-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 				<text class="follow-done-title">跟读完成</text>
 				<text class="follow-done-sub">{{ followDoneSummary }}</text>
 				<view class="follow-done-actions">
@@ -146,7 +146,9 @@ import {
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import MengAvatar from '@/components/meng-avatar.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
+import { MENG_VOICE, playMengmengVoiceOnce } from '@/utils/mengmeng-voice.js'
 
 function firstHanzi(text) {
 	const s = String(text || '').trim()
@@ -160,7 +162,8 @@ function delay(ms) {
 
 export default {
 	components: {
-		PinyinFourLinesRow
+		PinyinFourLinesRow,
+		MengAvatar
 	},
 	data() {
 		return {
@@ -254,6 +257,10 @@ export default {
 		await this.reloadLesson()
 		this.refreshProgress()
 		this.refreshLessonQuizBadge()
+		const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.hint)
+		playMengmengVoiceOnce(MENG_VOICE.LESSON_START, `meng_voice_lesson_${lessonKey}`).catch(
+			() => {}
+		)
 	},
 	methods: {
 		followStatusAt(i) {
@@ -729,7 +736,12 @@ export default {
 	min-height: 100vh;
 	padding: 0 0 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 32%, var(--meng-page-bg, #f6f3ec) 100%);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 32%,
+		var(--meng-page-bg) 100%
+	);
 }
 
 .lesson-hero {
@@ -1047,7 +1059,7 @@ export default {
 	margin-bottom: 18rpx;
 	padding: 16rpx 18rpx;
 	border-radius: 22rpx;
-	background: linear-gradient(135deg, #ffe8f2 0%, #fff0f8 100%);
+	background: linear-gradient(135deg, var(--meng-banner-soft) 0%, var(--meng-card) 100%);
 	border: 2rpx solid rgba(255, 120, 160, 0.35);
 }
 
@@ -1264,7 +1276,7 @@ export default {
 	line-height: 1.55;
 }
 
-.panda-tip {
+.meng-tip {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -1276,12 +1288,10 @@ export default {
 	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }
 
-.panda-emoji {
-	font-size: 32rpx;
-	margin-right: 10rpx;
-}
-
-.panda-msg {
+.meng-tip-msg {
+	flex: 1;
+	min-width: 0;
+	margin-left: 10rpx;
 	font-size: 24rpx;
 	color: var(--meng-tip-text, #7a5f2a);
 	font-weight: 500;

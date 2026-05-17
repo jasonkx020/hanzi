@@ -281,7 +281,7 @@
 					<image
 						class="pinyin-mascot"
 						:class="pinyinMascotJumping ? 'pinyin-mascot--jump' : ''"
-						src="/static/logo.png"
+						:src="mengMascotIp"
 						mode="aspectFit"
 					/>
 					<text class="pinyin-mascot-hint">点我停止</text>
@@ -397,6 +397,8 @@ import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import tabMain from '@/mixins/tab-main-page.js'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import { MENG_VOICE, playMengmengVoice, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
 
 export default {
 	mixins: [tabMain],
@@ -405,6 +407,7 @@ export default {
 	},
 	data() {
 		return {
+			mengMascotIp: MENG_ASSETS.ip.book,
 			tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
 			toneColumnLabels: ['一声', '二声', '三声', '四声'],
 			activeTab: '声母',
@@ -588,6 +591,7 @@ export default {
 	},
 	onShow() {
 		this.setTabBarIndex(1)
+		playMengmengVoiceOnce(MENG_VOICE.PINYIN_FOLLOW_START, 'meng_voice_pinyin_tab').catch(() => {})
 		this.narrator = getAudioNarrator()
 		this.recording = getFollowReadState().recording
 		this.followReadHistory = getFollowReadHistory()
@@ -597,6 +601,7 @@ export default {
 		})
 	},
 	onHide() {
+		stopMengmengVoice()
 		this.stopAutoReadChain()
 		cancelFollowReadAutoStop()
 		this.clearFollowReadStatusHint()
@@ -1311,6 +1316,7 @@ export default {
 					'ok',
 					2800
 				)
+				playMengmengVoice(MENG_VOICE.PINYIN_FOLLOW_GOOD, { minGapMs: 1200 }).catch(() => {})
 			} else {
 				this.lastScoreText = scoreRes.message || '跟读未通过，请再试一次'
 				const hint =
@@ -1346,7 +1352,12 @@ export default {
 	overflow: hidden;
 	padding-left: 0;
 	padding-right: 0;
-	background: var(--meng-page-bg);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 24%,
+		var(--meng-page-bg) 100%
+	);
 }
 
 .pinyin-dock {
@@ -1365,11 +1376,9 @@ export default {
 	margin: 12rpx 20rpx 16rpx;
 	padding: 22rpx 20rpx 16rpx;
 	border-radius: 40rpx 40rpx 28rpx 28rpx;
-	background: rgba(255, 255, 255, 0.9);
-	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow:
-		0 -12rpx 48rpx rgba(255, 150, 180, 0.1),
-		0 16rpx 40rpx var(--meng-shadow);
+	background: var(--meng-glass-bg);
+	border: 2rpx solid var(--meng-glass-border);
+	box-shadow: 0 -12rpx 48rpx var(--meng-shadow), 0 16rpx 40rpx var(--meng-shadow);
 	/* #ifdef H5 */
 	backdrop-filter: blur(24px);
 	/* #endif */
@@ -1713,7 +1722,7 @@ export default {
 	padding: 12rpx 14rpx;
 	background: var(--meng-banner-soft);
 	border-radius: 16rpx;
-	border: 2rpx solid rgba(255, 180, 200, 0.15);
+	border: 2rpx solid var(--meng-border-warm);
 }
 .legend-title {
 	display: block;

@@ -1,5 +1,17 @@
 <template>
-	<view class="page tab-root-page" :style="tabPageStyle">
+	<view class="page tab-root-page me-page" :style="tabPageStyle">
+		<view class="me-hero">
+			<image class="me-hero-bg" :src="assets.heroBg" mode="aspectFill" />
+			<view class="me-hero-overlay" />
+			<view class="me-hero-body">
+				<meng-avatar pose="wave" size="lg" />
+				<view class="me-hero-text">
+					<text class="me-hero-title">我的萌萌</text>
+					<text class="me-hero-sub">{{ summary }}</text>
+				</view>
+			</view>
+		</view>
+
 		<view class="stat-row">
 			<view class="stat-card">
 				<text class="stat-num">{{ learnedCount }}</text>
@@ -51,7 +63,6 @@
 				<text class="arrow">›</text>
 			</view>
 		</view>
-		<text class="foot">{{ summary }}</text>
 	</view>
 </template>
 
@@ -59,11 +70,21 @@
 import { formatCurriculumSummary, getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import MengAvatar from '@/components/meng-avatar.vue'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import {
+	MENG_VOICE,
+	playMengmengVoice,
+	playMengmengVoiceOnce,
+	stopMengmengVoice
+} from '@/utils/mengmeng-voice.js'
 
 export default {
+	components: { MengAvatar },
 	mixins: [tabMain],
 	data() {
 		return {
+			assets: MENG_ASSETS,
 			summary: '',
 			learnedCount: 0,
 			wrongCount: 0
@@ -74,6 +95,10 @@ export default {
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.learnedCount = getLearnedChars().length
 		this.wrongCount = getWrongChars().length
+		playMengmengVoiceOnce(MENG_VOICE.ME_WELCOME).catch(() => {})
+	},
+	onHide() {
+		stopMengmengVoice()
 	},
 	methods: {
 		goReport() {
@@ -92,6 +117,7 @@ export default {
 			uni.navigateTo({ url: '/pages/vip/vip' })
 		},
 		goStroke() {
+			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 160 }).catch(() => {})
 			uni.navigateTo({ url: '/pages/tools/stroke' })
 		},
 		goLearned() {
@@ -105,99 +131,146 @@ export default {
 </script>
 
 <style scoped>
-.page {
+.me-page {
 	min-height: 100vh;
 	background: var(--meng-page-bg);
-	padding: 32rpx;
+	padding: 0 32rpx 32rpx;
 	box-sizing: border-box;
+}
+
+.me-hero {
+	position: relative;
+	margin: 0 -32rpx 24rpx;
+	padding: 28rpx 32rpx 24rpx;
+	overflow: hidden;
+	min-height: 200rpx;
+}
+
+.me-hero-bg {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.me-hero-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: var(--meng-hero-overlay);
+}
+
+.me-hero-body {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.me-hero-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.me-hero-title {
+	display: block;
+	font-size: 36rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+	line-height: 1.25;
+}
+
+.me-hero-sub {
+	display: block;
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.4;
 }
 
 .stat-row {
 	display: flex;
 	flex-direction: row;
 	margin-bottom: 24rpx;
-	margin-top: 4rpx;
+	gap: 20rpx;
 }
 
 .stat-card {
 	flex: 1;
-	min-width: 0;
-	background: #fffef9;
-	border-radius: 16rpx;
-	padding: 18rpx;
+	background: var(--meng-card-solid);
+	border-radius: 24rpx;
+	padding: 28rpx 20rpx;
 	text-align: center;
-}
-
-.stat-card + .stat-card {
-	margin-left: 14rpx;
+	box-shadow: 0 8rpx 24rpx var(--meng-shadow);
+	border: 1rpx solid var(--meng-border);
 }
 
 .stat-num {
 	display: block;
-	font-size: 42rpx;
-	font-weight: 700;
-	color: var(--meng-text);
+	font-size: 44rpx;
+	font-weight: 800;
+	color: var(--meng-accent-solid);
+	line-height: 1.1;
 }
 
 .stat-label {
 	display: block;
-	font-size: 22rpx;
-	color: #8a8279;
-	margin-top: 6rpx;
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-muted);
 }
 
 .section-label {
-	font-size: 24rpx;
-	color: #8a8279;
+	font-size: 26rpx;
+	font-weight: 700;
+	color: var(--meng-text-muted);
 	margin-bottom: 12rpx;
-	padding-left: 8rpx;
+	padding-left: 4rpx;
 }
 
 .section-label-spaced {
-	margin-top: 36rpx;
+	margin-top: 28rpx;
 }
 
 .list {
-	background: #fffef9;
-	border-radius: 16rpx;
+	background: var(--meng-card-solid);
+	border-radius: 24rpx;
 	overflow: hidden;
+	border: 1rpx solid var(--meng-border);
+	box-shadow: 0 6rpx 20rpx var(--meng-shadow);
 }
 
 .list-gap {
-	margin-top: 24rpx;
+	margin-bottom: 8rpx;
 }
 
 .item {
 	display: flex;
-	justify-content: space-between;
+	flex-direction: row;
 	align-items: center;
+	justify-content: space-between;
 	padding: 28rpx 24rpx;
-	border-bottom: 1rpx solid #eee;
-	font-size: 28rpx;
+	font-size: 30rpx;
 	color: var(--meng-text);
+	border-bottom: 1rpx solid var(--meng-border);
 }
 
-.item-sub {
-	border-top: none;
-	padding-top: 20rpx;
-	padding-bottom: 20rpx;
+.item:last-child {
+	border-bottom: none;
 }
 
-.sub-indent {
-	padding-left: 24rpx;
-	font-size: 28rpx;
-	color: #4a453d;
+.item-sub .sub-indent {
+	padding-left: 8rpx;
+	color: var(--meng-text-secondary);
 }
 
 .arrow {
-	font-size: 32rpx;
-	color: #c4bcb4;
-}
-
-.foot {
-	display: block;
-	margin-top: 32rpx;
-	font-size: 22rpx;
-	color: #a8a29e;
+	font-size: 36rpx;
+	color: var(--meng-text-muted);
+	line-height: 1;
 }
 </style>

@@ -1,9 +1,10 @@
 <template>
 	<view class="page dict-page tab-root-page" :style="tabPageStyle">
 		<view class="dict-hero">
+			<image class="dict-hero-bg" :src="assets.heroBg" mode="aspectFill" />
 			<view class="dict-hero-sky" />
 			<view class="dict-hero-bar">
-				<image class="dict-hero-logo" src="/static/logo.png" mode="aspectFit" />
+				<meng-avatar class="dict-hero-logo" pose="curious" size="sm" />
 				<view class="dict-hero-meta">
 					<text class="dict-hero-title">查字</text>
 					<text class="dict-hero-sub">{{ curriculumChip }} · 字库 {{ chars.length }} 字</text>
@@ -164,7 +165,7 @@
 			</view>
 			</view>
 			<view v-else class="glass-card empty-card">
-				<image class="empty-logo" src="/static/logo.png" mode="aspectFit" />
+				<meng-avatar class="empty-logo" pose="curious" size="md" />
 				<text class="empty-title">查一查汉字</text>
 				<text class="empty-desc">
 					输入汉字看笔顺动画、拼音与组词；也可按部首从当前字库里找字。
@@ -176,7 +177,7 @@
 
 			<view class="glass-card detective" @click="playDetective">
 				<view class="detective-icon-wrap">
-					<text class="detective-emoji">🧸</text>
+					<meng-avatar pose="book" size="sm" />
 				</view>
 				<view class="detective-main">
 					<text class="detective-label">汉字小侦探</text>
@@ -236,6 +237,14 @@ import { DICTIONARY_RADICAL_PRESETS } from '@/data/dictionary-radical-presets.js
 import { charMatchesRadicalFilter } from '@/utils/dictionary-radical-filter.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import MengAvatar from '@/components/meng-avatar.vue'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import {
+	MENG_VOICE,
+	playMengmengVoice,
+	playMengmengVoiceOnce,
+	stopMengmengVoice
+} from '@/utils/mengmeng-voice.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
@@ -254,10 +263,12 @@ const DICTIONARY_STROKE_LENGTH = 148
 export default {
 	mixins: [tabMain],
 	components: {
-		PinyinFourLinesRow
+		PinyinFourLinesRow,
+		MengAvatar
 	},
 	data() {
 		return {
+			assets: MENG_ASSETS,
 			dictStrokeReady: false,
 			dictAnimFallback: false,
 			dictDrawWriter: null,
@@ -363,11 +374,14 @@ export default {
 		this.narrator = getAudioNarrator()
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.reloadDb()
+		playMengmengVoiceOnce(MENG_VOICE.DICT_SEARCH_HINT).catch(() => {})
 	},
 	onHide() {
+		stopMengmengVoice()
 		stopLocalPinyinAudio()
 	},
 	onUnload() {
+		stopMengmengVoice()
 		stopLocalPinyinAudio()
 		this.teardownDictStroke()
 	},
@@ -533,6 +547,7 @@ export default {
 				const entry = await getDictionaryEntry(c, lessonHint)
 				if (!entry) {
 					uni.showToast({ title: '未找到该字', icon: 'none' })
+					playMengmengVoice(MENG_VOICE.DICT_NOT_FOUND).catch(() => {})
 					return
 				}
 				this.activeEntry = entry
@@ -557,9 +572,14 @@ export default {
 				this.dictPinyinPlaying = false
 			}
 		},
+		/** 部首/字库点选后收起部首区，避免吸顶字表挡住下方田字格（输入框「查」不走此逻辑） */
+		collapseRadicalBrowse() {
+			this.radicalPanelOn = false
+		},
 		async selectGridChar(hanzi) {
 			const c = String(hanzi || '').trim().charAt(0)
 			if (!c) return
+			this.collapseRadicalBrowse()
 			const row = this.chars.find((r) => String(r.hanzi || '').trim() === c)
 			const fp = row?.pinyin ? String(row.pinyin).replace(/\s+/g, ' ').trim() : ''
 			if (!this.dictPinyinPlaying) {
@@ -613,9 +633,9 @@ export default {
 	box-sizing: border-box;
 	background: linear-gradient(
 		180deg,
-		#ffe8f2 0%,
-		#fff6fa 22%,
-		var(--meng-page-bg, #f6f3ec) 100%
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 28%,
+		var(--meng-page-bg) 100%
 	);
 }
 
@@ -623,30 +643,35 @@ export default {
 	position: relative;
 	padding: 12rpx 24rpx 20rpx;
 	overflow: hidden;
+	min-height: 140rpx;
+}
+
+.dict-hero-bg {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
 }
 
 .dict-hero-sky {
 	position: absolute;
 	inset: 0;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 220, 235, 0.4) 0%,
-		rgba(255, 255, 255, 0) 100%
-	);
+	z-index: 1;
+	background: var(--meng-hero-overlay);
 	pointer-events: none;
 }
 
 .dict-hero-bar {
 	position: relative;
-	z-index: 1;
+	z-index: 2;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 }
 
 .dict-hero-logo {
-	width: 72rpx;
-	height: 72rpx;
 	flex-shrink: 0;
 	margin-right: 16rpx;
 }
@@ -680,8 +705,8 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(255, 255, 255, 0.92);
-	box-shadow: 0 8rpx 24rpx rgba(255, 120, 160, 0.2);
+	background: var(--meng-glass-bg);
+	box-shadow: 0 8rpx 24rpx var(--meng-shadow);
 }
 
 .dict-hero-btn-icon {
@@ -764,7 +789,7 @@ export default {
 
 .quick-pill--on {
 	border-color: rgba(255, 140, 170, 0.65);
-	background: linear-gradient(135deg, #ffe8f2 0%, #fff0f8 100%);
+	background: linear-gradient(135deg, var(--meng-banner-soft) 0%, var(--meng-card) 100%);
 	box-shadow: 0 0 0 2rpx rgba(255, 107, 157, 0.2);
 }
 
@@ -1133,7 +1158,7 @@ export default {
 .explain-box {
 	margin-top: 14rpx;
 	padding: 16rpx 18rpx;
-	background: linear-gradient(135deg, #fff5f8 0%, #ffeef5 100%);
+	background: linear-gradient(135deg, var(--meng-card) 0%, var(--meng-banner-soft) 100%);
 	border-radius: 18rpx;
 	border: 2rpx solid rgba(255, 160, 190, 0.4);
 }
@@ -1207,8 +1232,6 @@ export default {
 }
 
 .empty-logo {
-	width: 88rpx;
-	height: 88rpx;
 	margin-bottom: 16rpx;
 }
 
@@ -1247,7 +1270,7 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: flex-start;
-	background: linear-gradient(135deg, #f3eeff 0%, #ffeef5 100%);
+	background: linear-gradient(135deg, var(--meng-leaf-soft) 0%, var(--meng-banner-soft) 100%);
 	border-color: rgba(200, 160, 255, 0.35);
 }
 

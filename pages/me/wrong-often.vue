@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page meng-page-shell meng-page-pad">
 		<view v-if="rows.length === 0" class="empty">
 			<text class="empty-title">暂无易错记录</text>
 			<text class="empty-tip">笔顺练习写错、或在生字页「记录一次出错」会增加计数；按 wrong_count 从高到低排序。</text>
@@ -55,9 +55,6 @@ export default {
 
 <style scoped>
 .page {
-	min-height: 100vh;
-	background: var(--meng-page-bg);
-	padding: 24rpx;
 	box-sizing: border-box;
 }
 

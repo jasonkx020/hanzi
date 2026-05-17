@@ -1,18 +1,21 @@
 <template>
 	<view class="daily-page">
-		<!-- <view class="daily-hero">
-			<image class="daily-hero-bg" src="/static/db.png" mode="aspectFill" />
+		<view class="daily-hero">
+			<image class="daily-hero-bg" :src="assets.heroBg" mode="aspectFill" />
 			<view class="daily-hero-sky" />
 			<view class="daily-hero-body">
-				<text class="daily-hero-title">每日一练</text>
-				<text class="daily-hero-sub">{{ volumeLabel }} · {{ headSubLine }}</text>
+				<meng-avatar pose="book" size="sm" />
+				<view class="daily-hero-text">
+					<text class="daily-hero-title">每日一练</text>
+					<text class="daily-hero-sub">{{ volumeLabel }} · {{ headSubLine }}</text>
+				</view>
 			</view>
-		</view> -->
+		</view>
 
-		<view class="daily-dock">
+		<view class="daily-dock" :class="{ 'daily-dock--with-foot': showDailyFoot }">
 			<view class="daily-dock-glass">
 				<view v-if="poolSize === 0" class="daily-empty">
-					<text class="daily-empty-emoji">📘</text>
+					<meng-avatar pose="curious" size="lg" />
 					<text class="daily-empty-title">暂无生字可练</text>
 					<text class="daily-empty-desc">切换年级字表，或通过课本同步学选课。</text>
 					<view class="daily-cta" @click="goCurriculum">
@@ -45,7 +48,7 @@
 					<text class="seg-hint">{{ activeSegmentSubtitle }}</text>
 
 					<view v-if="!segmentItems.length" class="daily-panel daily-panel-empty">
-						<text v-if="isWriteSegment">今日暂无练字推荐，可先完成复习或预习。</text>
+						<text v-if="isWriteSegment">今日暂无练字推荐，可先完成复习。</text>
 						<text v-else>这一段今天没有字，请切换其他标签。</text>
 					</view>
 
@@ -67,35 +70,15 @@
 								ref="inlineWrite"
 								:key="'daily-write-' + currentIndex + '-' + currentItem.hanzi"
 								compact
+								meng-voice
 								:initial-hanzi="currentItem.hanzi"
 								:initial-pinyin="writeItemPinyin"
 								canvas-id="daily-write-canvas"
+								@compact-complete="onInlineWriteComplete"
 							/>
-							<view class="daily-foot">
-								<view
-									class="foot-btn"
-									:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
-									@click="goPrev"
-								>
-									<text class="foot-btn-text">上一字</text>
-								</view>
-								<view class="foot-btn" @click="markLearned">
-									<text class="foot-btn-text">已学</text>
-								</view>
-								<view class="foot-btn" @click="markWrong">
-									<text class="foot-btn-text">易错</text>
-								</view>
-								<view
-									class="foot-btn foot-btn--primary"
-									:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
-									@click="goNext"
-								>
-									<text class="foot-btn-text foot-btn-text--on">下一字</text>
-								</view>
-							</view>
 						</view>
 
-						<!-- 复习 / 预习 -->
+						<!-- 复习认读 -->
 						<view v-else-if="detailEntry" class="daily-panel daily-panel--char">
 								<text
 									v-if="reasonLabel && !isWeakReason"
@@ -129,29 +112,7 @@
 									</view>
 
 									<view class="daily-char-side">
-										<!-- 预习：直接展示正确读音并自动播放 -->
-										<view v-if="isPreviewSegment" class="daily-py-preview">
-											<text class="daily-py-preview-label">正确读音</text>
-											<view class="daily-py-show" @click.stop="speakCurrentPinyin">
-												<view v-if="pinyinSyllableTokens.length" class="py-rows">
-													<view
-														v-for="(tok, ti) in pinyinSyllableTokens"
-														:key="'daily-py-' + ti"
-														class="py-row"
-													>
-														<pinyin-four-lines-row class="py-core" :syllables="[tok]" size="lg" />
-													</view>
-												</view>
-												<text v-else class="py-plain font-pinyin">{{ pinyinPlain }}</text>
-											</view>
-											<view class="daily-py-replay" @click.stop="speakCurrentPinyin">
-												<text class="daily-py-replay-text">🔊 再听一遍</text>
-											</view>
-											<text v-if="dailyStrokeHint" class="daily-stroke-hint">{{ dailyStrokeHint }}</text>
-										</view>
-
-										<!-- 复习：多选拼音确认 -->
-										<view v-else-if="isReviewSegment" class="daily-py-quiz">
+										<view class="daily-py-quiz">
 											<text class="daily-py-quiz-prompt">哪个读音对？</text>
 											<view v-if="pinyinChoices.length" class="daily-py-options">
 												<view
@@ -226,29 +187,6 @@
 										detailEntry.explainText
 									}}</text>
 								</view>
-
-								<view class="daily-foot">
-									<view
-										class="foot-btn"
-										:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
-										@click="goPrev"
-									>
-										<text class="foot-btn-text">上一字</text>
-									</view>
-									<view class="foot-btn" @click="markLearned">
-										<text class="foot-btn-text">已学</text>
-									</view>
-									<view class="foot-btn" @click="markWrong">
-										<text class="foot-btn-text">易错</text>
-									</view>
-									<view
-										class="foot-btn foot-btn--primary"
-										:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
-										@click="goNext"
-									>
-										<text class="foot-btn-text foot-btn-text--on">下一字</text>
-									</view>
-								</view>
 						</view>
 
 						<view v-else class="daily-panel daily-panel-empty">
@@ -257,9 +195,35 @@
 					</template>
 
 					<view v-if="!isWriteSegment" class="daily-tip">
-						<text class="daily-tip-text">🐼 {{ tipLine }}</text>
+						<view class="daily-tip-row">
+							<meng-avatar pose="happy" size="xs" />
+							<text class="daily-tip-text">{{ tipLine }}</text>
+						</view>
 					</view>
 				</template>
+			</view>
+		</view>
+
+		<view v-if="showDailyFoot" class="daily-foot-fixed">
+			<view
+				class="foot-btn"
+				:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
+				@click="goPrev"
+			>
+				<text class="foot-btn-text">上一字</text>
+			</view>
+			<view class="foot-btn" @click="markLearned">
+				<text class="foot-btn-text">已学</text>
+			</view>
+			<view class="foot-btn" @click="markWrong">
+				<text class="foot-btn-text">易错</text>
+			</view>
+			<view
+				class="foot-btn foot-btn--primary"
+				:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
+				@click="goNext"
+			>
+				<text class="foot-btn-text foot-btn-text--on">下一字</text>
 			</view>
 		</view>
 	</view>
@@ -287,17 +251,29 @@ import { startTextbookLearning } from '@/modules/literacy/usecases/start-textboo
 import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
 import WritePracticePanel from '@/pages/literacy/write-practice.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
-import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { buildDailyReviewPinyinChoices } from '@/utils/daily-pinyin-quiz.js'
+import MengAvatar from '@/components/meng-avatar.vue'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import {
+	MENG_VOICE,
+	getMengmengVoiceCopy,
+	playMengmengVoice,
+	stopMengmengVoice,
+	voiceIdForDailySegment,
+	waitForMengmengVoiceIdle
+} from '@/utils/mengmeng-voice.js'
+import { LESSON_AUDIO_GAP_MS, sleepMs } from '@/utils/lesson-mode-audio.js'
 
 export default {
 	components: {
 		PinyinFourLinesRow,
 		HanziStrokePlayer,
-		WritePracticePanel
+		WritePracticePanel,
+		MengAvatar
 	},
 	data() {
 		return {
+			assets: MENG_ASSETS,
 			plan: null,
 			dateKey: '',
 			poolSize: 0,
@@ -329,29 +305,28 @@ export default {
 			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
 			return seg?.items || []
 		},
+		showDailyFoot() {
+			return this.poolSize > 0 && this.segmentItems.length > 0
+		},
 		activeSegmentSubtitle() {
 			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
 			return seg?.subtitle || ''
 		},
 		headSubLine() {
-			if (!this.dateKey && !this.plan?.stats) return '复习 · 预习 · 练字'
+			if (!this.dateKey && !this.plan?.stats) return '复习 · 练字'
 			const parts = []
 			if (this.dateKey) parts.push(this.dateKey)
 			const st = this.plan?.stats
 			if (st) {
 				const bits = []
 				if (st.review + st.weak > 0) bits.push(`复习${st.review + st.weak}`)
-				if (st.preview > 0) bits.push(`预习${st.preview}`)
 				if (st.write > 0) bits.push(`练字${st.write}`)
 				if (bits.length) parts.push(bits.join(' '))
 			}
 			return parts.join(' · ')
 		},
-		isPreviewSegment() {
-			return this.activeSegment === 'preview'
-		},
 		strokeHintOnSide() {
-			return this.isPreviewSegment || this.isReviewSegment
+			return this.isReviewSegment
 		},
 		dailyStrokeHint() {
 			if (!this.strokeHintOnSide || !this.dailyStrokeNames.length) return ''
@@ -372,7 +347,6 @@ export default {
 		},
 		tipLine() {
 			if (this.isWriteSegment) return '按住田字格，按笔顺写完每一笔'
-			if (this.activeSegment === 'preview') return '先听正确读音，再看笔顺怎么写'
 			return '点对的拼音，再记一记这个字'
 		},
 		dailyQuizPoolItems() {
@@ -437,22 +411,13 @@ export default {
 			}
 			return out
 		},
-		pinyinPlain() {
-			const t = this.strokeDisplayPinyin
-			return t || '—'
-		},
-		pinyinSyllableTokens() {
-			const py = this.detailEntry?.pinyin || ''
-			const tokens = splitPinyinDisplayTokens(py)
-			if (tokens.length) return tokens
-			const s = this.strokeDisplayPinyin
-			if (s && s !== '—' && s !== '-') return [s]
-			return []
-		}
 	},
 	async onShow() {
 		this.narrator = getAudioNarrator()
 		await this.reload()
+		playMengmengVoice(voiceIdForDailySegment(this.activeSegment), { debounceMs: 400 }).catch(
+			() => {}
+		)
 	},
 	onHide() {
 		this.teardownMedia()
@@ -462,6 +427,7 @@ export default {
 	},
 	methods: {
 		teardownMedia() {
+			stopMengmengVoice()
 			stopLocalPinyinAudio()
 			stopStrokeOrderAudio()
 			this.stopStrokePlayer()
@@ -524,9 +490,10 @@ export default {
 			} else {
 				this.detailEntry = null
 			}
+			playMengmengVoice(voiceIdForDailySegment(key)).catch(() => {})
 		},
 		pickFirstSegmentWithItems() {
-			for (const key of ['review', 'preview', 'write']) {
+			for (const key of ['review', 'write']) {
 				const seg = this.planSegments.find((s) => s.key === key)
 				if (seg?.items?.length) {
 					this.activeSegment = key
@@ -557,7 +524,10 @@ export default {
 				uni.showToast({ title: '请先点选正确读音', icon: 'none' })
 				return
 			}
-			if (this.currentIndex >= this.segmentItems.length - 1) return
+			if (this.currentIndex >= this.segmentItems.length - 1) {
+				playMengmengVoice(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 }).catch(() => {})
+				return
+			}
 			this.stopStrokePlayer()
 			this.currentIndex += 1
 			if (!this.isWriteSegment) {
@@ -595,6 +565,9 @@ export default {
 			this.pinyinQuizPassed = !choices.length
 			this.pinyinPickId = ''
 			this.pinyinQuizFeedback = choices.length ? '点一个你认为对的读音' : ''
+			if (choices.length) {
+				playMengmengVoice(MENG_VOICE.DAILY_QUIZ_PROMPT, { debounceMs: 350 }).catch(() => {})
+			}
 		},
 		pinyinOptClass(opt) {
 			if (!this.pinyinPickId) return ''
@@ -620,26 +593,32 @@ export default {
 				narrator: this.narrator,
 				...DICTIONARY_LOCAL_PINYIN_OPTS
 			})
+			stopLocalPinyinAudio()
+			await sleepMs(LESSON_AUDIO_GAP_MS)
 			if (opt.isCorrect) {
 				this.pinyinQuizPassed = true
-				this.pinyinQuizFeedback = '对了！就是这个读音'
-				uni.showToast({ title: '读对了', icon: 'success', duration: 1200 })
+				this.pinyinQuizFeedback =
+					getMengmengVoiceCopy(MENG_VOICE.DAILY_QUIZ_CORRECT) || '太棒了，读对了！'
+				await playMengmengVoice(MENG_VOICE.DAILY_QUIZ_CORRECT)
 			} else {
 				this.pinyinQuizFeedback = `再试试，正确是「${this.pinyinCorrect}」`
-				uni.showToast({ title: '再想想', icon: 'none' })
+				await playMengmengVoice(MENG_VOICE.DAILY_QUIZ_WRONG)
 				recordCharWrong(this.detailEntry.hanzi, 1, getCurriculumPrefs())
+			}
+		},
+		async replayPinyinWithVoice() {
+			await playMengmengVoice(MENG_VOICE.DAILY_PINYIN_REPLAY, { minGapMs: 600 })
+			await sleepMs(LESSON_AUDIO_GAP_MS)
+			await this.speakCurrentPinyin()
+		},
+		onInlineWriteComplete() {
+			if (this.currentIndex >= this.segmentItems.length - 1) {
+				playMengmengVoice(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 }).catch(() => {})
 			}
 		},
 		applySegmentPinyinMode() {
 			if (!this.detailEntry || this.activeSegment === 'write') return
-			if (this.isPreviewSegment) {
-				this.resetPinyinQuiz()
-				this.$nextTick(() => {
-					setTimeout(() => {
-						void this.speakCurrentPinyin()
-					}, 420)
-				})
-			} else if (this.isReviewSegment) {
+			if (this.isReviewSegment) {
 				this.setupReviewPinyinChoices()
 			} else {
 				this.resetPinyinQuiz()
@@ -698,7 +677,7 @@ export default {
 		},
 		async onTapPlayPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
-			await this.speakCurrentPinyin()
+			await this.replayPinyinWithVoice()
 		},
 		async speakCurrentPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
@@ -735,7 +714,12 @@ export default {
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: linear-gradient(180deg, #ffe8f2 0%, #fff6fa 32%, var(--meng-page-bg) 100%);
+	background: linear-gradient(
+		180deg,
+		var(--meng-cream) 0%,
+		var(--meng-page-bg) 32%,
+		var(--meng-page-bg) 100%
+	);
 }
 
 .daily-hero {
@@ -757,12 +741,7 @@ export default {
 	position: absolute;
 	inset: 0;
 	z-index: 1;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 220, 235, 0.45) 0%,
-		rgba(255, 245, 250, 0.15) 70%,
-		transparent 100%
-	);
+	background: var(--meng-hero-overlay);
 	pointer-events: none;
 }
 
@@ -770,35 +749,43 @@ export default {
 	position: relative;
 	z-index: 2;
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+	gap: 16rpx;
 	height: 100%;
 	padding: 16rpx 32rpx;
 	box-sizing: border-box;
 }
 
+.daily-hero-text {
+	flex: 1;
+	min-width: 0;
+}
+
 .daily-hero-title {
-	font-size: 38rpx;
+	font-size: 36rpx;
 	font-weight: 800;
-	color: #fff;
-	text-shadow: 0 4rpx 16rpx rgba(200, 80, 120, 0.45);
-	letter-spacing: 4rpx;
+	color: var(--meng-text);
+	letter-spacing: 2rpx;
 }
 
 .daily-hero-sub {
 	margin-top: 8rpx;
 	font-size: 22rpx;
-	color: rgba(255, 255, 255, 0.95);
-	text-shadow: 0 2rpx 8rpx rgba(160, 60, 90, 0.35);
-	text-align: center;
+	color: var(--meng-text-secondary);
 	line-height: 1.35;
 }
 
 .daily-dock {
 	flex: 1;
 	margin-top: -28rpx;
-	padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+	padding-bottom: 20rpx;
+}
+
+.daily-dock--with-foot {
+	padding-bottom: calc(152rpx + constant(safe-area-inset-bottom));
+	padding-bottom: calc(152rpx + env(safe-area-inset-bottom));
 }
 
 .daily-dock-glass {
@@ -807,9 +794,7 @@ export default {
 	border-radius: 36rpx 36rpx 28rpx 28rpx;
 	background: rgba(255, 255, 255, 0.9);
 	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow:
-		0 -12rpx 48rpx rgba(255, 150, 180, 0.1),
-		0 16rpx 40rpx var(--meng-shadow);
+	box-shadow: 0 -12rpx 48rpx var(--meng-shadow), 0 16rpx 40rpx var(--meng-shadow);
 }
 
 .daily-lesson-line {
@@ -894,7 +879,7 @@ export default {
 .daily-bar-fill {
 	height: 100%;
 	border-radius: 999rpx;
-	background: linear-gradient(90deg, var(--meng-accent-from) 0%, #ff8aab 100%);
+	background: linear-gradient(90deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
 	transition: width 0.2s ease;
 }
 
@@ -988,11 +973,6 @@ export default {
 	background: var(--meng-leaf-soft);
 }
 
-.daily-tag--preview {
-	color: #5a6b8a;
-	background: #eef3ff;
-}
-
 .daily-char-layout {
 	display: flex;
 	flex-direction: row;
@@ -1024,37 +1004,6 @@ export default {
 	flex: 1;
 	min-width: 0;
 	padding-top: 8rpx;
-}
-
-.daily-py-preview {
-	width: 100%;
-}
-
-.daily-py-preview-label {
-	display: block;
-	font-size: 22rpx;
-	font-weight: 600;
-	color: #3d6b4a;
-	margin-bottom: 8rpx;
-}
-
-.daily-py-show {
-	width: 100%;
-}
-
-.daily-py-replay {
-	margin-top: 12rpx;
-	padding: 10rpx 16rpx;
-	border-radius: 999rpx;
-	background: rgba(255, 240, 248, 0.95);
-	border: 1rpx solid rgba(255, 180, 200, 0.35);
-	display: inline-flex;
-}
-
-.daily-py-replay-text {
-	font-size: 24rpx;
-	color: #c44d6a;
-	font-weight: 600;
 }
 
 .daily-stroke-hint {
@@ -1136,24 +1085,8 @@ export default {
 	line-height: 1.4;
 }
 
-.py-rows {
-	display: flex;
-	flex-direction: column;
-	gap: 4rpx;
-}
-
-.py-row {
-	width: 100%;
-}
-
 .py-core {
 	width: 100%;
-}
-
-.py-plain {
-	font-size: 44rpx;
-	line-height: 1.2;
-	color: #3d6b4a;
 }
 
 .daily-quick-pair {
@@ -1290,21 +1223,30 @@ export default {
 	color: var(--meng-text-secondary);
 }
 
-.daily-panel--write .daily-foot {
-	margin-top: 14rpx;
-}
-
-.daily-foot {
+.daily-foot-fixed {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 120;
 	display: flex;
 	flex-direction: row;
-	gap: 10rpx;
-	margin-top: 16rpx;
+	align-items: stretch;
+	gap: 12rpx;
+	padding: 14rpx 20rpx;
+	padding-bottom: calc(14rpx + constant(safe-area-inset-bottom));
+	padding-bottom: calc(14rpx + env(safe-area-inset-bottom));
+	box-sizing: border-box;
+	background: rgba(255, 253, 248, 0.97);
+	border-top: 1rpx solid var(--meng-border-warm, #e3d9c8);
+	box-shadow: 0 -10rpx 36rpx var(--meng-shadow, rgba(44, 36, 25, 0.1));
 }
 
 .foot-btn {
 	flex: 1;
-	height: 72rpx;
-	border-radius: 999rpx;
+	min-width: 0;
+	height: 92rpx;
+	border-radius: 22rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1324,9 +1266,10 @@ export default {
 }
 
 .foot-btn-text {
-	font-size: 24rpx;
-	font-weight: 600;
+	font-size: 30rpx;
+	font-weight: 700;
 	color: #c44d6a;
+	line-height: 1.2;
 }
 
 .foot-btn-text--on {
@@ -1337,11 +1280,19 @@ export default {
 	margin-top: 8rpx;
 	padding: 14rpx 16rpx;
 	border-radius: 20rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
-	border: 1rpx solid rgba(255, 200, 180, 0.35);
+	background: var(--meng-tip-bg);
+	border: 1rpx solid var(--meng-border-warm);
+}
+
+.daily-tip-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
 }
 
 .daily-tip-text {
+	flex: 1;
 	font-size: 24rpx;
 	color: var(--meng-tip-text);
 	line-height: 1.45;

@@ -48,30 +48,72 @@ function getAudioContext() {
 	return Ctx ? new Ctx() : null
 }
 
-/**
- * @param {string} filePath
- * @returns {Promise<ArrayBuffer>}
- */
-export function readFileAsArrayBuffer(filePath) {
+function stripFileScheme(p) {
+	return String(p || '').replace(/^file:\/\//i, '')
+}
+
+/** 本地路径多种写法（录音 tempFilePath、_doc、file://） */
+function expandLocalReadPaths(filePath) {
+	const raw = String(filePath || '').trim()
+	if (!raw) return []
+	const out = []
+	const push = (p) => {
+		const s = String(p || '').trim()
+		if (s && out.indexOf(s) === -1) out.push(s)
+	}
+	push(raw)
+	if (/^file:\/\//i.test(raw)) {
+		push(stripFileScheme(raw))
+	} else if (/^\//.test(raw)) {
+		push(`file://${raw}`)
+	}
+	try {
+		if (typeof plus !== 'undefined' && plus.io?.convertLocalFileSystemURL) {
+			const converted = plus.io.convertLocalFileSystemURL(raw)
+			push(converted)
+			push(stripFileScheme(converted))
+		}
+	} catch (_) {}
+	return out
+}
+
+function readUniFsArrayBuffer(fs, path) {
 	return new Promise((resolve, reject) => {
-		if (!filePath) {
-			reject(new Error('empty path'))
-			return
-		}
-		const fs = uni.getFileSystemManager?.()
-		if (!fs) {
-			reject(new Error('no filesystem'))
-			return
-		}
 		fs.readFile({
-			filePath,
-			success: (res) => resolve(res.data),
+			filePath: path,
+			success: (res) => {
+				const data = res?.data
+				if (data instanceof ArrayBuffer) resolve(data)
+				else reject(new Error('readFile not arraybuffer'))
+			},
 			fail: (err) => reject(err || new Error('readFile fail'))
 		})
 	})
 }
 
-// #ifdef APP-PLUS
+function dataUrlToArrayBuffer(dataUrl) {
+	const s = String(dataUrl || '')
+	const i = s.indexOf(',')
+	const b64 = i >= 0 ? s.slice(i + 1) : s
+	// #ifdef APP-PLUS
+	if (typeof plus !== 'undefined' && plus.base64?.decode) {
+		const bin = plus.base64.decode(b64)
+		const buf = new ArrayBuffer(bin.length)
+		const view = new Uint8Array(buf)
+		for (let j = 0; j < bin.length; j++) view[j] = bin.charCodeAt(j) & 0xff
+		return buf
+	}
+	// #endif
+	if (typeof atob === 'function') {
+		const bin = atob(b64)
+		const buf = new ArrayBuffer(bin.length)
+		const view = new Uint8Array(buf)
+		for (let j = 0; j < bin.length; j++) view[j] = bin.charCodeAt(j) & 0xff
+		return buf
+	}
+	throw new Error('base64 decode unavailable')
+}
+
 function readPlusIoFileAsArrayBuffer(absPath) {
 	return new Promise((resolve, reject) => {
 		if (typeof plus === 'undefined' || !plus.io?.resolveLocalFileSystemURL) {
@@ -85,12 +127,27 @@ function readPlusIoFileAsArrayBuffer(absPath) {
 					(file) => {
 						const reader = new plus.io.FileReader()
 						reader.onloadend = (evt) => {
-							const r = evt?.target?.result
-							if (r instanceof ArrayBuffer) resolve(r)
-							else reject(new Error('plus.io read not arraybuffer'))
+							try {
+								const r = evt?.target?.result
+								if (r instanceof ArrayBuffer) {
+									resolve(r)
+									return
+								}
+								if (typeof r === 'string' && r.indexOf('base64') >= 0) {
+									resolve(dataUrlToArrayBuffer(r))
+									return
+								}
+								reject(new Error('plus.io read not arraybuffer'))
+							} catch (e) {
+								reject(e)
+							}
 						}
 						reader.onerror = () => reject(new Error('plus.io read error'))
-						reader.readAsArrayBuffer(file)
+						if (typeof reader.readAsArrayBuffer === 'function') {
+							reader.readAsArrayBuffer(file)
+						} else {
+							reader.readAsDataURL(file)
+						}
 					},
 					(err) => reject(err || new Error('entry.file fail'))
 				)
@@ -99,7 +156,41 @@ function readPlusIoFileAsArrayBuffer(absPath) {
 		)
 	})
 }
-// #endif
+
+/**
+ * 读取本地文件（录音临时文件、App static 等）
+ * App 端无 getFileSystemManager，走 plus.io。
+ * @param {string} filePath
+ * @returns {Promise<ArrayBuffer>}
+ */
+export async function readFileAsArrayBuffer(filePath) {
+	const paths = expandLocalReadPaths(filePath)
+	if (!paths.length) throw new Error('empty path')
+
+	let lastErr = null
+	const fs = typeof uni !== 'undefined' ? uni.getFileSystemManager?.() : null
+	if (fs) {
+		for (const p of paths) {
+			try {
+				return await readUniFsArrayBuffer(fs, p)
+			} catch (e) {
+				lastErr = e
+			}
+		}
+	}
+
+	if (typeof plus !== 'undefined' && plus.io?.resolveLocalFileSystemURL) {
+		for (const p of paths) {
+			try {
+				return await readPlusIoFileAsArrayBuffer(p)
+			} catch (e) {
+				lastErr = e
+			}
+		}
+	}
+
+	throw lastErr || new Error(fs ? 'readFile fail' : 'no filesystem')
+}
 
 /** App 打包 static 资源读入 */
 export async function readAppStaticAsArrayBuffer(webPath) {
