@@ -1,16 +1,18 @@
 <template>
 	<view class="page tb-page">
 		<view class="tb-hero">
+			<image class="meng-hero-bg-layer" src="/static/mengmeng/hero-bg.png" mode="aspectFill" />
+			<view class="meng-hero-sky-layer" />
 			<view class="tb-hero-sky" />
-			<view class="tb-hero-card">
-				<view class="tb-hero-head">
-					<text class="tb-hero-title">课本同步学</text>
-					<view class="tb-hero-tools">
-						<view class="tb-circle-btn" @click="reload">
-							<text class="tb-circle-icon">🔄</text>
-						</view>
+			<meng-status-bar-spacer :height-px="statusBarPx" />
+			<meng-page-nav title="课本同步学" class="tb-nav" :inset-status-bar="false">
+				<template #right>
+					<view class="tb-circle-btn tb-circle-btn--nav" @click="reload">
+						<text class="tb-circle-icon">🔄</text>
 					</view>
-				</view>
+				</template>
+			</meng-page-nav>
+			<view class="tb-hero-card">
 				<view class="tb-hero-body">
 					<view class="tb-cover-wrap" @click="openCurriculumPicker">
 						<image
@@ -34,7 +36,7 @@
 			</view>
 		</view>
 
-		<view class="tb-sheet">
+		<view v-if="!curriculumPickerRequired" class="tb-sheet">
 		<view v-if="textbookTexts.length" class="textbook-panel">
 			<view class="textbook-panel-head">
 				<text class="textbook-panel-title">人教版（部编）课文原文</text>
@@ -88,11 +90,25 @@
 		</view>
 		</view>
 
-		<view v-if="showCurriculumPicker" class="picker-mask" @click="closeCurriculumPicker">
+		<view
+			v-if="showCurriculumPicker"
+			class="picker-mask"
+			:class="{ 'picker-mask--required': curriculumPickerRequired }"
+			@click="onPickerMaskTap"
+		>
 			<view class="picker-panel" @click.stop>
 				<view class="picker-head">
-					<text class="picker-title">选择教材</text>
-					<text class="picker-close" @click="closeCurriculumPicker">×</text>
+					<view class="picker-head-text">
+						<text class="picker-title">选择教材</text>
+						<text v-if="curriculumPickerRequired" class="picker-required-hint">
+							首次进入请先选一本教材，选好后才能使用课本同步
+						</text>
+					</view>
+					<text
+						v-if="!curriculumPickerRequired"
+						class="picker-close"
+						@click="closeCurriculumPicker"
+					>×</text>
 				</view>
 
 				<view class="version-row">
@@ -143,7 +159,12 @@
 
 <script>
 import { TEXTBOOK_VERSION_IDS, COL_PROGRESS, LIST_TYPE } from '@/constants/curriculum-schema.js'
-import { getCurriculumPrefs, setCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
+import {
+	getCurriculumPrefs,
+	setCurriculumPrefs,
+	formatCurriculumSummary,
+	hasUserCurriculumPrefsSaved
+} from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
@@ -153,6 +174,9 @@ import {
 } from '@/utils/renjiao-textbook-loader.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
+import MengPageNav from '@/components/meng-page-nav.vue'
+import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
+import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 
 const COVER_BOOKS = [
 	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
@@ -195,14 +219,18 @@ function rawCoverPathForPrefs(prefs) {
 }
 
 export default {
+	components: { MengPageNav, MengStatusBarSpacer },
 	data() {
 		return {
+			statusBarPx: 44,
 			summary: '',
 			chars: [],
 			lessons: [],
 			loading: false,
 			textbookTexts: [],
 			showCurriculumPicker: false,
+			/** 未保存过教材偏好：须选一本教材后才能使用本页 */
+			curriculumPickerRequired: false,
 			modalVersion: '统编(人教版)',
 			versionOptions: VERSION_OPTIONS,
 			/** 顶部「换教材」按钮：当前册封面（完整显示，aspectFit） */
@@ -244,9 +272,11 @@ export default {
 		}
 	},
 	onShow() {
-		this.reload()
+		this.statusBarPx = getMengNavMetrics().statusBarPx
+		this.ensureCurriculumSelected()
 	},
 	created() {
+		this.statusBarPx = getMengNavMetrics().statusBarPx
 		this.syncHeroBookCover()
 	},
 	methods: {
@@ -262,6 +292,10 @@ export default {
 			this.heroBookCoverSrc = this.resolveAppStaticImg(rawCoverPathForPrefs(prefs))
 		},
 		async reload() {
+			if (!hasUserCurriculumPrefsSaved()) {
+				this.ensureCurriculumSelected()
+				return
+			}
 			if (this.loading) return
 			this.loading = true
 			try {
@@ -348,12 +382,30 @@ export default {
 				this.$set(lesson, 'doneBadgeText', text)
 			}
 		},
+		ensureCurriculumSelected() {
+			if (!hasUserCurriculumPrefsSaved()) {
+				this.curriculumPickerRequired = true
+				this.lessons = []
+				this.chars = []
+				this.textbookTexts = []
+				this.summary = '请先选择教材'
+				this.openCurriculumPicker()
+				return
+			}
+			this.curriculumPickerRequired = false
+			this.reload()
+		},
 		openCurriculumPicker() {
 			const p = getCurriculumPrefs()
 			this.modalVersion = p.textbook_version_id || TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
 			this.showCurriculumPicker = true
 		},
+		onPickerMaskTap() {
+			if (this.curriculumPickerRequired) return
+			this.closeCurriculumPicker()
+		},
 		closeCurriculumPicker() {
+			if (this.curriculumPickerRequired) return
 			this.showCurriculumPicker = false
 		},
 		chooseVersion(versionId) {
@@ -365,9 +417,14 @@ export default {
 				grade: book.grade,
 				semester: book.semester
 			})
-			this.closeCurriculumPicker()
+			const wasRequired = this.curriculumPickerRequired
+			this.curriculumPickerRequired = false
+			this.showCurriculumPicker = false
 			await this.reload()
-			uni.showToast({ title: `已切换到${book.label}`, icon: 'success' })
+			uni.showToast({
+				title: wasRequired ? `已选择${book.label}` : `已切换到${book.label}`,
+				icon: 'success'
+			})
 		},
 		openText(item, idx) {
 			const title = item && item.title ? item.title : `第${idx + 1}篇`
@@ -383,6 +440,10 @@ export default {
 			uni.switchTab({ url: '/pages/home/home' })
 		},
 		openLesson(lesson) {
+			if (this.curriculumPickerRequired) {
+				this.openCurriculumPicker()
+				return
+			}
 			if (typeof lesson.rjIdx === 'number') {
 				uni.navigateTo({
 					url: `/pages/literacy/lesson?rjLesson=${lesson.rjIdx}`
@@ -402,19 +463,27 @@ export default {
 	min-height: 100vh;
 	padding: 0 0 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 32%,
-		var(--meng-page-bg) 100%
-	);
+	background: var(--meng-page-bg);
 }
 
 /* —— 顶区（对齐首页 Hero 粉奶油氛围）—— */
 .tb-hero {
 	position: relative;
-	padding: 16rpx 20rpx 8rpx;
+	padding: 0 20rpx 36rpx;
 	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.tb-nav {
+	position: relative;
+	z-index: 3;
+	margin-left: -20rpx;
+	margin-right: -20rpx;
+}
+
+.tb-circle-btn--nav {
+	width: 64rpx;
+	height: 64rpx;
 }
 
 .tb-hero-sky {
@@ -423,11 +492,7 @@ export default {
 	right: 0;
 	top: 0;
 	height: 280rpx;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 220, 235, 0.45) 0%,
-		rgba(255, 255, 255, 0) 100%
-	);
+	background: rgba(255, 255, 255, 0);
 	pointer-events: none;
 }
 
@@ -494,7 +559,7 @@ export default {
 	padding-bottom: 200rpx;
 	margin-right: 22rpx;
 	border-radius: 18rpx;
-	background: linear-gradient(160deg, #f3ebe0 0%, #fff8f0 100%);
+	background: #fff8f0;
 	overflow: hidden;
 	box-shadow: 0 10rpx 28rpx rgba(44, 36, 25, 0.1);
 	border: 2rpx solid rgba(255, 200, 180, 0.35);
@@ -518,7 +583,7 @@ export default {
 	font-size: 20rpx;
 	font-weight: 700;
 	color: #fff;
-	background: linear-gradient(180deg, transparent 0%, rgba(196, 77, 106, 0.75) 100%);
+	background: rgba(196, 77, 106, 0.35);
 }
 
 .tb-hero-meta {
@@ -539,7 +604,7 @@ export default {
 	margin-top: 14rpx;
 	padding: 10rpx 18rpx;
 	border-radius: 999rpx;
-	background: linear-gradient(135deg, #e8f8ee 0%, #d4f0dc 100%);
+	background: #d4f0dc;
 	border: 2rpx solid rgba(111, 186, 125, 0.35);
 }
 
@@ -556,7 +621,9 @@ export default {
 
 /* —— 主内容玻璃区（对齐首页 dock-glass）—— */
 .tb-sheet {
-	margin: 0 20rpx;
+	position: relative;
+	z-index: 2;
+	margin: -32rpx 20rpx 0;
 	padding: 24rpx 22rpx 20rpx;
 	border-radius: 36rpx 36rpx 28rpx 28rpx;
 	background: rgba(255, 255, 255, 0.88);
@@ -569,7 +636,7 @@ export default {
 
 .textbook-panel {
 	margin-bottom: 20rpx;
-	background: linear-gradient(135deg, #fffaf5 0%, #fff5f8 100%);
+	background: #fff5f8;
 	border-radius: 22rpx;
 	padding: 18rpx 20rpx;
 	border: 1rpx solid rgba(255, 200, 180, 0.35);
@@ -675,7 +742,7 @@ export default {
 	font-size: 26rpx;
 	font-weight: 800;
 	color: #fff;
-	background: linear-gradient(160deg, #b8e8c8 0%, #7fd49a 100%);
+	background: #7fd49a;
 	border-radius: 16rpx;
 	margin-right: 18rpx;
 	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.28);
@@ -734,7 +801,7 @@ export default {
 
 .empty-box {
 	padding: 48rpx 28rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	background: #fff0f5;
 	border-radius: 24rpx;
 	border: 2rpx dashed rgba(255, 180, 200, 0.45);
 	text-align: center;
@@ -766,7 +833,7 @@ export default {
 	align-items: flex-start;
 	margin-top: 8rpx;
 	padding: 16rpx 18rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	background: #fff0f5;
 	border-radius: 20rpx;
 	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }
@@ -797,11 +864,15 @@ export default {
 	z-index: 999;
 }
 
+.picker-mask--required {
+	background: rgba(0, 0, 0, 0.52);
+}
+
 .picker-panel {
 	width: 100%;
 	max-height: 1200rpx;
 	max-height: 78vh;
-	background: linear-gradient(180deg, #fffaf8 0%, #fff6fa 100%);
+	background: #fff6fa;
 	border-radius: 36rpx 36rpx 0 0;
 	padding: 28rpx 24rpx 32rpx;
 	box-sizing: border-box;
@@ -810,15 +881,30 @@ export default {
 
 .picker-head {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	margin-bottom: 20rpx;
+	gap: 16rpx;
+}
+
+.picker-head-text {
+	flex: 1;
+	min-width: 0;
 }
 
 .picker-title {
+	display: block;
 	font-size: 32rpx;
 	font-weight: 700;
 	color: var(--meng-text);
+}
+
+.picker-required-hint {
+	display: block;
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.45;
 }
 
 .picker-close {
@@ -851,7 +937,7 @@ export default {
 }
 
 .version-chip-on {
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: var(--meng-chip-active-border, rgba(255, 107, 66, 0.42));
 	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.18);
 }

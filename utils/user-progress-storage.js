@@ -2,8 +2,9 @@
  * 用户生字进度本地存储（uni.storage），字段与 curriculum-schema COL_PROGRESS 一致。
  */
 
-import { STORAGE_KEYS, COL_PROGRESS } from '@/constants/curriculum-schema.js'
+import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { getUserCharProgressStorageKey } from '@/utils/learning-profile-storage.js'
 
 function semesterNorm(s) {
 	return s === '下' ? '下' : '上'
@@ -15,7 +16,7 @@ export function makeProgressKey(textbookVersionId, grade, semester, hanzi) {
 
 function readMap() {
 	try {
-		const raw = uni.getStorageSync(STORAGE_KEYS.USER_CHAR_PROGRESS)
+		const raw = uni.getStorageSync(getUserCharProgressStorageKey())
 		if (raw && typeof raw === 'object' && !Array.isArray(raw)) return { ...raw }
 	} catch (e) {
 		console.warn('[user-progress-storage] readMap', e)
@@ -25,7 +26,7 @@ function readMap() {
 
 function writeMap(map) {
 	try {
-		uni.setStorageSync(STORAGE_KEYS.USER_CHAR_PROGRESS, map)
+		uni.setStorageSync(getUserCharProgressStorageKey(), map)
 	} catch (e) {
 		console.warn('[user-progress-storage] writeMap', e)
 	}

@@ -1,4 +1,4 @@
-/** 会员档位展示（实际金额与 applets / 微信商户配置保持一致后替换） */
+/** 订阅会员档位 */
 export const VIP_PLANS = [
 	{
 		id: 'vip_month',
@@ -6,7 +6,8 @@ export const VIP_PLANS = [
 		priceYuan: 18,
 		durationDays: 31,
 		tag: '',
-		highlight: false
+		highlight: false,
+		kind: 'subscription'
 	},
 	{
 		id: 'vip_quarter',
@@ -14,7 +15,8 @@ export const VIP_PLANS = [
 		priceYuan: 48,
 		durationDays: 93,
 		tag: '省心之选',
-		highlight: true
+		highlight: true,
+		kind: 'subscription'
 	},
 	{
 		id: 'vip_year',
@@ -22,15 +24,63 @@ export const VIP_PLANS = [
 		priceYuan: 128,
 		durationDays: 372,
 		tag: '均价更低',
-		highlight: false
+		highlight: false,
+		kind: 'subscription'
+	},
+	{
+		id: 'vip_family_year',
+		name: '家庭年卡',
+		priceYuan: 168,
+		durationDays: 372,
+		tag: '2 个孩子',
+		highlight: false,
+		kind: 'subscription',
+		familyPlan: true
 	}
 ]
 
+/** 年级字库永久解锁（单次 IAP） */
+export const GRADE_IAP_PRODUCTS = [1, 2, 3, 4, 5, 6].map((grade) => ({
+	id: `grade_pack_${grade}`,
+	name: `${grade} 年级字库`,
+	priceYuan: 12,
+	kind: 'grade_pack',
+	grade,
+	durationDays: 0,
+	tag: '永久',
+	highlight: false
+}))
+
+/** 期末复习字包 */
+export const REVIEW_IAP_PRODUCT = {
+	id: 'review_pack_final',
+	name: '期末复习 200 字包',
+	priceYuan: 6,
+	kind: 'review_pack',
+	durationDays: 0,
+	tag: '复习',
+	highlight: false
+}
+
+export const IAP_PRODUCTS = [...GRADE_IAP_PRODUCTS, REVIEW_IAP_PRODUCT]
+
+export const ALL_VIP_PRODUCTS = [...VIP_PLANS, ...IAP_PRODUCTS]
+
+/** @param {string} productId */
+export function findVipProduct(productId) {
+	return ALL_VIP_PRODUCTS.find((p) => p.id === productId) || null
+}
+
 /** 免费版与会员版对比（面向家长说明） */
 export const VIP_COMPARE = [
-	{ label: '字库范围', free: '当前年级每日限额练习', vip: '1～6 年级上下册按需切换' },
-	{ label: '笔顺练习', free: '演示次数有限', vip: '动画 / 描红不限次' },
-	{ label: '复习巩固', free: '随机少量', vip: '易错字夹、复习计划、报表' },
-	{ label: '导出', free: '—', vip: '导出生字清单（可打印）' },
+	{ label: '字库范围', free: '当前年级册别', vip: '1～6 年级上下册任意切换' },
+	{ label: '笔顺/写字', free: '每日少量次数', vip: '动画、描红、写字不限' },
+	{ label: '拼音跟读', free: '每日 5 次评分', vip: '跟读评分与自动连读不限' },
+	{ label: '每日一练', free: '每日 1 轮', vip: '多轮练习与弱项计划' },
+	{ label: '趣味营/拼读', free: '每日有限次', vip: '气球营、换一批不限' },
+	{ label: '查字', free: '每日约 18 次', vip: '不限次' },
+	{ label: '易错复习', free: '仅展示前 5 个', vip: '完整易错字夹' },
+	{ label: '导出', free: '—', vip: '生字清单与周报告可分享' },
+	{ label: '家庭档案', free: '—', vip: '家庭年卡支持 2 位孩子' },
 	{ label: '展示', free: '含教育类推荐位', vip: '去除第三方推广' }
 ]

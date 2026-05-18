@@ -462,7 +462,7 @@ export default {
 	width: 88rpx;
 	height: 88rpx;
 	border-radius: 50%;
-	background: linear-gradient(145deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
 	box-shadow: 0 8rpx 24rpx var(--meng-shadow-warm);
 	display: flex;
 	align-items: center;
@@ -471,7 +471,7 @@ export default {
 }
 
 .play-fab-on {
-	background: linear-gradient(145deg, #ff8a65, #e64a19);
+	background: #e64a19;
 }
 
 .play-fab-icon {

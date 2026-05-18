@@ -1,12 +1,10 @@
 <template>
-	<view class="stroke-lab-page">
-		<view class="lab-hero">
-			<meng-avatar pose="book" size="sm" />
-			<view class="lab-hero-text">
-				<text class="lab-hero-title">笔顺实验室</text>
-				<text class="lab-hero-sub">看笔顺、分步写、练一练</text>
+	<meng-sub-page title="笔顺实验室" subtitle="看笔顺、分步写、练一练" :overlap-body="false">
+		<template #hero>
+			<view class="lab-hero">
+				<meng-avatar pose="book" size="sm" />
 			</view>
-		</view>
+		</template>
 		<view class="lab-card lab-input-card">
 			<view class="lab-input-row">
 				<text class="lab-input-label">要练的字</text>
@@ -120,10 +118,11 @@
 				:class="logItemClass(item)"
 			>{{ item }}</text>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import drawNative from '@/utils/draw-native.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
@@ -139,7 +138,7 @@ const LAB_DRAW_MODE = {
 }
 
 export default {
-	components: { MengAvatar },
+	components: { MengSubPage, MengAvatar },
 	data() {
 		return {
 			word: '人',
@@ -445,25 +444,12 @@ export default {
 </script>
 
 <style scoped>
-.stroke-lab-page {
-	min-height: 100vh;
-	padding: 20rpx 24rpx 48rpx;
-	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 28%,
-		var(--meng-page-bg) 100%
-	);
-}
-
 .lab-hero {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	gap: 16rpx;
-	margin-bottom: 16rpx;
-	padding: 8rpx 4rpx;
+	width: 100%;
 }
 
 .lab-hero-text {
@@ -626,15 +612,15 @@ export default {
 }
 
 .lab-mode-chip--anim {
-	background: linear-gradient(165deg, #fff9e8 0%, #ffe8b8 100%);
+	background: #ffe8b8;
 }
 
 .lab-mode-chip--write {
-	background: linear-gradient(165deg, #fff5f8 0%, #ffdce8 100%);
+	background: #ffdce8;
 }
 
 .lab-mode-chip--step {
-	background: linear-gradient(165deg, #eef8ff 0%, #d4ebff 100%);
+	background: #d4ebff;
 }
 
 .lab-chip-emoji {
@@ -656,16 +642,16 @@ export default {
 }
 
 .lab-mode-chip--anim.lab-mode-chip--on {
-	background: linear-gradient(165deg, #ffe9a8 0%, #ffc84d 100%);
+	background: #ffc84d;
 }
 
 .lab-mode-chip--write.lab-mode-chip--on {
-	background: linear-gradient(165deg, #ffc8dc 0%, #ff9ec4 100%);
+	background: #ff9ec4;
 	box-shadow: 0 10rpx 0 rgba(255, 120, 160, 0.18), 0 14rpx 28rpx rgba(255, 100, 140, 0.2);
 }
 
 .lab-mode-chip--step.lab-mode-chip--on {
-	background: linear-gradient(165deg, #b8e4ff 0%, #7ec8ff 100%);
+	background: #7ec8ff;
 	box-shadow: 0 10rpx 0 rgba(80, 160, 220, 0.2), 0 14rpx 28rpx rgba(80, 150, 210, 0.22);
 }
 
@@ -714,19 +700,19 @@ export default {
 }
 
 .lab-pill--sun {
-	background: linear-gradient(165deg, #fff3c4 0%, #ffd45a 55%, #ffb84d 100%);
+	background: #ffb84d;
 }
 
 .lab-pill--leaf {
-	background: linear-gradient(165deg, #e8fbe8 0%, #a8e6b8 55%, #7fd49a 100%);
+	background: #7fd49a;
 }
 
 .lab-pill--lavender {
-	background: linear-gradient(165deg, #f3f0ff 0%, #ddd4ff 55%, #c5b8ff 100%);
+	background: #c5b8ff;
 }
 
 .lab-pill--pink {
-	background: linear-gradient(165deg, #fff0f5 0%, #ffc8dc 55%, #ffaac8 100%);
+	background: #ffaac8;
 }
 
 .lab-pill--sun .lab-pill-label,

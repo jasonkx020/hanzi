@@ -1,7 +1,11 @@
 <template>
 	<view class="page lesson-page">
 		<view class="lesson-hero">
+			<image class="meng-hero-bg-layer" src="/static/mengmeng/hero-bg.png" mode="aspectFill" />
+			<view class="meng-hero-sky-layer" />
 			<view class="lesson-hero-sky" />
+			<meng-status-bar-spacer :height-px="statusBarPx" />
+			<meng-page-nav :title="lessonNavTitle" class="lesson-nav" :inset-status-bar="false" />
 			<view class="lesson-hero-card">
 				<text class="lesson-grade-chip">{{ gradeSemesterLabel }}</text>
 				<text class="lesson-title">{{ hint }}</text>
@@ -147,6 +151,9 @@ import {
 } from '@/services/pinyin-follow-read-service.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
+import MengPageNav from '@/components/meng-page-nav.vue'
+import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
+import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { MENG_VOICE, playMengmengVoiceOnce } from '@/utils/mengmeng-voice.js'
 
@@ -163,10 +170,13 @@ function delay(ms) {
 export default {
 	components: {
 		PinyinFourLinesRow,
-		MengAvatar
+		MengAvatar,
+		MengPageNav,
+		MengStatusBarSpacer
 	},
 	data() {
 		return {
+			statusBarPx: 44,
 			hint: '课次字卡',
 			lessonChars: [],
 			learnedCount: 0,
@@ -197,6 +207,10 @@ export default {
 		}
 	},
 	computed: {
+		lessonNavTitle() {
+			const h = String(this.hint || '').trim()
+			return h || '课次字卡'
+		},
 		gradeSemesterLabel() {
 			return formatGradeSemesterLabel(getCurriculumPrefs())
 		},
@@ -238,22 +252,12 @@ export default {
 			this.teardownFollowRecording()
 		}
 	},
-	async onLoad(query) {
-		const rjRaw = query.rjLesson
-		if (rjRaw != null && rjRaw !== '') {
-			const n = Number(rjRaw)
-			this.rjLessonIdx = Number.isFinite(n) && n >= 0 ? n : null
-		} else {
-			this.rjLessonIdx = null
-		}
-		if (this.rjLessonIdx == null) {
-			this.hint = query.hint ? decodeURIComponent(query.hint) : '课次字卡'
-		}
-		await this.reloadLesson()
-		this.refreshProgress()
-		this.refreshLessonQuizBadge()
+	onLoad(query) {
+		this.refreshStatusBarPx()
+		this._lessonLoadQuery(query)
 	},
 	async onShow() {
+		this.refreshStatusBarPx()
 		await this.reloadLesson()
 		this.refreshProgress()
 		this.refreshLessonQuizBadge()
@@ -263,6 +267,24 @@ export default {
 		)
 	},
 	methods: {
+		refreshStatusBarPx() {
+			this.statusBarPx = getMengNavMetrics().statusBarPx
+		},
+		async _lessonLoadQuery(query) {
+			const rjRaw = query?.rjLesson
+			if (rjRaw != null && rjRaw !== '') {
+				const n = Number(rjRaw)
+				this.rjLessonIdx = Number.isFinite(n) && n >= 0 ? n : null
+			} else {
+				this.rjLessonIdx = null
+			}
+			if (this.rjLessonIdx == null) {
+				this.hint = query?.hint ? decodeURIComponent(query.hint) : '课次字卡'
+			}
+			await this.reloadLesson()
+			this.refreshProgress()
+			this.refreshLessonQuizBadge()
+		},
 		followStatusAt(i) {
 			return this.followStatuses[i] || 'pending'
 		},
@@ -736,18 +758,21 @@ export default {
 	min-height: 100vh;
 	padding: 0 0 48rpx;
 	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 32%,
-		var(--meng-page-bg) 100%
-	);
+	background: var(--meng-page-bg);
 }
 
 .lesson-hero {
 	position: relative;
-	padding: 16rpx 20rpx 8rpx;
+	padding: 0 20rpx 36rpx;
 	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.lesson-nav {
+	position: relative;
+	z-index: 3;
+	margin-left: -20rpx;
+	margin-right: -20rpx;
 }
 
 .lesson-hero-sky {
@@ -756,11 +781,7 @@ export default {
 	right: 0;
 	top: 0;
 	height: 220rpx;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 220, 235, 0.45) 0%,
-		rgba(255, 255, 255, 0) 100%
-	);
+	background: rgba(255, 255, 255, 0);
 	pointer-events: none;
 }
 
@@ -784,7 +805,7 @@ export default {
 	font-size: 22rpx;
 	font-weight: 600;
 	color: #c44d6a;
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border: 2rpx solid rgba(255, 120, 160, 0.35);
 }
 
@@ -820,13 +841,15 @@ export default {
 	font-size: 22rpx;
 	font-weight: 700;
 	color: #2e7d32;
-	background: linear-gradient(135deg, #e8f8ee 0%, #d4f0dc 100%);
+	background: #d4f0dc;
 	border-radius: 999rpx;
 	border: 1rpx solid rgba(111, 186, 125, 0.4);
 }
 
 .lesson-sheet {
-	margin: 0 20rpx;
+	position: relative;
+	z-index: 2;
+	margin: -32rpx 20rpx 0;
 	padding: 22rpx 20rpx 24rpx;
 	border-radius: 36rpx 36rpx 28rpx 28rpx;
 	background: rgba(255, 255, 255, 0.88);
@@ -899,7 +922,7 @@ export default {
 }
 
 .mode-tile--follow {
-	background: linear-gradient(160deg, #ffb3c8 0%, #ff8aab 50%, #ff6b9d 100%);
+	background: #ff6b9d;
 }
 
 .mode-tile--guide {
@@ -928,11 +951,11 @@ export default {
 }
 
 .mode-tile--dictation {
-	background: linear-gradient(160deg, #b8dcff 0%, #7eb8ff 100%);
+	background: #7eb8ff;
 }
 
 .mode-tile--quiz {
-	background: linear-gradient(160deg, #ffe9a8 0%, #ffd060 100%);
+	background: #ffd060;
 }
 
 .mode-emoji {
@@ -1016,7 +1039,7 @@ export default {
 .cell--follow-current {
 	z-index: 12;
 	border-color: #ff6b9d !important;
-	background: linear-gradient(180deg, #fff5f9 0%, #fff 100%) !important;
+	background: #fff !important;
 	box-shadow:
 		0 0 0 4rpx rgba(255, 107, 157, 0.35),
 		0 10rpx 28rpx rgba(196, 77, 106, 0.18) !important;
@@ -1025,7 +1048,7 @@ export default {
 
 .cell--follow-miss {
 	border-color: #ff8a65 !important;
-	background: linear-gradient(180deg, #fff8f5 0%, #fff 100%) !important;
+	background: #fff !important;
 	box-shadow: 0 6rpx 18rpx rgba(255, 138, 101, 0.2) !important;
 }
 
@@ -1059,7 +1082,7 @@ export default {
 	margin-bottom: 18rpx;
 	padding: 16rpx 18rpx;
 	border-radius: 22rpx;
-	background: linear-gradient(135deg, var(--meng-banner-soft) 0%, var(--meng-card) 100%);
+	background: var(--meng-card);
 	border: 2rpx solid rgba(255, 120, 160, 0.35);
 }
 
@@ -1163,7 +1186,7 @@ export default {
 }
 
 .follow-done-btn--primary {
-	background: linear-gradient(135deg, #ff8aab 0%, #ff6b9d 100%);
+	background: #ff6b9d;
 }
 
 .cell {
@@ -1188,7 +1211,7 @@ export default {
 
 .cell-learned {
 	border-color: rgba(127, 212, 154, 0.75);
-	background: linear-gradient(180deg, #f4fff7 0%, #fff 100%);
+	background: #fff;
 	box-shadow: 0 6rpx 16rpx rgba(90, 160, 110, 0.12);
 }
 
@@ -1201,9 +1224,10 @@ export default {
 .cell-char {
 	display: block;
 	font-size: 88rpx;
-	font-weight: 700;
-	color: var(--meng-text);
+	font-weight: 400;
+	color: var(--meng-chocolate, #5c3d2e);
 	line-height: 1.05;
+	-webkit-font-smoothing: antialiased;
 }
 
 .cell-status-line {
@@ -1243,7 +1267,7 @@ export default {
 	padding: 8rpx 4rpx 6rpx;
 	min-height: 96rpx;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #fffaf6 0%, #fff5f8 100%);
+	background: #fff5f8;
 	border-radius: 14rpx;
 	border: 1rpx solid rgba(255, 200, 180, 0.4);
 }
@@ -1265,7 +1289,7 @@ export default {
 
 .empty-lesson {
 	padding: 40rpx 24rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	background: #fff0f5;
 	border-radius: 22rpx;
 	border: 2rpx dashed rgba(255, 180, 200, 0.45);
 }
@@ -1283,7 +1307,7 @@ export default {
 	justify-content: center;
 	margin-top: 16rpx;
 	padding: 16rpx 18rpx;
-	background: linear-gradient(135deg, #fff8f0 0%, #fff0f5 100%);
+	background: #fff0f5;
 	border-radius: 20rpx;
 	border: 1rpx solid rgba(255, 200, 180, 0.35);
 }

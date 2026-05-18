@@ -1,5 +1,11 @@
 <template>
-	<view class="page">
+	<meng-sub-page
+		title="萌萌的气球营"
+		subtitle="听一听、配对闯关，收集小星星"
+		:show-avatar="false"
+		:padded="false"
+		:overlap-body="false"
+	>
 		<!-- 营地大厅 -->
 		<view v-if="phase === 'lobby'" class="lobby">
 			<image class="lobby-mascot" src="/static/mengmeng/ip/balloon.png" mode="aspectFit" />
@@ -120,10 +126,11 @@
 			<button class="done-btn" type="default" @click="replayLastRun">再玩一轮</button>
 			<button class="done-primary" type="primary" @click="goHome">回识字首页</button>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { COL, COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
@@ -135,6 +142,10 @@ import {
 } from '@/utils/user-progress-storage.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
+import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
+import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
+import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
+import { recordGameLevelClear } from '@/utils/achievement-stats-storage.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
@@ -173,6 +184,7 @@ function uniquePoolRows(rows) {
 
 export default {
 	components: {
+		MengSubPage,
 		PinyinFourLinesRow
 	},
 	data() {
@@ -317,6 +329,14 @@ export default {
 		},
 		async startRun(mode) {
 			if (this.starting) return
+			const g = await gateAndPromptWithAd(VIP_FEATURE.GAME_UNLIMITED, {
+				quotaKey: QUOTA_KEYS.GAME_SESSION,
+				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.GAME_SESSION],
+				quotaTitle: '今日气球营次数已用完',
+				quotaMessage: '免费版每日可闯关 2 次。开通会员后不限次。',
+				adPlacement: AD_PLACEMENTS.GAME_EXTRA_SESSION
+			})
+			if (!g.ok) return
 			this.starting = true
 			this.clearAutoHear()
 			this.lastRunMode = mode
@@ -452,6 +472,7 @@ export default {
 				this.pickRIdx = null
 				this.pairMatched++
 				this.score++
+				recordGameLevelClear(1)
 				if (this.pairMatched >= this.pairTarget) {
 					this.finishPairPhase()
 				}
@@ -551,6 +572,7 @@ export default {
 			}, 900)
 		},
 		advanceQuestion() {
+			recordGameLevelClear(1)
 			this.qIndex++
 			if (this.qIndex >= this.totalQ) {
 				this.loadQuestion(this.qIndex)
@@ -571,14 +593,9 @@ export default {
 </script>
 
 <style scoped>
-.page {
-	min-height: 100vh;
-	padding: 28rpx 24rpx 48rpx;
-	background: #fff5f8;
-	box-sizing: border-box;
-}
-
 .lobby {
+	padding: 8rpx 24rpx 48rpx;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	align-items: center;

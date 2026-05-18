@@ -145,7 +145,7 @@ export default {
 	top: 4rpx;
 	bottom: 4rpx;
 	border-radius: 20rpx;
-	background: linear-gradient(180deg, var(--meng-tab-warm-from) 0%, var(--meng-tab-warm-to) 100%);
+	background: var(--meng-tab-warm-to);
 	box-shadow: inset 0 0 0 2rpx var(--meng-tab-active-border);
 	z-index: 0;
 }

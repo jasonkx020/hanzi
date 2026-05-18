@@ -1,8 +1,12 @@
 <template>
-	<view class="page">
+	<meng-sub-page
+		:title="lessonTitle || '跟读'"
+		subtitle="听示范，跟着读一读"
+		avatar-pose="wave"
+		:overlap-body="true"
+	>
 		<view v-if="phase === 'follow'" class="follow-body">
-			<text class="lesson-line">{{ lessonTitle }}</text>
-			<text class="step-line">第 {{ idx + 1 }} / {{ rows.length }} 个字 · 跟着读一读</text>
+			<text class="step-line">第 {{ idx + 1 }} / {{ rows.length }} 个字</text>
 
 			<view class="dots" aria-hidden="true">
 				<text
@@ -42,10 +46,11 @@
 			<button class="btn-restart" type="default" @click="restartFromHead">从头再来</button>
 			<button class="btn-back-primary" type="primary" @click="goBack">回字卡</button>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { takeLessonFollowTransfer } from '@/utils/lesson-mode-session.js'
 import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
@@ -61,6 +66,7 @@ function firstHanzi(text) {
 
 export default {
 	components: {
+		MengSubPage,
 		PinyinFourLinesRow
 	},
 	data() {
@@ -179,25 +185,10 @@ export default {
 </script>
 
 <style scoped>
-.page {
-	min-height: 100vh;
-	padding: 28rpx 24rpx 48rpx;
-	background: #fff8e7;
-	box-sizing: border-box;
-}
-
 .follow-body {
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
-}
-
-.lesson-line {
-	display: block;
-	font-size: 26rpx;
-	color: #8a8279;
-	text-align: center;
-	margin-bottom: 8rpx;
 }
 
 .step-line {

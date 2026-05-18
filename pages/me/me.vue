@@ -1,18 +1,13 @@
 <template>
-	<view class="page tab-root-page me-page" :style="tabPageStyle">
-		<view class="me-hero">
-			<image class="me-hero-bg" :src="assets.heroBg" mode="aspectFill" />
-			<view class="me-hero-overlay" />
-			<view class="me-hero-body">
-				<meng-avatar pose="wave" size="lg" />
-				<view class="me-hero-text">
-					<text class="me-hero-title">我的萌萌</text>
-					<text class="me-hero-sub">{{ summary }}</text>
-				</view>
-			</view>
-		</view>
+	<view class="page tab-page-shell tab-root-page me-page" :style="tabPageStyle">
+		<meng-tab-hero
+			:status-bar-px="statusBarHeight"
+			title="我的萌萌"
+			:subtitle="summary"
+			avatar-pose="wave"
+		/>
 
-		<view class="stat-row">
+		<view class="stat-row tab-dock-overlap">
 			<view class="stat-card">
 				<text class="stat-num">{{ learnedCount }}</text>
 				<text class="stat-label">已学字</text>
@@ -29,7 +24,17 @@
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goMedals">
-				<text>勋章墙</text>
+				<view class="item-main">
+					<text>勋章墙</text>
+					<text v-if="medalHint" class="item-subline">{{ medalHint }}</text>
+				</view>
+				<text class="arrow">›</text>
+			</view>
+			<view class="item" @click="goFamilyProfiles">
+				<view class="item-main">
+					<text>学习档案</text>
+					<text v-if="profileHint" class="item-subline">{{ profileHint }}</text>
+				</view>
 				<text class="arrow">›</text>
 			</view>
 		</view>
@@ -70,24 +75,33 @@
 import { formatCurriculumSummary, getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
-import MengAvatar from '@/components/meng-avatar.vue'
-import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import MengTabHero from '@/components/meng-tab-hero.vue'
 import {
 	MENG_VOICE,
 	playMengmengVoice,
 	playMengmengVoiceOnce,
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
+import { syncWrongReviewState } from '@/utils/achievement-stats-storage.js'
+import {
+	getCurrentGrowthLevel,
+	formatGrowthLevelLabel,
+	countUnlockedMedals
+} from '@/services/medal-service.js'
+import { MEDAL_LIST } from '@/data/medals.js'
+import { getActiveProfile, listLearningProfiles } from '@/utils/learning-profile-storage.js'
+import { hasFamilyPlan } from '@/utils/vip-entitlements.js'
 
 export default {
-	components: { MengAvatar },
+	components: { MengTabHero },
 	mixins: [tabMain],
 	data() {
 		return {
-			assets: MENG_ASSETS,
 			summary: '',
 			learnedCount: 0,
-			wrongCount: 0
+			wrongCount: 0,
+			medalHint: '',
+			profileHint: ''
 		}
 	},
 	onShow() {
@@ -95,6 +109,15 @@ export default {
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.learnedCount = getLearnedChars().length
 		this.wrongCount = getWrongChars().length
+		syncWrongReviewState(this.wrongCount)
+		const { current } = getCurrentGrowthLevel()
+		const unlocked = countUnlockedMedals()
+		this.medalHint = `${formatGrowthLevelLabel(current)} · ${unlocked}/${MEDAL_LIST.length} 枚`
+		const active = getActiveProfile()
+		const n = listLearningProfiles().length
+		this.profileHint = hasFamilyPlan()
+			? `${active?.name || '档案'} · 家庭 ${n}/2`
+			: `${active?.name || '默认档案'}`
 		playMengmengVoiceOnce(MENG_VOICE.ME_WELCOME).catch(() => {})
 	},
 	onHide() {
@@ -106,6 +129,9 @@ export default {
 		},
 		goMedals() {
 			uni.navigateTo({ url: '/pages/me/medals' })
+		},
+		goFamilyProfiles() {
+			uni.navigateTo({ url: '/pages/me/family-profiles' })
 		},
 		goCurriculum() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
@@ -131,67 +157,6 @@ export default {
 </script>
 
 <style scoped>
-.me-page {
-	min-height: 100vh;
-	background: var(--meng-page-bg);
-	padding: 0 32rpx 32rpx;
-	box-sizing: border-box;
-}
-
-.me-hero {
-	position: relative;
-	margin: 0 -32rpx 24rpx;
-	padding: 28rpx 32rpx 24rpx;
-	overflow: hidden;
-	min-height: 200rpx;
-}
-
-.me-hero-bg {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 0;
-}
-
-.me-hero-overlay {
-	position: absolute;
-	inset: 0;
-	z-index: 1;
-	background: var(--meng-hero-overlay);
-}
-
-.me-hero-body {
-	position: relative;
-	z-index: 2;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	gap: 20rpx;
-}
-
-.me-hero-text {
-	flex: 1;
-	min-width: 0;
-}
-
-.me-hero-title {
-	display: block;
-	font-size: 36rpx;
-	font-weight: 800;
-	color: var(--meng-text);
-	line-height: 1.25;
-}
-
-.me-hero-sub {
-	display: block;
-	margin-top: 8rpx;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary);
-	line-height: 1.4;
-}
-
 .stat-row {
 	display: flex;
 	flex-direction: row;
@@ -257,6 +222,19 @@ export default {
 	font-size: 30rpx;
 	color: var(--meng-text);
 	border-bottom: 1rpx solid var(--meng-border);
+}
+
+.item-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.item-subline {
+	font-size: 22rpx;
+	color: #8a8279;
+	margin-top: 6rpx;
 }
 
 .item:last-child {

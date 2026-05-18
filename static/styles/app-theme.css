@@ -5,6 +5,7 @@
 page {
 	--meng-page-bg: #f6f3ec;
 	--meng-card: #fffcf8;
+	--meng-status-bar-px: 44px;
 	--meng-card-solid: #ffffff;
 	--meng-text: #2c2419;
 	--meng-text-secondary: #6d5e52;
@@ -15,10 +16,11 @@ page {
 	--meng-chocolate: #5c3d2e;
 	--meng-pink-blush: #f5c4c8;
 	--meng-pink-paw: #f5b8c8;
-	/* 主操作：暖橙渐变 */
-	--meng-accent-from: #ffb86a;
+	/* 主操作：暖橙（全局禁用渐变，from/to 与 solid 同色） */
+	--meng-accent-from: #e87a4a;
 	--meng-accent-to: #e87a4a;
 	--meng-accent-solid: #e87a4a;
+	--meng-accent-bg: #e87a4a;
 	--meng-chip-active-bg: #fff0e6;
 	--meng-chip-active-border: rgba(232, 122, 74, 0.42);
 	--meng-banner-soft: #fff6ec;
@@ -34,17 +36,12 @@ page {
 	--meng-tab-bar-shadow: 0 -4rpx 32rpx rgba(44, 36, 25, 0.1);
 	--meng-tab-float-radius: 28rpx;
 	--meng-tab-warm-from: #fff8f0;
-	--meng-tab-warm-to: #ffece0;
+	--meng-tab-warm-to: #fff8f0;
 	--meng-tab-active-border: rgba(232, 122, 74, 0.38);
 	--meng-tab-active-text: #b84a28;
 	--meng-tab-inactive-text: #9c958c;
 	--meng-tab-icon-size: 52rpx;
-	--meng-hero-overlay: linear-gradient(
-		180deg,
-		rgba(255, 248, 240, 0.15) 0%,
-		rgba(255, 252, 248, 0.05) 55%,
-		rgba(255, 255, 255, 0) 100%
-	);
+	--meng-hero-overlay: rgba(255, 252, 248, 0.42);
 	--meng-glass-bg: rgba(255, 252, 248, 0.92);
 	--meng-glass-border: rgba(255, 255, 255, 0.95);
 }

@@ -7,6 +7,8 @@ import {
 	STORAGE_KEYS,
 	DEFAULT_CURRICULUM_PREFS,
 	LIST_TYPE_PREFERENCE,
+	TEXTBOOK_VERSION_IDS,
+	SEMESTER,
 	COL
 } from '@/constants/curriculum-schema.js'
 
@@ -63,14 +65,92 @@ export function setCurriculumPrefs(patch) {
 /** 年级中文数字（1–6） */
 const GRADE_CN = ['一', '二', '三', '四', '五', '六']
 
-/** 教材设置等：幼小衔接 … 六年级下册 */
-export function listGradeSemesterPickerOptions() {
-	const out = [{ label: '幼小衔接（课标300基本字）', grade: 0, semester: '上' }]
+const PRESCHOOL_OPTION = {
+	label: '幼小衔接（课标300基本字）',
+	grade: 0,
+	semester: SEMESTER.UP
+}
+
+/** 展示用教材版本简称 */
+export function formatTextbookVersionLabel(versionId) {
+	const id = String(versionId || '')
+	if (id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) return '幼小衔接·课标300'
+	if (id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) return '统编（人教版）'
+	return id || '—'
+}
+
+/**
+ * 教材设置：年级册别下拉项
+ * @param {string} [textbookVersionId] 不传则返回统编全套（幼升小 + 一至六上下册）
+ */
+export function listGradeSemesterPickerOptions(textbookVersionId) {
+	if (textbookVersionId === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
+		return [{ ...PRESCHOOL_OPTION }]
+	}
+	const out = [{ ...PRESCHOOL_OPTION }]
 	for (let g = 1; g <= 6; g++) {
-		out.push({ label: `${GRADE_CN[g]}年级上册`, grade: g, semester: '上' })
-		out.push({ label: `${GRADE_CN[g]}年级下册`, grade: g, semester: '下' })
+		const cn = GRADE_CN[g - 1]
+		if (!cn) continue
+		out.push({ label: `${cn}年级上册`, grade: g, semester: SEMESTER.UP })
+		out.push({ label: `${cn}年级下册`, grade: g, semester: SEMESTER.DOWN })
 	}
 	return out
+}
+
+/**
+ * 首页横向年级芯片：幼升小 + 一至六上下册（短标签「一上」「六下」）
+ */
+export function listHomeCurriculumTabs() {
+	const tabs = [
+		{
+			key: 'preschool',
+			label: '幼升小',
+			grade: 0,
+			semester: SEMESTER.UP,
+			textbook_version_id: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300
+		}
+	]
+	for (let g = 1; g <= 6; g++) {
+		const cn = GRADE_CN[g - 1]
+		if (!cn) continue
+		tabs.push({
+			key: `${g}-shang`,
+			label: `${cn}上`,
+			grade: g,
+			semester: SEMESTER.UP,
+			textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
+		})
+		tabs.push({
+			key: `${g}-xia`,
+			label: `${cn}下`,
+			grade: g,
+			semester: SEMESTER.DOWN,
+			textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
+		})
+	}
+	return tabs
+}
+
+/**
+ * 在 picker 选项中定位 grade + semester；无匹配时回退到首项或同年级任册
+ * @param {Array<{ grade: number, semester: string }>} options
+ */
+export function indexOfGradeSemesterOption(options, grade, semester) {
+	const list = Array.isArray(options) ? options : []
+	if (!list.length) return 0
+	const g = Number(grade)
+	const sem = semester === SEMESTER.DOWN || semester === '下' ? SEMESTER.DOWN : SEMESTER.UP
+	let i = list.findIndex((o) => Number(o.grade) === g && o.semester === sem)
+	if (i >= 0) return i
+	i = list.findIndex((o) => Number(o.grade) === g)
+	if (i >= 0) return i
+	return 0
+}
+
+/** 字表偏好展示文案 */
+export function formatListTypePreferenceLabel(pref) {
+	if (!pref || pref === LIST_TYPE_PREFERENCE.ALL) return '全部字表'
+	return String(pref)
 }
 
 /**
@@ -88,14 +168,10 @@ export function formatGradeSemesterLabel(prefs) {
 	return `${gradePart}${semPart}`
 }
 
-/** 展示用摘要文案 */
+/** 展示用摘要文案（面向家长，不含内部字段名） */
 export function formatCurriculumSummary(prefs) {
 	const p = prefs || getCurriculumPrefs()
-	const lt =
-		p.list_type_preference === LIST_TYPE_PREFERENCE.ALL
-			? '全部字表'
-			: p.list_type_preference
-	return `${p.textbook_version_id} · ${formatGradeSemesterLabel(p)} · ${lt}`
+	return `${formatTextbookVersionLabel(p.textbook_version_id)} · ${formatGradeSemesterLabel(p)} · ${formatListTypePreferenceLabel(p.list_type_preference)}`
 }
 
 /**

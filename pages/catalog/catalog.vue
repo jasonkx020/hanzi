@@ -1,5 +1,5 @@
 <template>
-	<view class="page meng-page-shell meng-page-pad">
+	<meng-sub-page title="教材目录" subtitle="按课次浏览生字">
 		<view class="bar">
 			<text class="bar-text">{{ summary }}</text>
 		</view>
@@ -21,16 +21,17 @@
 				<text class="lesson-meta">共 {{ lesson.count }} 字 · 进入字卡</text>
 			</view>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import MengAvatar from '@/components/meng-avatar.vue'
 
 export default {
-	components: { MengAvatar },
+	components: { MengSubPage, MengAvatar },
 	data() {
 		return {
 			summary: '',
@@ -66,10 +67,6 @@ export default {
 </script>
 
 <style scoped>
-.page {
-	box-sizing: border-box;
-}
-
 .bar {
 	padding: 16rpx 20rpx;
 	background: var(--meng-card-solid);

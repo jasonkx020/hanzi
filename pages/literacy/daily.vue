@@ -1,20 +1,29 @@
 <template>
-	<view class="daily-page">
-		<view class="daily-hero">
-			<image class="daily-hero-bg" :src="assets.heroBg" mode="aspectFill" />
-			<view class="daily-hero-sky" />
-			<view class="daily-hero-body">
-				<meng-avatar pose="book" size="sm" />
-				<view class="daily-hero-text">
-					<text class="daily-hero-title">每日一练</text>
-					<text class="daily-hero-sub">{{ volumeLabel }} · {{ headSubLine }}</text>
-				</view>
-			</view>
-		</view>
-
+	<meng-sub-page
+		title="每日一练"
+		:subtitle="dailyHeroSub"
+		avatar-pose="book"
+		:padded="false"
+		:overlap-body="true"
+		:full-height="true"
+	>
 		<view class="daily-dock" :class="{ 'daily-dock--with-foot': showDailyFoot }">
 			<view class="daily-dock-glass">
-				<view v-if="poolSize === 0" class="daily-empty">
+				<view v-if="dailyBlocked" class="daily-empty">
+					<meng-avatar pose="curious" size="lg" />
+					<text class="daily-empty-title">今日练习已完成</text>
+					<text class="daily-empty-desc">{{ dailyBlockMessage }}</text>
+					<view v-if="showDailyAdUnlock" class="daily-cta daily-cta--ad" @click="unlockDailyByAd">
+						<text class="daily-cta-text">看短视频再练一轮</text>
+					</view>
+					<view class="daily-cta" @click="goVip">
+						<text class="daily-cta-text">家长开通会员</text>
+					</view>
+					<view class="daily-cta daily-cta--ghost" @click="goBackHome">
+						<text class="daily-cta-text daily-cta-text--ghost">返回首页</text>
+					</view>
+				</view>
+				<view v-else-if="poolSize === 0" class="daily-empty">
 					<meng-avatar pose="curious" size="lg" />
 					<text class="daily-empty-title">暂无生字可练</text>
 					<text class="daily-empty-desc">切换年级字表，或通过课本同步学选课。</text>
@@ -226,10 +235,11 @@
 				<text class="foot-btn-text foot-btn-text--on">下一字</text>
 			</view>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import {
 	buildDailyTrainingPlan,
@@ -253,7 +263,6 @@ import WritePracticePanel from '@/pages/literacy/write-practice.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { buildDailyReviewPinyinChoices } from '@/utils/daily-pinyin-quiz.js'
 import MengAvatar from '@/components/meng-avatar.vue'
-import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import {
 	MENG_VOICE,
 	getMengmengVoiceCopy,
@@ -263,9 +272,16 @@ import {
 	waitForMengmengVoiceIdle
 } from '@/utils/mengmeng-voice.js'
 import { LESSON_AUDIO_GAP_MS, sleepMs } from '@/utils/lesson-mode-audio.js'
+import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
+import { gateVipFeature, peekQuota, grantAdQuotaReward, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
+import { isVipActive } from '@/utils/vip.js'
+import { shouldShowAds } from '@/utils/ad-service.js'
+import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
+import { recordDailySessionComplete } from '@/utils/achievement-stats-storage.js'
 
 export default {
 	components: {
+		MengSubPage,
 		PinyinFourLinesRow,
 		HanziStrokePlayer,
 		WritePracticePanel,
@@ -273,7 +289,6 @@ export default {
 	},
 	data() {
 		return {
-			assets: MENG_ASSETS,
 			plan: null,
 			dateKey: '',
 			poolSize: 0,
@@ -291,12 +306,17 @@ export default {
 			pinyinCorrect: '',
 			pinyinQuizPassed: false,
 			pinyinPickId: '',
-			pinyinQuizFeedback: ''
+			pinyinQuizFeedback: '',
+			dailyBlocked: false,
+			dailyBlockMessage: ''
 		}
 	},
 	computed: {
 		volumeLabel() {
 			return formatGradeSemesterLabel(getCurriculumPrefs())
+		},
+		dailyHeroSub() {
+			return `${this.volumeLabel} · ${this.headSubLine}`
 		},
 		planSegments() {
 			return this.plan?.segments || []
@@ -307,6 +327,9 @@ export default {
 		},
 		showDailyFoot() {
 			return this.poolSize > 0 && this.segmentItems.length > 0
+		},
+		showDailyAdUnlock() {
+			return this.dailyBlocked && shouldShowAds()
 		},
 		activeSegmentSubtitle() {
 			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
@@ -504,7 +527,44 @@ export default {
 			this.activeSegment = 'review'
 			this.currentIndex = 0
 		},
+		goVip() {
+			uni.navigateTo({ url: '/pages/vip/vip' })
+		},
+		async unlockDailyByAd() {
+			const ok = await grantAdQuotaReward(AD_PLACEMENTS.DAILY_EXTRA_ROUND)
+			if (ok) await this.reload()
+		},
+		goBackHome() {
+			uni.switchTab({ url: '/pages/home/home' })
+		},
 		async reload() {
+			if (!isVipActive()) {
+				const peek = peekQuota(
+					QUOTA_KEYS.DAILY_SESSION,
+					VIP_QUOTA_LIMITS[QUOTA_KEYS.DAILY_SESSION]
+				)
+				if (!peek.ok) {
+					this.dailyBlocked = true
+					this.dailyBlockMessage = peek.message || '免费版每日 1 轮，明日再来或由家长开通会员。'
+					this.plan = null
+					this.poolSize = 0
+					return
+				}
+				const g = gateVipFeature(VIP_FEATURE.DAILY_UNLIMITED, {
+					quotaKey: QUOTA_KEYS.DAILY_SESSION,
+					quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DAILY_SESSION],
+					consume: true
+				})
+				if (!g.ok) {
+					this.dailyBlocked = true
+					this.dailyBlockMessage = g.message || ''
+					this.plan = null
+					this.poolSize = 0
+					return
+				}
+			}
+			this.dailyBlocked = false
+			this.dailyBlockMessage = ''
 			const p = getCurriculumPrefs()
 			const plan = await buildDailyTrainingPlan(p)
 			this.plan = plan
@@ -525,6 +585,7 @@ export default {
 				return
 			}
 			if (this.currentIndex >= this.segmentItems.length - 1) {
+				recordDailySessionComplete()
 				playMengmengVoice(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 }).catch(() => {})
 				return
 			}
@@ -613,6 +674,7 @@ export default {
 		},
 		onInlineWriteComplete() {
 			if (this.currentIndex >= this.segmentItems.length - 1) {
+				recordDailySessionComplete()
 				playMengmengVoice(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 }).catch(() => {})
 			}
 		},
@@ -710,76 +772,9 @@ export default {
 </script>
 
 <style scoped>
-.daily-page {
-	min-height: 100vh;
-	display: flex;
-	flex-direction: column;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 32%,
-		var(--meng-page-bg) 100%
-	);
-}
-
-.daily-hero {
-	position: relative;
-	flex-shrink: 0;
-	height: 200rpx;
-	overflow: hidden;
-}
-
-.daily-hero-bg {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 0;
-}
-
-.daily-hero-sky {
-	position: absolute;
-	inset: 0;
-	z-index: 1;
-	background: var(--meng-hero-overlay);
-	pointer-events: none;
-}
-
-.daily-hero-body {
-	position: relative;
-	z-index: 2;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: flex-start;
-	gap: 16rpx;
-	height: 100%;
-	padding: 16rpx 32rpx;
-	box-sizing: border-box;
-}
-
-.daily-hero-text {
-	flex: 1;
-	min-width: 0;
-}
-
-.daily-hero-title {
-	font-size: 36rpx;
-	font-weight: 800;
-	color: var(--meng-text);
-	letter-spacing: 2rpx;
-}
-
-.daily-hero-sub {
-	margin-top: 8rpx;
-	font-size: 22rpx;
-	color: var(--meng-text-secondary);
-	line-height: 1.35;
-}
-
 .daily-dock {
 	flex: 1;
-	margin-top: -28rpx;
+	min-height: 0;
 	padding-bottom: 20rpx;
 }
 
@@ -826,7 +821,7 @@ export default {
 }
 
 .seg-chip--on {
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: var(--meng-chip-active-border);
 	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.16);
 }
@@ -879,7 +874,7 @@ export default {
 .daily-bar-fill {
 	height: 100%;
 	border-radius: 999rpx;
-	background: linear-gradient(90deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	background: var(--meng-accent-solid);
 	transition: width 0.2s ease;
 }
 
@@ -934,8 +929,13 @@ export default {
 	align-items: center;
 	justify-content: center;
 	margin-bottom: 14rpx;
-	background: linear-gradient(145deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	background: var(--meng-accent-solid);
 	box-shadow: 0 10rpx 28rpx var(--meng-shadow-warm);
+}
+
+.daily-cta--ad {
+	background: #fff8e8;
+	border-color: #e8d4a8;
 }
 
 .daily-cta--ghost {
@@ -1115,15 +1115,15 @@ export default {
 }
 
 .quick-pill--warm {
-	background: linear-gradient(160deg, #ffe9a8 0%, #ffd060 100%);
+	background: #ffd060;
 }
 
 .quick-pill--warm.quick-pill--on {
-	background: linear-gradient(160deg, #ffb3c8 0%, #ff8aab 100%);
+	background: #ff8aab;
 }
 
 .quick-pill--lavender {
-	background: linear-gradient(160deg, #e8e4ff 0%, #cfc8f5 100%);
+	background: #cfc8f5;
 }
 
 .quick-pill--lavender text {
@@ -1255,7 +1255,7 @@ export default {
 }
 
 .foot-btn--primary {
-	background: linear-gradient(145deg, #ffb3c8 0%, #ff8aab 50%, #ff6b9d 100%);
+	background: #ff6b9d;
 	border-color: transparent;
 	box-shadow: 0 8rpx 22rpx rgba(255, 100, 150, 0.28);
 }

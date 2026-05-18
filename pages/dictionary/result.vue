@@ -1,16 +1,18 @@
 <template>
 	<view class="page">
-		<view class="nav-bar" :style="navBarStyle">
-			<view class="nav-inner">
-				<view class="nav-back" @click="goBack">
-					<text class="nav-back-icon">‹</text>
-				</view>
-				<text class="nav-title">查询详情结果</text>
+		<!-- 顶区背景向下延伸，导航浮在上方（仿微信小程序自定义顶栏） -->
+		<view class="page-header-bg" :style="headerBgStyle">
+			<image class="page-header-bg-img" src="/static/mengmeng/hero-bg.png" mode="aspectFill" />
+			<view class="page-header-bg-fade" />
+		</view>
+
+		<meng-page-nav title="查询详情结果" class="result-nav" @back="goBack">
+			<template #right>
 				<view class="nav-right" @click="speakCurrentPinyin">
 					<text class="nav-right-icon">🔊</text>
 				</view>
-			</view>
-		</view>
+			</template>
+		</meng-page-nav>
 
 		<scroll-view scroll-y class="page-scroll">
 			<!-- 左缘：部首/结构/笔画；右侧区域：田字格居中 -->
@@ -176,6 +178,8 @@ import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repo
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
+import MengPageNav from '@/components/meng-page-nav.vue'
+import { getMengNavMetrics, mengHeaderBgHeightStyle } from '@/utils/meng-nav-metrics.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import cnchar from '@/utils/cnchar-setup.js'
 import {
@@ -187,7 +191,8 @@ import {
 export default {
 	components: {
 		PinyinFourLinesRow,
-		HanziStrokePlayer
+		HanziStrokePlayer,
+		MengPageNav
 	},
 	data() {
 		return {
@@ -252,8 +257,9 @@ export default {
 		labaFallbackIconSrc() {
 			return resolveMengAssetUrl(MENG_ASSETS.laba)
 		},
-		navBarStyle() {
-			return { paddingTop: this.statusBarPx + 'px' }
+		/** 顶图区高度：状态栏 + 导航 + 向下延伸一段，与下方内容自然衔接 */
+		headerBgStyle() {
+			return mengHeaderBgHeightStyle(this.statusBarPx, 56)
 		},
 		bottomBarStyle() {
 			return { paddingBottom: 'calc(16rpx + env(safe-area-inset-bottom))' }
@@ -285,12 +291,7 @@ export default {
 		},
 	},
 	onLoad(query) {
-		try {
-			const sys = uni.getSystemInfoSync()
-			this.statusBarPx = sys.statusBarHeight || 0
-		} catch (_) {
-			this.statusBarPx = 0
-		}
+		this.statusBarPx = getMengNavMetrics().statusBarPx
 		const hanzi = query.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const pinyin = query.pinyin ? decodeURIComponent(query.pinyin) : ''
 		const lessonHint = query.lesson ? decodeURIComponent(query.lesson) : ''
@@ -298,6 +299,7 @@ export default {
 		this.loadResultPage({ hanzi, pinyin, lessonHint })
 	},
 	onShow() {
+		this.statusBarPx = getMengNavMetrics().statusBarPx
 		this.narrator = getAudioNarrator()
 	},
 	onHide() {
@@ -486,55 +488,40 @@ export default {
 	height: 100vh;
 	min-height: 100vh;
 	background: var(--meng-page-bg);
-	background-image: url('/static/mengmeng/hero-bg.png');
-	background-size: cover;
-	background-position: center top;
-	background-repeat: no-repeat;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
+	position: relative;
 }
 
-/* 顶栏 */
-.nav-bar {
+/* 顶区背景（延伸至导航栏下方） */
+.page-header-bg {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.page-header-bg-img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.page-header-bg-fade {
+	position: absolute;
+	inset: 0;
+	background: var(--meng-page-bg);
+}
+
+.result-nav {
+	position: relative;
+	z-index: 2;
 	flex-shrink: 0;
-	background: rgba(255, 252, 248, 0.92);
-	border-bottom: 1rpx solid var(--meng-border);
-}
-
-.nav-inner {
-	height: 88rpx;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	padding: 0 20rpx;
-	box-sizing: border-box;
-}
-
-.nav-back {
-	width: 72rpx;
-	height: 72rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background: var(--meng-card-solid);
-	box-shadow: 0 4rpx 12rpx var(--meng-shadow);
-}
-
-.nav-back-icon {
-	font-size: 48rpx;
-	line-height: 1;
-	color: var(--meng-text);
-	margin-top: -4rpx;
-}
-
-.nav-title {
-	flex: 1;
-	text-align: center;
-	font-size: 32rpx;
-	font-weight: 700;
-	color: var(--meng-text);
 }
 
 .nav-right {
@@ -550,6 +537,8 @@ export default {
 }
 
 .page-scroll {
+	position: relative;
+	z-index: 1;
 	flex: 1;
 	height: 0;
 	width: 100%;
@@ -564,6 +553,7 @@ export default {
 	flex-direction: row;
 	align-items: flex-start;
 	min-height: 320rpx;
+	margin-top: -8rpx;
 }
 
 .hero-meta-col {
@@ -584,7 +574,7 @@ export default {
 	width: 100rpx;
 	padding: 12rpx 10rpx 12rpx 8rpx;
 	border-radius: 0 18rpx 18rpx 0;
-	background: linear-gradient(145deg, #fff8f0, #fffef9);
+	background: #fffef9;
 	border: 1rpx solid rgba(255, 154, 69, 0.28);
 	border-left: none;
 	box-shadow: 4rpx 6rpx 16rpx var(--meng-shadow);
@@ -668,7 +658,7 @@ export default {
 	align-items: center;
 	width: 100%;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #fffef9 0%, #fff8f0 100%);
+	background: #fff8f0;
 	border-bottom: 2rpx solid #e8d5c8;
 }
 
@@ -850,7 +840,7 @@ export default {
 }
 
 .pill-warm {
-	background: linear-gradient(135deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
 	color: #fffef9;
 	box-shadow: 0 6rpx 16rpx var(--meng-shadow-warm);
 }
@@ -1029,7 +1019,7 @@ export default {
 }
 
 .bar-wrong {
-	background: linear-gradient(135deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
 	color: #fffef9;
 	box-shadow: 0 6rpx 18rpx var(--meng-shadow-warm);
 }

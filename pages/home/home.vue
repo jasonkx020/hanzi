@@ -1,50 +1,38 @@
 <template>
-	<view class="page home-page tab-root-page" :style="tabPageStyle">
-		<view class="hero">
-			<image class="hero-bg" :src="assets.heroBg" mode="aspectFill" />
-			<view class="hero-sky" />
-
-			<view class="hero-toolbar">
-				<view class="hero-circle-btn" @click="goSettings">
-					<text class="hero-circle-icon">⚙️</text>
+	<view class="page tab-page-shell home-page tab-root-page" :style="tabPageStyle">
+		<meng-tab-hero
+			:status-bar-px="statusBarHeight"
+			title="萌萌识字"
+			:subtitle="heroSlides[heroDotIndex] || '和萌萌一起学汉字'"
+			:avatar-pose="heroMascotPose"
+			@avatar-error="onMascotError"
+		>
+			<template #actions>
+				<view class="tab-hero-btn" @click="goSettings">
+					<text class="tab-hero-btn-icon">⚙️</text>
 				</view>
-				<view class="hero-circle-btn hero-circle-btn--vip" @click="goVip">
-					<text class="hero-circle-icon">🔔</text>
-					<view v-if="vipActive" class="hero-vip-dot" />
+				<view class="tab-hero-btn" @click="goVip">
+					<text class="tab-hero-btn-icon">🔔</text>
+					<view v-if="vipActive" class="tab-hero-btn-dot" />
 				</view>
-			</view>
-
-			<view class="hero-brand">
-				<text class="hero-brand-title">萌萌识字</text>
-				<text class="hero-brand-tag">和萌萌一起学汉字</text>
-			</view>
-
-			<view class="hero-mascot-wrap">
-				<meng-avatar
-					:pose="heroMascotPose"
-					size="xl"
-					custom-class="hero-mascot"
-					@error="onMascotError"
-				/>
-			</view>
-
-			<view class="hero-foot">
-				<view class="hero-dots">
+			</template>
+			<template #foot>
+				<view class="home-hero-dots">
 					<view
 						v-for="(slide, i) in heroSlides"
 						:key="i"
-						class="hero-dot"
-						:class="{ 'hero-dot--on': heroDotIndex === i }"
-						@click="heroDotIndex = i"
+						class="home-hero-dot"
+						:class="{ 'home-hero-dot--on': heroDotIndex === i }"
+						@click="onHeroDotTap(i)"
 					/>
 				</view>
-				<text class="hero-caption">{{ heroSlides[heroDotIndex] }}</text>
-			</view>
-		</view>
+			</template>
+		</meng-tab-hero>
 
-		<view class="dock">
-			<view class="dock-glass">
-				<scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
+		<home-char-showcase ref="charShowcase" class="tab-dock-overlap" />
+
+		<view class="tab-dock-overlap tab-content-bleed home-main">
+				<!-- <scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
 					<view class="grade-row">
 						<view
 							v-for="item in curriculumTabs"
@@ -56,7 +44,7 @@
 							<text class="grade-chip-text">{{ item.label }}</text>
 						</view>
 					</view>
-				</scroll-view>
+				</scroll-view> -->
 
 				<view class="daily-banner" @click="goDaily">
 					<image class="daily-banner-bg" :src="assets.entry.daily" mode="aspectFit" />
@@ -73,13 +61,13 @@
 				</view>
 
 				<view class="cta-row">
-					<view class="cta-btn cta-btn--write" @click="goWritePractice">
+					<view class="cta-btn cta-btn--textbook" @click="goTextbook">
 						<view class="cta-icon-ring">
-							<image class="cta-icon-img" :src="assets.entry.strokeLab" mode="aspectFit" />
+							<image class="cta-icon-img" :src="assets.entry.textbook" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col">
-							<text class="cta-label">写字练习</text>
-							<text class="cta-sub">笔顺田字格</text>
+							<text class="cta-label">课本同步</text>
+							<text class="cta-sub">按课识字</text>
 						</view>
 					</view>
 					<view class="cta-btn cta-btn--pinyin" @click="goPinyin">
@@ -94,11 +82,11 @@
 				</view>
 
 				<view class="quick-grid">
-					<view class="quick-tile" @click="goTextbook">
-						<view class="quick-icon-ring quick-icon-ring--green">
-							<image class="quick-icon" :src="assets.entry.textbook" mode="aspectFit" />
+					<view class="quick-tile" @click="goWritePractice">
+						<view class="quick-icon-ring quick-icon-ring--accent">
+							<image class="quick-icon" :src="assets.entry.strokeLab" mode="aspectFit" />
 						</view>
-						<text class="quick-label">课本同步</text>
+						<text class="quick-label">写字练习</text>
 					</view>
 					<view class="quick-tile" @click="goGame">
 						<view class="quick-icon-ring quick-icon-ring--yellow">
@@ -120,6 +108,8 @@
 					</view>
 				</view>
 
+				<meng-ad-banner placement="home_banner" mock-title="和萌萌一起，每天识字一点点" />
+
 				<view class="dock-tip">
 					<meng-avatar pose="happy" size="xs" />
 					<view class="dock-tip-col">
@@ -127,7 +117,6 @@
 						<text v-if="textbookVolumeLabel" class="dock-tip-sub">{{ textbookVolumeLabel }}</text>
 					</view>
 				</view>
-			</view>
 		</view>
 	</view>
 </template>
@@ -140,12 +129,14 @@ import { startTextbookLearning } from '@/modules/literacy/usecases/start-textboo
 import { startWritePractice } from '@/modules/literacy/usecases/start-write-practice.js'
 import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
-import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
-import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
+import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel, listHomeCurriculumTabs } from '@/utils/curriculum-storage.js'
 import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
 import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import MengTabHero from '@/components/meng-tab-hero.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
+import HomeCharShowcase from '@/components/home-char-showcase.vue'
+import MengAdBanner from '@/components/meng-ad-banner.vue'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import {
 	MENG_VOICE,
@@ -157,7 +148,7 @@ import {
 const HERO_POSES = ['wave', 'book', 'happy']
 
 export default {
-	components: { MengAvatar },
+	components: { MengTabHero, MengAvatar, HomeCharShowcase, MengAdBanner },
 	mixins: [tabMain],
 	data() {
 		return {
@@ -172,36 +163,9 @@ export default {
 			heroDotIndex: 0,
 			heroSlides: ['跟着课本，轻松识字', '边玩边练，每天进步一点点', '和萌萌一起认字'],
 			_welcomeTimer: null,
-			curriculumTabs: [
-				{
-					key: 'preschool',
-					label: '幼升小',
-					grade: 0,
-					semester: '上',
-					textbook_version_id: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300
-				},
-				{
-					key: '1-shang',
-					label: '一上',
-					grade: 1,
-					semester: '上',
-					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
-				},
-				{
-					key: '1-xia',
-					label: '一下',
-					grade: 1,
-					semester: '下',
-					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
-				},
-				{
-					key: '2-shang',
-					label: '二上',
-					grade: 2,
-					semester: '上',
-					textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
-				}
-			]
+			_heroCarouselTimer: null,
+			_heroResumeTimer: null,
+			curriculumTabs: listHomeCurriculumTabs()
 		}
 	},
 	computed: {
@@ -220,10 +184,18 @@ export default {
 	},
 	onShow() {
 		this.setTabBarIndex(0)
+		this.startHeroCarousel()
 		this.refresh()
 		this.scheduleWelcomeVoice()
+		this.$refs.charShowcase?.resumeShowcase?.()
 	},
 	onHide() {
+		this.$refs.charShowcase?.pauseShowcase?.()
+		this.stopHeroCarousel()
+		if (this._heroResumeTimer != null) {
+			clearTimeout(this._heroResumeTimer)
+			this._heroResumeTimer = null
+		}
 		if (this._welcomeTimer != null) {
 			clearTimeout(this._welcomeTimer)
 			this._welcomeTimer = null
@@ -249,6 +221,28 @@ export default {
 		},
 		onMascotError() {
 			this.mascotFallback = true
+		},
+		startHeroCarousel() {
+			this.stopHeroCarousel()
+			this._heroCarouselTimer = setInterval(() => {
+				if (!this.heroSlides.length) return
+				this.heroDotIndex = (this.heroDotIndex + 1) % this.heroSlides.length
+			}, 4500)
+		},
+		stopHeroCarousel() {
+			if (this._heroCarouselTimer != null) {
+				clearInterval(this._heroCarouselTimer)
+				this._heroCarouselTimer = null
+			}
+		},
+		onHeroDotTap(i) {
+			this.heroDotIndex = i
+			this.stopHeroCarousel()
+			if (this._heroResumeTimer != null) clearTimeout(this._heroResumeTimer)
+			this._heroResumeTimer = setTimeout(() => {
+				this.startHeroCarousel()
+				this._heroResumeTimer = null
+			}, 8000)
 		},
 		async refresh() {
 			this.summary = getCurriculumSummary()
@@ -300,7 +294,7 @@ export default {
 		},
 		goWritePractice() {
 			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
-			startWritePractice()
+			void startWritePractice()
 		},
 		goTextbook() {
 			startTextbookLearning()
@@ -322,163 +316,34 @@ export default {
 
 <style scoped>
 .home-page {
-	min-height: 100vh;
-	display: flex;
-	flex-direction: column;
-	background: var(--meng-page-bg);
+	box-sizing: border-box;
 }
 
-.hero {
-	position: relative;
-	flex: 1;
-	min-height: 400rpx;
-	max-height: 52vh;
-	overflow: hidden;
-}
-
-.hero-bg {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 0;
-}
-
-.hero-sky {
-	position: absolute;
-	inset: 0;
-	z-index: 1;
-	background: linear-gradient(
-		180deg,
-		rgba(255, 248, 240, 0.35) 0%,
-		rgba(255, 252, 248, 0.08) 55%,
-		rgba(255, 255, 255, 0) 100%
-	);
-	pointer-events: none;
-}
-
-.hero-toolbar {
-	position: relative;
-	z-index: 4;
-	display: flex;
-	justify-content: space-between;
-	padding: 4rpx 24rpx 0;
-}
-
-.hero-circle-btn {
-	position: relative;
-	width: 68rpx;
-	height: 68rpx;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.88);
-	border: 1rpx solid rgba(255, 255, 255, 0.95);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 6rpx 20rpx var(--meng-shadow);
-}
-
-.hero-circle-icon {
-	font-size: 30rpx;
-}
-
-.hero-vip-dot {
-	position: absolute;
-	top: 10rpx;
-	right: 10rpx;
-	width: 14rpx;
-	height: 14rpx;
-	border-radius: 50%;
-	background: var(--meng-accent-solid);
-	border: 2rpx solid #fff;
-}
-
-.hero-brand {
-	position: relative;
-	z-index: 4;
-	text-align: center;
-	padding: 0 32rpx;
-}
-
-.hero-brand-title {
-	display: block;
-	font-size: 44rpx;
-	font-weight: 800;
-	color: var(--meng-chocolate);
-	letter-spacing: 6rpx;
-	text-shadow: 0 2rpx 0 rgba(255, 255, 255, 0.8);
-}
-
-.hero-brand-tag {
-	display: block;
-	margin-top: 6rpx;
-	font-size: 22rpx;
-	font-weight: 600;
-	color: var(--meng-text-secondary);
-	letter-spacing: 2rpx;
-}
-
-.hero-mascot-wrap {
-	position: relative;
-	z-index: 3;
-	flex: 1;
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-	min-height: 260rpx;
+.home-main {
 	padding-bottom: 8rpx;
 }
 
-.hero-mascot {
-	filter: drop-shadow(0 20rpx 36rpx rgba(92, 61, 46, 0.18));
-}
-
-.hero-foot {
-	position: relative;
-	z-index: 4;
-	padding-bottom: 48rpx;
-}
-
-.hero-dots {
+.home-hero-dots {
 	display: flex;
 	justify-content: center;
 	gap: 10rpx;
 }
 
-.hero-dot {
+.home-hero-dot {
 	width: 10rpx;
 	height: 10rpx;
 	border-radius: 50%;
 	background: rgba(92, 61, 46, 0.2);
 }
 
-.hero-dot--on {
+.home-hero-dot--on {
 	width: 26rpx;
 	border-radius: 8rpx;
 	background: var(--meng-accent-solid);
 }
 
-.hero-caption {
-	display: block;
-	text-align: center;
-	font-size: 22rpx;
-	color: var(--meng-text-secondary);
-	padding: 10rpx 40rpx 0;
-	line-height: 1.4;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.dock {
-	position: relative;
-	z-index: 5;
-	flex-shrink: 0;
-	margin-top: -44rpx;
-}
-
 .dock-glass {
-	margin: 0 16rpx;
+	margin: 0;
 	padding: 24rpx 22rpx 18rpx;
 	border-radius: 36rpx 36rpx 28rpx 28rpx;
 	background: var(--meng-glass-bg);
@@ -536,7 +401,7 @@ export default {
 	margin-bottom: 20rpx;
 	padding: 20rpx 20rpx 20rpx 0;
 	border-radius: 28rpx;
-	background: linear-gradient(135deg, #fff6ec 0%, #ffe8d4 48%, #ffd4b8 100%);
+	background: #ffd4b8;
 	border: 2rpx solid rgba(232, 122, 74, 0.22);
 	box-shadow: 0 10rpx 28rpx var(--meng-shadow-warm);
 	overflow: hidden;
@@ -604,7 +469,7 @@ export default {
 	flex-shrink: 0;
 	padding: 14rpx 22rpx;
 	border-radius: 999rpx;
-	background: linear-gradient(145deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
 	box-shadow: 0 6rpx 16rpx var(--meng-shadow-warm);
 }
 
@@ -634,11 +499,16 @@ export default {
 }
 
 .cta-btn--write {
-	background: linear-gradient(145deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
+}
+
+.cta-btn--textbook {
+	background: var(--meng-leaf-soft);
+	border: 1rpx solid rgba(126, 200, 160, 0.35);
 }
 
 .cta-btn--pinyin {
-	background: linear-gradient(145deg, var(--meng-leaf-soft) 0%, #c8e8d4 100%);
+	background: #c8e8d4;
 	border: 1rpx solid rgba(126, 200, 160, 0.35);
 }
 
@@ -717,6 +587,10 @@ export default {
 
 .quick-icon-ring--green {
 	background: var(--meng-leaf-soft);
+}
+
+.quick-icon-ring--accent {
+	background: rgba(255, 200, 180, 0.45);
 }
 
 .quick-icon-ring--yellow {

@@ -1,5 +1,5 @@
 <template>
-	<view class="page meng-page-shell meng-page-pad">
+	<meng-sub-page title="家长管理" subtitle="朗读人、缓存与护眼设置">
 		<view class="card">
 			<text class="title">家长管理</text>
 			<text class="desc">学习时长、提醒时间、护眼与家长验证配置。</text>
@@ -17,13 +17,15 @@
 			<text class="tip">已缓存 {{ cacheCount }} 条（缓存有效期 7 天）</text>
 			<button size="mini" type="warn" @click="clearDictCache">清空查字缓存</button>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { getAudioNarrator, setAudioNarrator, getAudioNarratorLabel } from '@/utils/audio-settings.js'
 import { clearDictionaryCache, getDictionaryCacheStats } from '@/utils/dictionary-cache.js'
 
 export default {
+	components: { MengSubPage },
 	data() {
 		return {
 			narrator: 'kid',

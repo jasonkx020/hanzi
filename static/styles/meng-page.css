@@ -4,12 +4,7 @@
 .meng-page-shell {
 	min-height: 100vh;
 	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 36%,
-		var(--meng-page-bg) 100%
-	);
+	background: var(--meng-page-bg);
 }
 
 .meng-page-pad {
@@ -115,4 +110,190 @@
 	font-size: 24rpx;
 	color: var(--meng-text-secondary);
 	line-height: 1.45;
+}
+
+/** 识字子页等自定义顶区：铺底图 + 渐变（与 Tab 主页面一致） */
+.meng-hero-bg-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.meng-hero-sky-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: var(--meng-hero-overlay);
+	pointer-events: none;
+}
+
+/** Tab 主页面外壳（与「我的」一致） */
+.tab-page-shell {
+	min-height: 100vh;
+	box-sizing: border-box;
+	background: var(--meng-page-bg);
+	padding: 0 20rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+
+/** Tab 顶区：大图 + 蒙层 + 左头像右文案 */
+.tab-hero {
+	position: relative;
+	margin: 0 -20rpx 20rpx;
+	padding: 0 20rpx 24rpx;
+	overflow: hidden;
+	min-height: 200rpx;
+	box-sizing: border-box;
+}
+
+.tab-hero .meng-status-bar-spacer,
+.meng-sub-page__hero .meng-status-bar-spacer {
+	position: relative;
+	z-index: 5;
+}
+
+.tab-hero-bg {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.tab-hero-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: var(--meng-hero-overlay);
+	pointer-events: none;
+}
+
+.tab-hero-body {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+}
+
+.tab-hero-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.tab-hero-title {
+	display: block;
+	font-size: 36rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+	line-height: 1.25;
+}
+
+.tab-hero-sub {
+	display: block;
+	margin-top: 8rpx;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+	line-height: 1.4;
+}
+
+.tab-hero-actions {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+}
+
+.tab-hero-btn {
+	position: relative;
+	width: 68rpx;
+	height: 68rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.88);
+	border: 1rpx solid rgba(255, 255, 255, 0.95);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 6rpx 20rpx var(--meng-shadow);
+}
+
+.tab-hero-btn-icon {
+	font-size: 30rpx;
+	line-height: 1;
+}
+
+.tab-hero-btn-dot {
+	position: absolute;
+	top: 10rpx;
+	right: 10rpx;
+	width: 14rpx;
+	height: 14rpx;
+	border-radius: 50%;
+	background: var(--meng-accent-solid);
+	border: 2rpx solid #fff;
+}
+
+.tab-hero-foot {
+	position: relative;
+	z-index: 2;
+	margin-top: 16rpx;
+}
+
+.tab-dock-overlap {
+	position: relative;
+	z-index: 2;
+	margin-top: -24rpx;
+}
+
+/**
+ * 主内容横向铺满：抵消 tab-page-shell 左右 padding，避免「方框」两侧留白。
+ */
+.tab-content-bleed {
+	margin-left: -20rpx;
+	margin-right: -20rpx;
+	padding-left: 12rpx;
+	padding-right: 12rpx;
+	box-sizing: border-box;
+	width: auto;
+}
+
+/** Tab 主内容玻璃面板（全宽，顶圆角） */
+.tab-dock-panel {
+	box-sizing: border-box;
+	padding: 18rpx 12rpx 14rpx;
+	border-radius: 32rpx 32rpx 0 0;
+	background: var(--meng-glass-bg);
+	border: 2rpx solid var(--meng-glass-border);
+	border-bottom: none;
+	box-shadow: 0 -10rpx 40rpx var(--meng-shadow), 0 12rpx 32rpx var(--meng-shadow);
+	/* #ifdef H5 */
+	backdrop-filter: blur(20px);
+	/* #endif */
+}
+
+/** 拼音/识字/查字主内容贴边（去掉 shell 左右 padding，避免右侧留白） */
+.tab-page-shell--edge {
+	padding-left: 0;
+	padding-right: 0;
+	padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-page-shell--edge .tab-hero {
+	margin-left: 0;
+	margin-right: 0;
+	padding-left: 16rpx;
+	padding-right: 16rpx;
+}
+
+/** 子页统一页面底（无顶图时，纯色） */
+.meng-page-gradient,
+.meng-page-fill {
+	min-height: 100vh;
+	box-sizing: border-box;
+	background: var(--meng-page-bg);
 }

@@ -1,7 +1,7 @@
 <template>
-	<view class="page" :class="{ 'page--embedded': compact }">
+	<view v-if="compact" class="write-compact-root">
 		<!-- 每日一练内嵌：仅田字格 + 极简辅助 -->
-		<view v-if="compact" class="write-compact">
+		<view class="write-compact">
 			<view class="canvas-shell canvas-shell--compact">
 				<canvas
 					v-if="canvasReady"
@@ -36,8 +36,15 @@
 				<text class="write-compact-link" @click.stop="resetPractice">重写</text>
 			</view>
 		</view>
+	</view>
 
-		<template v-else>
+	<meng-sub-page
+		v-else
+		title="写字练习"
+		subtitle="按笔顺在田字格里写"
+		avatar-pose="happy"
+		:overlap-body="false"
+	>
 			<view class="hero-card">
 				<view class="char-badge">
 					<text class="char-badge-text">{{ displayChar }}</text>
@@ -122,9 +129,8 @@
 					<text class="tool-caption">练别的生字</text>
 				</view>
 			</view>
-		</template>
 
-		<view v-if="!compact" class="input-card">
+		<view class="input-card">
 			<text class="input-label">想练哪个字？输入一个汉字后点确定</text>
 			<view class="input-row">
 				<input
@@ -139,10 +145,11 @@
 				<button class="apply-btn" size="mini" @click="applyHanzi">确定</button>
 			</view>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import drawNative from '@/utils/draw-native.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import {
@@ -162,6 +169,7 @@ import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
+import { recordStrokePractice } from '@/utils/achievement-stats-storage.js'
 import { buildWritePracticeCharPool } from '@/utils/write-practice-char-pool.js'
 import {
 	MENG_VOICE,
@@ -181,7 +189,7 @@ const CHAR_TO_STROKE_AUDIO_GAP_MS = 2000
 const CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT = 600
 
 export default {
-	components: { PinyinFourLinesRow },
+	components: { MengSubPage, PinyinFourLinesRow },
 	props: {
 		/** 每日一练内嵌：无换字输入、紧凑布局 */
 		compact: {
@@ -676,6 +684,7 @@ export default {
 			if (status === 'complete') {
 				this.completed = true
 				this.activeStroke = this.strokeTotal
+				recordStrokePractice(1)
 				if (this.compact) {
 					this.compactToast('全部写对了', 'success')
 					this.playMengVoiceIf(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 })
@@ -913,22 +922,9 @@ export default {
 </script>
 
 <style scoped>
-.page {
-	min-height: 100vh;
-	padding: 24rpx 24rpx 48rpx;
+.write-compact-root {
+	width: 100%;
 	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 35%,
-		var(--meng-page-bg) 100%
-	);
-}
-
-.page--embedded {
-	min-height: 0;
-	padding: 0;
-	background: transparent;
 }
 
 .write-compact {
@@ -1011,7 +1007,7 @@ export default {
 	width: 120rpx;
 	height: 120rpx;
 	border-radius: 24rpx;
-	background: linear-gradient(145deg, #fff5f8 0%, #ffe8f0 100%);
+	background: #ffe8f0;
 	border: 2rpx solid rgba(255, 180, 200, 0.4);
 	display: flex;
 	align-items: center;
@@ -1295,7 +1291,7 @@ export default {
 }
 
 .tool-btn--primary {
-	background: linear-gradient(135deg, var(--meng-accent-from), var(--meng-accent-to)) !important;
+	background: var(--meng-accent-solid) !important;
 	color: #fff !important;
 	border: none !important;
 }

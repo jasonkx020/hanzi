@@ -4,6 +4,13 @@
 import { chunkHomeworkSymbols } from '@/utils/pinyin-homework-chunk.js'
 import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
 
+/** 拼音页四线格：尽量铺满屏宽，不补空格子占位 */
+const PINYIN_HOMEWORK_CHUNK_OPTS = {
+	maxPerRow: 4,
+	maxUnitsPerRow: 14,
+	padToMaxPerRow: false
+}
+
 function sheetForChunk(chunk, categoryTab) {
 	const list = Array.isArray(chunk) ? chunk : []
 	for (let i = 0; i < list.length; i++) {
@@ -26,7 +33,7 @@ export function buildHomeworkSectionViews(sections, kind, categoryTab) {
 		desc: sec.desc || '',
 		si,
 		kind,
-		rows: chunkHomeworkSymbols(sec.symbols).map((chunk, ri) => {
+		rows: chunkHomeworkSymbols(sec.symbols, PINYIN_HOMEWORK_CHUNK_OPTS).map((chunk, ri) => {
 			const sheet = sheetForChunk(chunk, categoryTab)
 			return {
 				chunk,
@@ -47,7 +54,9 @@ export function buildHomeworkDrillRows(symbols) {
 	const kind = 'drill'
 	const si = 0
 	const categoryTab = '拼读练习'
-	return chunkHomeworkSymbols(symbols).map((chunk, ri) => {
+	/** 拼读练习：每行仅 1 个拼音，不补空格子 */
+	const chunks = chunkHomeworkSymbols(symbols, { maxPerRow: 1, padToMaxPerRow: false, maxUnitsPerRow: 14 })
+	return chunks.map((chunk, ri) => {
 		const sheet = sheetForChunk(chunk, categoryTab)
 		return {
 			chunk,

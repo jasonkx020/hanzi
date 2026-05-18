@@ -1,59 +1,210 @@
 <template>
-	<view class="page meng-page-shell meng-page-pad">
-		<view class="card">
-			<text class="title">勋章墙</text>
-			<text class="desc">根据学习数据自动点亮勋章。</text>
-		</view>
-		<view class="grid">
-			<view v-for="m in medals" :key="m.id" class="medal" :class="m.unlocked ? 'medal-on' : 'medal-off'">
-				<text class="icon">{{ m.unlocked ? '🏅' : '🔒' }}</text>
-				<text class="name">{{ m.name }}</text>
-				<text class="rule">{{ m.rule }}</text>
+	<meng-sub-page title="勋章墙" subtitle="学习越多，点亮越多">
+		<view class="growth-card">
+			<meng-avatar :pose="growthPose" size="sm" />
+			<view class="growth-copy">
+				<text class="growth-level">{{ growthLabel }}</text>
+				<text class="growth-sub">{{ growthSub }}</text>
+				<text v-if="growthCosmetic" class="growth-cosmetic">{{ growthCosmetic }}</text>
+			</view>
+			<view class="growth-stat">
+				<text class="growth-stat-num">{{ unlockedCount }}</text>
+				<text class="growth-stat-label">/ {{ totalCount }} 枚</text>
 			</view>
 		</view>
-	</view>
+
+		<view v-if="nextLevelHint" class="next-hint">
+			<text class="next-hint-text">{{ nextLevelHint }}</text>
+		</view>
+
+		<view class="section-head">
+			<text class="section-title">全部勋章</text>
+			<text class="section-desc">未解锁显示进度；图片可替换为 static/mengmeng/medals 下 AI 资源</text>
+		</view>
+
+		<view class="grid">
+			<meng-medal-card
+				v-for="m in medals"
+				:key="m.id"
+				:medal="m"
+				@tap="onMedalTap"
+			/>
+		</view>
+	</meng-sub-page>
 </template>
+
 <script>
-import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
+import MengSubPage from '@/components/meng-sub-page.vue'
+import MengAvatar from '@/components/meng-avatar.vue'
+import MengMedalCard from '@/components/meng-medal-card.vue'
+import { listWrongOftenChars } from '@/utils/user-progress-storage.js'
+import { syncWrongReviewState } from '@/utils/achievement-stats-storage.js'
+import {
+	listMedalsWithState,
+	getCurrentGrowthLevel,
+	formatGrowthLevelLabel,
+	countUnlockedMedals
+} from '@/services/medal-service.js'
+import { MEDAL_LIST } from '@/data/medals.js'
 
 export default {
+	components: { MengSubPage, MengAvatar, MengMedalCard },
 	data() {
 		return {
-			medals: []
+			medals: [],
+			growthLabel: '',
+			growthSub: '',
+			growthCosmetic: '',
+			growthPose: 'wave',
+			nextLevelHint: '',
+			unlockedCount: 0,
+			totalCount: MEDAL_LIST.length
 		}
 	},
 	onShow() {
-		const learned = getLearnedChars().length
-		const wrong = getWrongChars().length
-		this.medals = [
-			{ id: 'm1', name: '识字新星', rule: '累计学会 10 字', unlocked: learned >= 10 },
-			{ id: 'm2', name: '稳扎稳打', rule: '累计学会 50 字', unlocked: learned >= 50 },
-			{ id: 'm3', name: '复习达人', rule: '待复习控制在 5 以内', unlocked: wrong <= 5 }
-		]
+		syncWrongReviewState(listWrongOftenChars().length)
+
+		const { current, next, snapshot } = getCurrentGrowthLevel()
+		this.growthLabel = formatGrowthLevelLabel(current)
+		this.growthSub = current.summary || ''
+		this.growthCosmetic = current.cosmetic || ''
+		this.growthPose = current.level >= 5 ? 'happy' : current.level >= 2 ? 'book' : 'wave'
+
+		if (next && next.require) {
+			const parts = []
+			if (next.require.learnedTotal != null) {
+				parts.push(`已学 ${snapshot.learnedTotal}/${next.require.learnedTotal} 字`)
+			}
+			if (next.require.pinyinPractice != null) {
+				parts.push(`拼音练 ${snapshot.pinyinPractice}/${next.require.pinyinPractice} 次`)
+			}
+			if (next.require.lessonQuizPassed != null) {
+				parts.push(`小测通关 ${snapshot.lessonQuizPassed}/${next.require.lessonQuizPassed} 课`)
+			}
+			if (next.require.strokePractice != null) {
+				parts.push(`描红 ${snapshot.strokePractice}/${next.require.strokePractice} 次`)
+			}
+			if (next.require.dailyStreak != null) {
+				parts.push(`连续打卡 ${snapshot.dailyStreak}/${next.require.dailyStreak} 天`)
+			}
+			this.nextLevelHint = `下一级「${next.name}」：${parts.join(' · ')}`
+		} else {
+			this.nextLevelHint = '已达最高成长等级，继续保持！'
+		}
+
+		this.medals = listMedalsWithState()
+		this.unlockedCount = countUnlockedMedals()
+	},
+	methods: {
+		onMedalTap(m) {
+			if (!m) return
+			const title = m.unlocked ? m.name : `${m.name}（未解锁）`
+			const content = m.unlocked
+				? `主题：${m.theme || '—'}\n${m.rule}`
+				: `${m.rule}${m.progress ? `\n进度：${m.progress.current}/${m.progress.target}` : ''}`
+			uni.showModal({
+				title,
+				content,
+				showCancel: false,
+				confirmText: '知道了'
+			})
+		}
 	}
 }
 </script>
+
 <style scoped>
-.page { box-sizing: border-box; }
-.card { background: #fff; border-radius: 14rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.title { display: block; font-size: 32rpx; font-weight: 700; color: var(--meng-text); margin-bottom: 10rpx; }
-.desc { display: block; font-size: 25rpx; color: #6b6560; }
-.grid { display: flex; flex-direction: row; flex-wrap: wrap; }
-.medal {
-	flex: 0 0 48%;
-	width: 48%;
-	max-width: 48%;
-	box-sizing: border-box;
-	margin-right: 4%;
-	margin-bottom: 12rpx;
-	border-radius: 12rpx;
-	padding: 16rpx;
-	background: #fff;
+.growth-card {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 24rpx;
+	margin-bottom: 20rpx;
+	border-radius: 20rpx;
+	background: linear-gradient(135deg, #fff8e8 0%, #f0f7ea 100%);
+	border: 1rpx solid #e8dfc8;
 }
-.medal:nth-child(2n) { margin-right: 0; }
-.medal-on { border: 1rpx solid #ffd36b; }
-.medal-off { border: 1rpx solid #e7e1d4; }
-.icon { display: block; font-size: 36rpx; margin-bottom: 8rpx; }
-.name { display: block; font-size: 27rpx; color: var(--meng-text); font-weight: 600; margin-bottom: 4rpx; }
-.rule { display: block; font-size: 22rpx; color: #8a8279; }
+
+.growth-copy {
+	flex: 1;
+	min-width: 0;
+	margin-left: 16rpx;
+}
+
+.growth-level {
+	display: block;
+	font-size: 32rpx;
+	font-weight: 700;
+	color: var(--meng-text);
+}
+
+.growth-sub {
+	display: block;
+	font-size: 24rpx;
+	color: #6b6560;
+	margin-top: 6rpx;
+}
+
+.growth-cosmetic {
+	display: block;
+	font-size: 22rpx;
+	color: #3d6b4a;
+	margin-top: 4rpx;
+}
+
+.growth-stat {
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.growth-stat-num {
+	display: block;
+	font-size: 40rpx;
+	font-weight: 700;
+	color: #b8860b;
+	line-height: 1.1;
+}
+
+.growth-stat-label {
+	font-size: 22rpx;
+	color: #8a8279;
+}
+
+.next-hint {
+	padding: 16rpx 20rpx;
+	margin-bottom: 20rpx;
+	border-radius: 14rpx;
+	background: rgba(255, 255, 255, 0.75);
+	border: 1rpx dashed #d9d0c0;
+}
+
+.next-hint-text {
+	font-size: 23rpx;
+	color: #5a534c;
+	line-height: 1.5;
+}
+
+.section-head {
+	margin-bottom: 16rpx;
+}
+
+.section-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 700;
+	color: var(--meng-text);
+}
+
+.section-desc {
+	display: block;
+	font-size: 22rpx;
+	color: #a8a29e;
+	margin-top: 6rpx;
+}
+
+.grid {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
 </style>

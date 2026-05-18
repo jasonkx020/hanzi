@@ -1,10 +1,23 @@
 <script>
 import { initAppStores } from '@/store/index.js'
 import { schedulePinyinFontLoad } from '@/utils/pinyin-font-loader.js'
+import { applyMengSafeAreaCssVars } from '@/utils/meng-nav-metrics.js'
+import { VIP_PAY_SYNC_ON_LAUNCH } from '@/config/vip-pay-config.js'
+import {
+	syncVipEntitlementFromServer,
+	resumePendingVipPurchaseIfAny
+} from '@/services/vip-pay-service.js'
 	export default {
 		onLaunch: function() {
 			console.log('App Launch')
+			applyMengSafeAreaCssVars()
+			setTimeout(() => applyMengSafeAreaCssVars(), 80)
+			setTimeout(() => applyMengSafeAreaCssVars(), 320)
 			initAppStores()
+			if (VIP_PAY_SYNC_ON_LAUNCH) {
+				resumePendingVipPurchaseIfAny().catch(() => {})
+				syncVipEntitlementFromServer().catch(() => {})
+			}
 			// #ifndef H5
 			schedulePinyinFontLoad()
 			// #endif
@@ -37,6 +50,7 @@ import { schedulePinyinFontLoad } from '@/utils/pinyin-font-loader.js'
 		},
 		onShow: function() {
 			console.log('App Show')
+			applyMengSafeAreaCssVars()
 		},
 		onHide: function() {
 			console.log('App Hide')

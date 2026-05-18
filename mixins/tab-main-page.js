@@ -1,5 +1,7 @@
+import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
+
 /**
- * Tab 主页面：状态栏占位 + 底部给自定义 tabBar 留白 + 同步选中项
+ * Tab 主页面：顶图铺满状态栏区 + 底部给自定义 tabBar 留白 + 同步选中项
  */
 export default {
 	data() {
@@ -8,19 +10,21 @@ export default {
 		}
 	},
 	computed: {
+		/** 根节点不再顶 padding，避免页头与顶图之间露底色（微信小程序常见全屏顶图） */
 		tabPageStyle() {
-			return {
-				paddingTop: `${this.statusBarHeight || 44}px`
-			}
-		}
+			return { paddingTop: 0 }
+		},
 	},
 	onLoad() {
-		try {
-			const s = uni.getSystemInfoSync()
-			this.statusBarHeight = Number(s.statusBarHeight) || 44
-		} catch (_) {}
+		this.refreshStatusBarMetrics()
+	},
+	onShow() {
+		this.refreshStatusBarMetrics()
 	},
 	methods: {
+		refreshStatusBarMetrics() {
+			this.statusBarHeight = getMengNavMetrics().statusBarPx
+		},
 		setTabBarIndex(index) {
 			this.$nextTick(() => {
 				let bar = null

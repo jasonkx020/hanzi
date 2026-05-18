@@ -4,11 +4,13 @@ import { installDebugConsoleHook } from '@/utils/debug-console-hook.js'
 installDebugConsoleHook()
 
 import App from './App'
+import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
 Vue.config.productionTip = false
+Vue.component('MengStatusBarSpacer', MengStatusBarSpacer)
 App.mpType = 'app'
 const app = new Vue({
   ...App
@@ -20,6 +22,7 @@ app.$mount()
 import { createSSRApp } from 'vue'
 export function createApp() {
   const app = createSSRApp(App)
+  app.component('MengStatusBarSpacer', MengStatusBarSpacer)
   return {
     app
   }

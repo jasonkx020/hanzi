@@ -2,7 +2,7 @@
  * 课级学习进度（与字级 USER_CHAR_PROGRESS 分离，见 docs 课次字卡-学习进度与小测设计 §1.4）
  */
 
-import { STORAGE_KEYS } from '@/constants/curriculum-schema.js'
+import { getUserLessonProgressStorageKey } from '@/utils/learning-profile-storage.js'
 
 function semesterNorm(s) {
 	return s === '下' ? '下' : '上'
@@ -32,7 +32,7 @@ export function makeLessonMapKey(textbookVersionId, grade, semester, lessonKey) 
 
 function readMap() {
 	try {
-		const raw = uni.getStorageSync(STORAGE_KEYS.USER_LESSON_PROGRESS)
+		const raw = uni.getStorageSync(getUserLessonProgressStorageKey())
 		if (raw && typeof raw === 'object' && !Array.isArray(raw)) return { ...raw }
 	} catch (e) {
 		console.warn('[user-lesson-progress-storage] readMap', e)
@@ -42,7 +42,7 @@ function readMap() {
 
 function writeMap(map) {
 	try {
-		uni.setStorageSync(STORAGE_KEYS.USER_LESSON_PROGRESS, map)
+		uni.setStorageSync(getUserLessonProgressStorageKey(), map)
 	} catch (e) {
 		console.warn('[user-lesson-progress-storage] writeMap', e)
 	}

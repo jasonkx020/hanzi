@@ -3,27 +3,42 @@
  * 付费入口须面向家长，避免对儿童施加心理压力。
  */
 
-import { VIP_PLANS } from '@/constants/vip-products.js'
+import { clearTodayQuotasForDebug } from '@/utils/vip-quota.js'
+import { clearVipEntitlementsForDebug } from '@/utils/vip-entitlements.js'
+import { clearLearningProfilesForDebug } from '@/utils/learning-profile-storage.js'
 
 const STORAGE_EXPIRE_MS = 'vip_expire_at_ms'
 const STORAGE_ORDER_HINT = 'vip_last_order_id'
 const STORAGE_TRIAL_USED = 'vip_trial_once_used'
 
-/** 功能点编码：业务页用 assertVipFeature 统一拦截 */
+/** 功能点编码：业务页用 gateVipFeature / assertVipFeature 统一拦截 */
 export const VIP_FEATURE = {
 	FULL_GRADES: 'full_grades',
 	STROKE_UNLIMITED: 'stroke_unlimited',
 	DAILY_CHARS_SOFT_CAP: 'daily_chars_soft_cap',
 	EXPORT_LIST: 'export_list',
-	ADVANCED_REVIEW: 'advanced_review'
+	ADVANCED_REVIEW: 'advanced_review',
+	PINYIN_FOLLOW_SCORE: 'pinyin_follow_score',
+	PINYIN_AUTO_READ: 'pinyin_auto_read',
+	DAILY_UNLIMITED: 'daily_unlimited',
+	DRILL_UNLIMITED: 'drill_unlimited',
+	GAME_UNLIMITED: 'game_unlimited',
+	NO_ADS: 'no_ads',
+	FAMILY_REPORT: 'family_report'
 }
 
-/** 非会员时受限的功能（其余默认可用） */
+/** 非会员时受限的功能（其余默认可用或由配额控制） */
 const VIP_ONLY_FEATURES = new Set([
 	VIP_FEATURE.FULL_GRADES,
 	VIP_FEATURE.STROKE_UNLIMITED,
 	VIP_FEATURE.EXPORT_LIST,
-	VIP_FEATURE.ADVANCED_REVIEW
+	VIP_FEATURE.ADVANCED_REVIEW,
+	VIP_FEATURE.PINYIN_FOLLOW_SCORE,
+	VIP_FEATURE.PINYIN_AUTO_READ,
+	VIP_FEATURE.DAILY_UNLIMITED,
+	VIP_FEATURE.DRILL_UNLIMITED,
+	VIP_FEATURE.GAME_UNLIMITED,
+	VIP_FEATURE.FAMILY_REPORT
 ])
 
 const FREE_DAILY_CHAR_SOFT_LIMIT = 30
@@ -68,6 +83,9 @@ export function clearVipForDebug() {
 	uni.removeStorageSync(STORAGE_EXPIRE_MS)
 	uni.removeStorageSync(STORAGE_ORDER_HINT)
 	uni.removeStorageSync(STORAGE_TRIAL_USED)
+	clearTodayQuotasForDebug()
+	clearVipEntitlementsForDebug()
+	clearLearningProfilesForDebug()
 }
 
 export function rememberOrderRef(orderId) {
@@ -90,9 +108,6 @@ export function assertVipFeature(feature) {
 	}
 }
 
-/**
- * 拉起付费：此处占位。接入微信支付 / 苹果 IAP 后替换为真实下单与票据校验。
- */
 /** 每个设备安装后可领取一次短期体验（演示转化漏斗，上线可按运营策略关闭） */
 export function tryClaimInstallTrialIfEligible(days = 7) {
 	const used = uni.getStorageSync(STORAGE_TRIAL_USED)
@@ -103,23 +118,10 @@ export function tryClaimInstallTrialIfEligible(days = 7) {
 	return { ok: true, days }
 }
 
-export function requestPurchase(planId) {
-	return new Promise((resolve, reject) => {
-		uni.showModal({
-			title: '家长付费确认',
-			content:
-				'即将跳转支付（演示）。正式上线请接入微信支付等合规渠道，并完成服务端签约与用户协议展示。',
-			confirmText: '模拟支付成功',
-			cancelText: '取消',
-			success: (res) => {
-				if (res.confirm) {
-					const plan = VIP_PLANS.find((p) => p.id === planId)
-					const days = plan ? plan.durationDays : 31
-					extendVipByDays(days)
-					rememberOrderRef(`demo_${planId}_${Date.now()}`)
-					resolve({ ok: true, planId, days })
-				} else reject(new Error('cancel'))
-			}
-		})
-	})
+/**
+ * 发起会员购买（P1：家长验证 → 下单 → 平台支付 → 服务端/本地确认写 expireAt）
+ */
+export async function requestPurchase(productId) {
+	const { purchaseProduct } = await import('@/services/vip-pay-service.js')
+	return purchaseProduct(productId)
 }

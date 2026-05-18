@@ -9,6 +9,7 @@ import {
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
 import { starsForDrillScore } from '@/data/pinyin-drill-pools.js'
+import { recordPinyinPractice } from '@/utils/achievement-stats-storage.js'
 
 const STORAGE_STATS = 'pinyin_drill_stats_v1'
 
@@ -57,6 +58,7 @@ export function recordDrillRound(categoryKey, correct, total) {
 	try {
 		uni.setStorageSync(STORAGE_STATS, JSON.stringify(stats))
 	} catch (_) {}
+	recordPinyinPractice()
 	return { stars, stats }
 }
 

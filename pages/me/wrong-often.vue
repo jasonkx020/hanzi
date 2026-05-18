@@ -1,12 +1,16 @@
 <template>
-	<view class="page meng-page-shell meng-page-pad">
+	<meng-sub-page title="我经常错的" subtitle="按出错次数排序，优先复习">
 		<view v-if="rows.length === 0" class="empty">
 			<text class="empty-title">暂无易错记录</text>
 			<text class="empty-tip">笔顺练习写错、或在生字页「记录一次出错」会增加计数；按 wrong_count 从高到低排序。</text>
 		</view>
-		<view v-else class="list">
+		<view v-else class="list-wrap">
+			<view v-if="vipUpsell" class="vip-upsell" @click="goVip">
+				<text class="vip-upsell-text">{{ vipUpsell }}</text>
+				<text class="vip-upsell-link">家长开通 ›</text>
+			</view>
 			<view
-				v-for="(r, i) in rows"
+				v-for="(r, i) in visibleRows"
 				:key="i"
 				class="row"
 				@click="openDetail(r)"
@@ -19,27 +23,46 @@
 				<text class="arrow">›</text>
 			</view>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { listWrongOftenChars } from '@/utils/user-progress-storage.js'
+import { syncWrongReviewState } from '@/utils/achievement-stats-storage.js'
+import { FREE_WRONG_OFTEN_VISIBLE } from '@/constants/vip-quota-limits.js'
+import { isVipActive } from '@/utils/vip.js'
 
 export default {
+	components: { MengSubPage },
 	data() {
 		return {
 			COL_PROGRESS,
 			rows: []
 		}
 	},
+	computed: {
+		visibleRows() {
+			if (isVipActive()) return this.rows
+			return this.rows.slice(0, FREE_WRONG_OFTEN_VISIBLE)
+		},
+		vipUpsell() {
+			if (isVipActive() || this.rows.length <= FREE_WRONG_OFTEN_VISIBLE) return ''
+			return `免费版仅展示前 ${FREE_WRONG_OFTEN_VISIBLE} 个，共 ${this.rows.length} 个易错字`
+		}
+	},
 	onShow() {
 		this.rows = listWrongOftenChars()
+		syncWrongReviewState(this.rows.length)
 	},
 	methods: {
 		formatGradeSemesterLabel,
+		goVip() {
+			uni.navigateTo({ url: '/pages/vip/vip' })
+		},
 		openDetail(r) {
 			speakHanzi(r[COL_PROGRESS.hanzi] || '')
 			const h = encodeURIComponent(r[COL_PROGRESS.hanzi] || '')
@@ -79,10 +102,32 @@ export default {
 	line-height: 1.55;
 }
 
-.list {
+.list-wrap {
 	background: #fffef9;
 	border-radius: 16rpx;
 	overflow: hidden;
+}
+
+.vip-upsell {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 18rpx 20rpx;
+	background: var(--meng-leaf-soft);
+	border-bottom: 1rpx solid var(--meng-border);
+}
+
+.vip-upsell-text {
+	flex: 1;
+	font-size: 24rpx;
+	color: var(--meng-text-secondary);
+}
+
+.vip-upsell-link {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: var(--meng-accent-solid);
 }
 
 .row {

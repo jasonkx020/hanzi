@@ -29,6 +29,8 @@ export const MENG_ASSETS = {
 		loading: '/static/mengmeng/state/loading.png',
 		success: '/static/mengmeng/state/success.png'
 	},
+	/** 勋章图（P3）：/static/mengmeng/medals/{id}.png，缺省由组件回退到 IP 图 */
+	medal: (id) => `/static/mengmeng/medals/${id}.png`,
 	entry: {
 		daily: '/static/mengmeng/entry/daily.png',
 		textbook: '/static/mengmeng/entry/textbook.png',

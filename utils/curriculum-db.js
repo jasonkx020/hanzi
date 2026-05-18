@@ -87,7 +87,8 @@ export async function queryCurriculumChars(prefs) {
 }
 
 /**
- * 全库「识字表」生字（未选教材时写字练习等用）
+ * 全年级统编「识字表」生字（去重；与当前年级/学期偏好无关）
+ * 用于查字页部首检索、写字练习换字池等。
  * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function queryAllShiziCurriculumChars() {

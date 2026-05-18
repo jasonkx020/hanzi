@@ -1,5 +1,11 @@
 <template>
-	<view class="page dictation-page">
+	<meng-sub-page
+		:title="lessonTitle || '听写'"
+		subtitle="听音按笔顺写一写"
+		:full-height="true"
+		:padded="false"
+		:overlap-body="false"
+	>
 		<view v-if="phase === 'run'" class="run-shell">
 			<view class="top-bar">
 				<image class="top-logo" :src="logoSrc" mode="aspectFit" />
@@ -141,10 +147,11 @@
 			<text class="done-msg">{{ doneEncourage }}</text>
 			<button class="back-btn" type="primary" @click="goBackLesson">回字卡</button>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { takeLessonDictationTransfer } from '@/utils/lesson-mode-session.js'
 import { addCharWrongCount, markCharLearned } from '@/utils/user-progress-storage.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
@@ -203,6 +210,7 @@ const FEEDBACK = {
 }
 
 export default {
+	components: { MengSubPage },
 	data() {
 		return {
 			phase: 'run',
@@ -780,22 +788,18 @@ export default {
 </script>
 
 <style scoped>
-.dictation-page {
-	height: 100vh;
-	max-height: 100vh;
-	overflow: hidden;
-	box-sizing: border-box;
-	padding: 8rpx 20rpx 0;
-	padding-bottom: constant(safe-area-inset-bottom);
-	padding-bottom: env(safe-area-inset-bottom);
-	background: linear-gradient(180deg, #fff6ec 0%, var(--meng-page-bg, #f6f3ec) 42%);
-}
-
 .run-shell {
+	width: 100%;
 	height: 100%;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
+}
+
+.done-shell {
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .top-bar {
@@ -880,7 +884,7 @@ export default {
 .progress-fill {
 	height: 100%;
 	border-radius: 8rpx;
-	background: linear-gradient(90deg, var(--meng-accent-from, #ffb86a), var(--meng-accent-to, #e87a4a));
+	background: var(--meng-accent-solid, #e87a4a);
 	transition: width 0.35s ease;
 }
 
@@ -1136,7 +1140,7 @@ export default {
 }
 
 .action-btn--primary {
-	background: linear-gradient(135deg, var(--meng-accent-from, #ffb86a), var(--meng-accent-to, #e87a4a)) !important;
+	background: var(--meng-accent-solid, #e87a4a) !important;
 	color: #fff !important;
 	border: none !important;
 	font-weight: 700 !important;
@@ -1207,7 +1211,7 @@ export default {
 	border-radius: 20rpx;
 	font-size: 30rpx;
 	font-weight: 700;
-	background: linear-gradient(135deg, var(--meng-accent-from, #ffb86a), var(--meng-accent-to, #e87a4a));
+	background: var(--meng-accent-solid, #e87a4a);
 	border: none;
 }
 </style>

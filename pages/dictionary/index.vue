@@ -1,21 +1,19 @@
 <template>
-	<view class="page dict-page tab-root-page" :style="tabPageStyle">
-		<view class="dict-hero">
-			<image class="dict-hero-bg" :src="assets.heroBg" mode="aspectFill" />
-			<view class="dict-hero-sky" />
-			<view class="dict-hero-bar">
-				<meng-avatar class="dict-hero-logo" pose="curious" size="sm" />
-				<view class="dict-hero-meta">
-					<text class="dict-hero-title">查字</text>
-					<text class="dict-hero-sub">{{ curriculumChip }} · 字库 {{ chars.length }} 字</text>
+	<view class="page tab-page-shell dict-page tab-root-page" :style="tabPageStyle">
+		<meng-tab-hero
+			:status-bar-px="statusBarHeight"
+			title="查字"
+			:subtitle="dictHeroSubtitle"
+			avatar-pose="curious"
+		>
+			<template #actions>
+				<view class="tab-hero-btn" @click="goSettings">
+					<text class="tab-hero-btn-icon">⚙️</text>
 				</view>
-				<view class="dict-hero-btn" @click="goSettings">
-					<text class="dict-hero-btn-icon">⚙️</text>
-				</view>
-			</view>
-		</view>
+			</template>
+		</meng-tab-hero>
 
-		<view class="dict-body">
+		<view class="dict-body tab-dock-overlap tab-content-bleed">
 			<view class="glass-card search-card">
 				<view class="search-row">
 					<text class="search-glyph">🔍</text>
@@ -65,7 +63,7 @@
 		</view>
 
 			<view v-if="radicalPanelOn" class="glass-card radical-panel">
-			<text class="radical-title">按部首筛选字库（当前 {{ chars.length }} 字）</text>
+			<text class="radical-title">按部首筛选 · 全年级识字表 {{ radicalBrowseChars.length }} 字</text>
 			<view class="radical-chips">
 				<text
 					v-for="r in radicalOptions"
@@ -231,13 +229,19 @@ import {
 	formatCurriculumSummary,
 	formatGradeSemesterLabel
 } from '@/utils/curriculum-storage.js'
-import { queryCurriculumChars } from '@/utils/curriculum-db.js'
+import { queryAllShiziCurriculumChars, queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getDictionaryEntry, getRadicalLabel } from '@/repositories/dictionary-repository.js'
 import { DICTIONARY_RADICAL_PRESETS } from '@/data/dictionary-radical-presets.js'
 import { charMatchesRadicalFilter } from '@/utils/dictionary-radical-filter.js'
+import { consumeDictionaryPendingHanzi } from '@/utils/dictionary-tab-nav.js'
+import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
+import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
+import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
+import { recordDictLookup } from '@/utils/achievement-stats-storage.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
 import MengAvatar from '@/components/meng-avatar.vue'
+import MengTabHero from '@/components/meng-tab-hero.vue'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import {
 	MENG_VOICE,
@@ -264,7 +268,8 @@ export default {
 	mixins: [tabMain],
 	components: {
 		PinyinFourLinesRow,
-		MengAvatar
+		MengAvatar,
+		MengTabHero
 	},
 	data() {
 		return {
@@ -277,6 +282,8 @@ export default {
 			dictWordNotFoundRegistered: false,
 			summary: '',
 			chars: [],
+			/** 部首检索：全年级识字表，与当前学习进度无关 */
+			radicalBrowseChars: [],
 			hanziInput: '',
 			pinyinKeyword: '',
 			activeEntry: null,
@@ -300,6 +307,9 @@ export default {
 	computed: {
 		curriculumChip() {
 			return formatGradeSemesterLabel(getCurriculumPrefs())
+		},
+		dictHeroSubtitle() {
+			return `${this.curriculumChip} · 字库 ${this.chars.length} 字`
 		},
 		pinyinDisplayPlain() {
 			const t = String(this.pinyinDisplay || '').replace(/[()（）]/g, '').trim()
@@ -331,7 +341,7 @@ export default {
 		radicalHits() {
 			if (!this.radicalFilter) return []
 			const rad = this.radicalFilter
-			return this.chars.filter((row) => charMatchesRadicalFilter(row.hanzi, rad))
+			return this.radicalBrowseChars.filter((row) => charMatchesRadicalFilter(row.hanzi, rad))
 		},
 		strokeHint() {
 			if (!this.activeEntry) return ''
@@ -373,7 +383,7 @@ export default {
 		this.setTabBarIndex(2)
 		this.narrator = getAudioNarrator()
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
-		this.reloadDb()
+		this.reloadDb().then(() => this.applyPendingDictionaryHanzi())
 		playMengmengVoiceOnce(MENG_VOICE.DICT_SEARCH_HINT).catch(() => {})
 	},
 	onHide() {
@@ -500,12 +510,34 @@ export default {
 			}
 		},
 		async reloadDb() {
-			this.chars = await queryCurriculumChars(getCurriculumPrefs())
+			const prefs = getCurriculumPrefs()
+			const [chars, radicalBrowseChars] = await Promise.all([
+				queryCurriculumChars(prefs),
+				queryAllShiziCurriculumChars()
+			])
+			this.chars = chars
+			this.radicalBrowseChars = radicalBrowseChars
 			this.rebuildRadicalOptions()
+		},
+		findCharRow(hanzi) {
+			const c = String(hanzi || '').trim()
+			if (!c) return null
+			return (
+				this.chars.find((r) => String(r.hanzi || '').trim() === c) ||
+				this.radicalBrowseChars.find((r) => String(r.hanzi || '').trim() === c) ||
+				null
+			)
+		},
+		/** 从首页示范等 switchTab 带入的待查字 */
+		async applyPendingDictionaryHanzi() {
+			const ch = consumeDictionaryPendingHanzi()
+			if (!ch) return
+			this.hanziInput = ch
+			await this.loadEntryForChar(ch)
 		},
 		rebuildRadicalOptions() {
 			const fromDb = new Set()
-			for (const row of this.chars) {
+			for (const row of this.radicalBrowseChars) {
 				const ch = String(row.hanzi || '').trim().charAt(0)
 				if (!ch) continue
 				const rad = getRadicalLabel(ch)
@@ -533,6 +565,14 @@ export default {
 				uni.showToast({ title: '请输入汉字', icon: 'none' })
 				return
 			}
+			const g = await gateAndPromptWithAd(VIP_FEATURE.DAILY_CHARS_SOFT_CAP, {
+				quotaKey: QUOTA_KEYS.DICT_LOOKUP,
+				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DICT_LOOKUP],
+				quotaTitle: '今日查字次数已用完',
+				quotaMessage: '免费版每日可查约 18 次。开通会员后查字不限次。',
+				adPlacement: AD_PLACEMENTS.DICT_EXTRA_LOOKUPS
+			})
+			if (!g.ok) return
 			await this.loadEntryForChar(ch)
 		},
 		async loadEntryForChar(ch) {
@@ -542,7 +582,7 @@ export default {
 			this.loadingEntry = true
 			this.activeEntry = null
 			try {
-				const row = this.chars.find((r) => String(r.hanzi || '').trim() === c)
+				const row = this.findCharRow(c)
 				const lessonHint = row ? String(row.lesson_hint || '') : ''
 				const entry = await getDictionaryEntry(c, lessonHint)
 				if (!entry) {
@@ -553,6 +593,7 @@ export default {
 				this.activeEntry = entry
 				this.hanziInput = c
 				this.pinyinDisplay = entry.pinyin ? entry.pinyin : '—'
+				recordDictLookup()
 				this.scheduleDictStrokeMount()
 			} finally {
 				this.loadingEntry = false
@@ -579,8 +620,16 @@ export default {
 		async selectGridChar(hanzi) {
 			const c = String(hanzi || '').trim().charAt(0)
 			if (!c) return
+			const g = await gateAndPromptWithAd(VIP_FEATURE.DAILY_CHARS_SOFT_CAP, {
+				quotaKey: QUOTA_KEYS.DICT_LOOKUP,
+				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DICT_LOOKUP],
+				quotaTitle: '今日查字次数已用完',
+				quotaMessage: '免费版每日可查约 18 次。开通会员后查字不限次。',
+				adPlacement: AD_PLACEMENTS.DICT_EXTRA_LOOKUPS
+			})
+			if (!g.ok) return
 			this.collapseRadicalBrowse()
-			const row = this.chars.find((r) => String(r.hanzi || '').trim() === c)
+			const row = this.findCharRow(c)
 			const fp = row?.pinyin ? String(row.pinyin).replace(/\s+/g, ' ').trim() : ''
 			if (!this.dictPinyinPlaying) {
 				this.dictPinyinPlaying = true
@@ -629,99 +678,18 @@ export default {
 
 <style scoped>
 .dict-page {
-	min-height: 100vh;
 	box-sizing: border-box;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 28%,
-		var(--meng-page-bg) 100%
-	);
-}
-
-.dict-hero {
-	position: relative;
-	padding: 12rpx 24rpx 20rpx;
-	overflow: hidden;
-	min-height: 140rpx;
-}
-
-.dict-hero-bg {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 0;
-}
-
-.dict-hero-sky {
-	position: absolute;
-	inset: 0;
-	z-index: 1;
-	background: var(--meng-hero-overlay);
-	pointer-events: none;
-}
-
-.dict-hero-bar {
-	position: relative;
-	z-index: 2;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.dict-hero-logo {
-	flex-shrink: 0;
-	margin-right: 16rpx;
-}
-
-.dict-hero-meta {
-	flex: 1;
-	min-width: 0;
-}
-
-.dict-hero-title {
-	display: block;
-	font-size: 40rpx;
-	font-weight: 800;
-	color: var(--meng-text, #2c2419);
-	line-height: 1.2;
-}
-
-.dict-hero-sub {
-	display: block;
-	margin-top: 4rpx;
-	font-size: 22rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.35;
-}
-
-.dict-hero-btn {
-	flex-shrink: 0;
-	width: 72rpx;
-	height: 72rpx;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--meng-glass-bg);
-	box-shadow: 0 8rpx 24rpx var(--meng-shadow);
-}
-
-.dict-hero-btn-icon {
-	font-size: 32rpx;
 }
 
 .dict-body {
-	padding: 0 20rpx 48rpx;
+	padding: 0 0 24rpx;
 	box-sizing: border-box;
 }
 
 .glass-card {
 	margin-top: 16rpx;
-	padding: 22rpx 20rpx;
-	border-radius: 28rpx;
+	padding: 20rpx 14rpx;
+	border-radius: 24rpx;
 	background: rgba(255, 255, 255, 0.9);
 	border: 2rpx solid rgba(255, 255, 255, 0.95);
 	box-shadow:
@@ -764,7 +732,7 @@ export default {
 	height: 68rpx;
 	line-height: 68rpx;
 	border-radius: 16rpx;
-	background: linear-gradient(135deg, var(--meng-accent-from), var(--meng-accent-to));
+	background: var(--meng-accent-solid);
 	box-shadow: 0 6rpx 18rpx var(--meng-shadow-warm, rgba(255, 120, 72, 0.22));
 }
 
@@ -784,12 +752,12 @@ export default {
 	padding: 18rpx 12rpx;
 	border-radius: 18rpx;
 	border: 2rpx solid rgba(144, 202, 249, 0.45);
-	background: linear-gradient(135deg, #f4faff 0%, #eef6ff 100%);
+	background: #eef6ff;
 }
 
 .quick-pill--on {
 	border-color: rgba(255, 140, 170, 0.65);
-	background: linear-gradient(135deg, var(--meng-banner-soft) 0%, var(--meng-card) 100%);
+	background: var(--meng-card);
 	box-shadow: 0 0 0 2rpx rgba(255, 107, 157, 0.2);
 }
 
@@ -870,7 +838,7 @@ export default {
 .rad-chip-on {
 	color: #c44d6a;
 	font-weight: 700;
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: rgba(255, 120, 160, 0.45);
 }
 
@@ -914,7 +882,7 @@ export default {
 }
 
 .rad-cell--active {
-	background: linear-gradient(135deg, #fff5f9 0%, #fff 100%);
+	background: #fff;
 	border-color: #ff8aab;
 	box-shadow: 0 4rpx 14rpx rgba(255, 140, 170, 0.2);
 }
@@ -965,7 +933,7 @@ export default {
 
 .meta-compact {
 	position: relative;
-	background: linear-gradient(135deg, #fff8fb 0%, #fff5f8 100%);
+	background: #fff5f8;
 	border-radius: 16rpx;
 	border: 2rpx solid rgba(255, 180, 200, 0.4);
 	padding: 14rpx 16rpx;
@@ -1158,7 +1126,7 @@ export default {
 .explain-box {
 	margin-top: 14rpx;
 	padding: 16rpx 18rpx;
-	background: linear-gradient(135deg, var(--meng-card) 0%, var(--meng-banner-soft) 100%);
+	background: var(--meng-card);
 	border-radius: 18rpx;
 	border: 2rpx solid rgba(255, 160, 190, 0.4);
 }
@@ -1201,7 +1169,7 @@ export default {
 	margin: 6rpx;
 	padding: 8rpx 16rpx;
 	border-radius: 999rpx;
-	background: linear-gradient(135deg, #e8f4fc 0%, #e3f2fd 100%);
+	background: #e3f2fd;
 	font-size: 24rpx;
 	color: #1565c0;
 	font-weight: 600;
@@ -1216,7 +1184,7 @@ export default {
 
 .notebook-btn {
 	border-radius: 999rpx !important;
-	background: linear-gradient(135deg, var(--meng-leaf, #6bae7d), #5a9a6c) !important;
+	background: var(--meng-leaf, #6bae7d) !important;
 	border: none !important;
 	font-size: 28rpx !important;
 	font-weight: 700 !important;
@@ -1256,7 +1224,7 @@ export default {
 .empty-demo {
 	padding: 14rpx 36rpx;
 	border-radius: 999rpx;
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border: 2rpx solid rgba(255, 120, 160, 0.4);
 }
 
@@ -1270,7 +1238,7 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: flex-start;
-	background: linear-gradient(135deg, var(--meng-leaf-soft) 0%, var(--meng-banner-soft) 100%);
+	background: var(--meng-banner-soft);
 	border-color: rgba(200, 160, 255, 0.35);
 }
 

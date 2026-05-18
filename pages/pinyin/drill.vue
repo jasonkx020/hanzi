@@ -1,5 +1,5 @@
 <template>
-	<view class="page drill-page">
+	<meng-sub-page title="拼音大闯关" subtitle="听音选拼音，集小星星">
 		<!-- 大厅 -->
 		<view v-if="phase === 'lobby'" class="lobby">
 			<text class="lobby-emoji">🎯</text>
@@ -86,10 +86,11 @@
 			<button class="done-btn" type="default" @click="replayRound">再闯一次</button>
 			<button class="done-primary" type="primary" @click="goBackPinyin">返回拼音学习</button>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import {
 	PINYIN_DRILL_CATEGORIES,
@@ -99,6 +100,7 @@ import {
 	pickDrillTargets,
 	buildDrillOptions
 } from '@/data/pinyin-drill-pools.js'
+import { getDrillPoolFromCurriculum } from '@/services/pinyin-practice-pool-service.js'
 import {
 	loadDrillStats,
 	recordDrillRound,
@@ -108,6 +110,7 @@ import {
 
 export default {
 	components: {
+		MengSubPage,
 		PinyinFourLinesRow
 	},
 	data() {
@@ -192,13 +195,17 @@ export default {
 		isBlendCategory() {
 			return this.selectedCategory === 'blend'
 		},
-		startRound() {
+		async startRound() {
 			if (this.starting) return
 			this.starting = true
 			this.clearAutoHear()
 			stopDrillAudio()
 			try {
-				const pool = getDrillPool(this.selectedCategory)
+				const key = this.selectedCategory
+				const pool =
+					key === 'blend' || key === 'mix'
+						? await getDrillPoolFromCurriculum(key)
+						: getDrillPool(key)
 				if (pool.length < this.optionCount) {
 					uni.showToast({ title: '题库太少，请换一类试试', icon: 'none' })
 					return
@@ -322,13 +329,6 @@ export default {
 </script>
 
 <style scoped>
-.drill-page {
-	min-height: 100vh;
-	padding: 24rpx;
-	box-sizing: border-box;
-	background: linear-gradient(180deg, #fff6fa 0%, var(--meng-page-bg) 42%);
-}
-
 .lobby {
 	display: flex;
 	flex-direction: column;
@@ -390,7 +390,7 @@ export default {
 }
 
 .cat-chip--on {
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: var(--meng-chip-active-border);
 	box-shadow: 0 8rpx 20rpx rgba(255, 120, 160, 0.2);
 }
@@ -441,7 +441,7 @@ export default {
 	font-size: 30rpx;
 	font-weight: 700;
 	color: #fff;
-	background: linear-gradient(145deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	background: var(--meng-accent-solid);
 	border: none;
 	border-radius: 999rpx;
 	box-shadow: 0 12rpx 28rpx var(--meng-shadow-warm);

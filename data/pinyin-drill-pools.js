@@ -80,7 +80,7 @@ export const PINYIN_DRILL_CATEGORIES = [
 	{ key: 'initial', label: '声母', emoji: '🔤', desc: '听音选出正确的声母' },
 	{ key: 'vowel', label: '韵母', emoji: '🎵', desc: '听音选出正确的韵母' },
 	{ key: 'whole', label: '整体认读', emoji: '⭐', desc: '听音选出整体认读音节' },
-	{ key: 'blend', label: '拼读', emoji: '🧩', desc: '听拼读，选出完整音节' },
+	{ key: 'blend', label: '拼读', emoji: '🧩', desc: '听拼读，选出完整音节（优先当前教材识字表）' },
 	{ key: 'mix', label: '综合', emoji: '🌈', desc: '声母、韵母、拼读混合挑战' }
 ]
 

@@ -1,7 +1,18 @@
 <template>
-	<view class="page tab-root-page pinyin-page" :style="pinyinRootStyle">
-		<view class="pinyin-dock">
-			<view class="pinyin-dock-glass">
+	<view
+		class="page tab-page-shell tab-page-shell--edge tab-root-page pinyin-page"
+		:class="{ 'pinyin-page--letters': isLetterPinyinTab }"
+		:style="tabPageStyle"
+	>
+		<meng-tab-hero
+			:status-bar-px="statusBarHeight"
+			title="拼音"
+			subtitle="跟读 · 拼读 · 闯关"
+			avatar-pose="happy"
+		/>
+
+		<view class="tab-dock-overlap pinyin-dock">
+			<view class="tab-dock-panel pinyin-dock-panel">
 				<scroll-view scroll-x class="pinyin-tab-scroll" :show-scrollbar="false">
 					<view class="pinyin-tab-row">
 						<view
@@ -55,16 +66,12 @@
 					</view>
 				</view>
 
-				<view class="pinyin-scroll-wrap">
-			<scroll-view
-				scroll-y
-				class="pinyin-scroll"
-				:style="pinyinScrollStyle"
-				:scroll-top="pinyinScrollTop"
-				scroll-with-animation
-				@scroll="onPinyinScroll"
-			>
-				<view class="pinyin-content">
+				<view
+					class="pinyin-scroll-wrap"
+					:class="{ 'pinyin-scroll-wrap--letters': isLetterPinyinTab }"
+				>
+					<view v-if="isLetterPinyinTab" class="pinyin-body">
+						<view class="pinyin-content">
 			<view v-if="mountedTabs['声母']" v-show="activeTab === '声母'" class="pinyin-tab-panel">
 				<view
 					v-for="sec in tabViewInitial"
@@ -206,62 +213,89 @@
 					</view>
 				</view>
 			</view>
-			<view
-				v-if="mountedTabs['拼读练习']"
-				v-show="activeTab === '拼读练习'"
-				class="pinyin-tab-panel pinyin-homework-strip"
-			>
-				<view
-					v-for="row in tabViewDrillRows"
-					:key="row.scrollId"
-					class="pinyin-chunk-anchor"
-				>
-					<view :id="row.scrollPadId" class="pinyin-mascot-scroll-pad" />
-					<view
-						:id="row.scrollId"
-						class="pinyin-homework-wrap"
-						:class="{ 'pinyin-homework-wrap--reading': autoReadChunkActive('drill', 0, row.ri, row.chunk) }"
-					>
-						<pinyin-four-lines-row
-							size="grid"
-							interactive
-							:sheet-bg="row.sheetBg"
-							:sheet-bd="row.sheetBd"
-							:highlight-column-index="autoReadHighlightCol('drill', 0, row.ri, row.chunk)"
-							:syllables="row.chunk"
-							@cell-click="onHomeworkCellSpeak"
-						/>
+						</view>
 					</view>
-				</view>
-			</view>
-				</view>
-			</scroll-view>
-				</view>
+					<scroll-view
+						v-else
+						scroll-y
+						class="pinyin-scroll"
+						:style="pinyinScrollStyle"
+						:scroll-top="pinyinScrollTop"
+						:enable-flex="true"
+						scroll-with-animation
+						@scroll="onPinyinScroll"
+					>
+						<view class="pinyin-content">
+							<view
+								v-if="mountedTabs['拼读练习']"
+								v-show="activeTab === '拼读练习'"
+								class="pinyin-tab-panel pinyin-homework-strip"
+							>
+								<view class="drill-practice-bar">
+									<text class="drill-practice-hint clamp-2">{{ drillPracticeHint }}</text>
+									<view
+										class="drill-practice-shuffle"
+										:class="{ 'drill-practice-shuffle--busy': drillPracticeLoading }"
+										@click="refreshDrillPracticePool(true)"
+									>
+										<text class="drill-practice-shuffle-text">{{
+											drillPracticeLoading ? '抽取中…' : '换一批'
+										}}</text>
+									</view>
+								</view>
+								<view
+									v-for="row in tabViewDrillRows"
+									:key="row.scrollId"
+									class="pinyin-chunk-anchor"
+								>
+									<view :id="row.scrollPadId" class="pinyin-mascot-scroll-pad" />
+									<view
+										:id="row.scrollId"
+										class="pinyin-homework-wrap pinyin-homework-wrap--drill-one"
+										:class="{
+											'pinyin-homework-wrap--reading': autoReadChunkActive('drill', 0, row.ri, row.chunk)
+										}"
+									>
+										<pinyin-four-lines-row
+											size="tone"
+											interactive
+											:sheet-bg="row.sheetBg"
+											:sheet-bd="row.sheetBd"
+											:highlight-column-index="autoReadHighlightCol('drill', 0, row.ri, row.chunk)"
+											:syllables="row.chunk"
+											@cell-click="onHomeworkCellSpeak"
+										/>
+									</view>
+								</view>
+							</view>
+						</view>
+					</scroll-view>
 
-				<view class="pinyin-footer">
-					<view class="pinyin-quick-row">
-						<view class="pinyin-quick-btn pinyin-quick-btn--drill" @click="goDrill">
-							<text class="pinyin-quick-emoji">🎯</text>
-							<text class="pinyin-quick-label">闯关</text>
-						</view>
-						<view
-							class="pinyin-quick-btn pinyin-quick-btn--autoread"
-							:class="{
-								'pinyin-quick-btn--autoread-on': autoReadRunning,
-								'pinyin-quick-btn--disabled': followReadBusy
-							}"
-							@click="toggleAutoReadChain"
-						>
-							<text class="pinyin-quick-emoji">{{ autoReadRunning ? '⏹' : '▶' }}</text>
-							<text class="pinyin-quick-label">{{ autoReadRunning ? '停止连读' : '开始连读' }}</text>
-						</view>
-						<view
-							class="pinyin-quick-btn pinyin-quick-btn--stop"
-							:class="{ 'pinyin-quick-btn--disabled': !recording || followReadBusy }"
-							@click="stopRecordAndScore"
-						>
-							<text class="pinyin-quick-emoji">✓</text>
-							<text class="pinyin-quick-label">评分</text>
+					<view class="pinyin-footer">
+						<view class="pinyin-quick-row">
+							<view class="pinyin-quick-btn pinyin-quick-btn--drill" @click="goDrill">
+								<text class="pinyin-quick-emoji">🎯</text>
+								<text class="pinyin-quick-label">闯关</text>
+							</view>
+							<view
+								class="pinyin-quick-btn pinyin-quick-btn--autoread"
+								:class="{
+									'pinyin-quick-btn--autoread-on': autoReadRunning,
+									'pinyin-quick-btn--disabled': followReadBusy
+								}"
+								@click="toggleAutoReadChain"
+							>
+								<text class="pinyin-quick-emoji">{{ autoReadRunning ? '⏹' : '▶' }}</text>
+								<text class="pinyin-quick-label">{{ autoReadRunning ? '停止连读' : '开始连读' }}</text>
+							</view>
+							<view
+								class="pinyin-quick-btn pinyin-quick-btn--stop"
+								:class="{ 'pinyin-quick-btn--disabled': !recording || followReadBusy }"
+								@click="stopRecordAndScore"
+							>
+								<text class="pinyin-quick-emoji">✓</text>
+								<text class="pinyin-quick-label">评分</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -305,6 +339,11 @@ import {
 	followReadStatusBarHint,
 	followReadToastTitle
 } from '@/utils/pinyin-follow-read-ui-messages.js'
+import {
+	describePinyinPracticeSource,
+	FALLBACK_BLEND_SYLLABLES,
+	pickRandomPinyinPracticeSyllables
+} from '@/services/pinyin-practice-pool-service.js'
 import { getPinyinSymbolCategory, legendForTab } from '@/utils/pinyin-pep-category.js'
 import { chunkHomeworkSymbols as chunkHomeworkSymbolsByWidth } from '@/utils/pinyin-homework-chunk.js'
 import {
@@ -314,6 +353,12 @@ import {
 	autoReadSlotsFromDrillRows,
 	autoReadSlotsFromToneBlocks
 } from '@/utils/pinyin-index-tab-views.js'
+import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
+import { gateAndPrompt, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
+import {
+	recordPinyinFollowPass,
+	recordPinyinAutoReadChainComplete
+} from '@/utils/achievement-stats-storage.js'
 
 /** 韵母分块（顺序与教材常见层级一致，自上而下） */
 const VOWEL_SECTIONS = [
@@ -396,6 +441,8 @@ import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import MengAvatar from '@/components/meng-avatar.vue'
+import MengTabHero from '@/components/meng-tab-hero.vue'
 import tabMain from '@/mixins/tab-main-page.js'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import { MENG_VOICE, playMengmengVoice, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
@@ -403,10 +450,13 @@ import { MENG_VOICE, playMengmengVoice, playMengmengVoiceOnce, stopMengmengVoice
 export default {
 	mixins: [tabMain],
 	components: {
-		PinyinFourLinesRow
+		PinyinFourLinesRow,
+		MengAvatar,
+		MengTabHero
 	},
 	data() {
 		return {
+			assets: MENG_ASSETS,
 			mengMascotIp: MENG_ASSETS.ip.book,
 			tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
 			toneColumnLabels: ['一声', '二声', '三声', '四声'],
@@ -415,13 +465,15 @@ export default {
 				声母: INITIAL_SECTIONS.flatMap((s) => s.symbols),
 				韵母: VOWEL_SECTIONS.flatMap((s) => s.symbols),
 				整体认读: WHOLE_READING_SECTIONS.flatMap((s) => s.symbols),
-				拼读练习: ['ba', 'bo', 'ma', 'de', 'du', 'ge', 'hua', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
+				拼读练习: FALLBACK_BLEND_SYLLABLES.slice()
 			},
+			drillPracticeHint: '正在从识字表抽取拼音…',
+			drillPracticeLoading: false,
 			narrator: 'kid',
 			/** 是否正在自动连读（与跟读复选框可同时开启） */
 			autoReadRunning: false,
 			/** 进入页面 / 切换 Tab 后是否自动开始连读 */
-			autoReadPrefer: true,
+			autoReadPrefer: false,
 			autoReadActiveSlot: null,
 			/** 连读滚动位置（px），使当前行停在视区中上部而非顶格 */
 			pinyinScrollTop: 0,
@@ -500,12 +552,14 @@ export default {
 		this._slotsTone = autoReadSlotsFromToneBlocks(this.toneTabBlocksData)
 	},
 	computed: {
-		pinyinRootStyle() {
-			return this.tabPageStyle || {}
+		/** 声母 / 韵母 / 整体认读 / 音调：不用 scroll-view，走页面滚动 */
+		isLetterPinyinTab() {
+			return this.activeTab !== '拼读练习'
 		},
 		pinyinScrollStyle() {
 			const h = this.scrollAreaHeightPx
-			return h > 0 ? { height: `${h}px` } : { height: '65vh' }
+			if (h > 0) return { height: `${h}px`, flex: 'none' }
+			return { flex: '1', height: '0', minHeight: '200px' }
 		},
 		autoReadActiveLabel() {
 			return this.autoReadActiveSlot?.symbol || ''
@@ -587,7 +641,17 @@ export default {
 		}
 	},
 	onReady() {
-		this.scheduleMeasureScrollHeight()
+		if (!this.isLetterPinyinTab) {
+			this.scheduleMeasureScrollHeight()
+		}
+	},
+	onPageScroll(e) {
+		if (!this.isLetterPinyinTab) return
+		const top = e && e.scrollTop
+		if (top != null && !Number.isNaN(top)) {
+			this._lastPinyinScrollTop = top
+		}
+		this.handlePinyinScrollMotion()
 	},
 	onShow() {
 		this.setTabBarIndex(1)
@@ -595,7 +659,9 @@ export default {
 		this.narrator = getAudioNarrator()
 		this.recording = getFollowReadState().recording
 		this.followReadHistory = getFollowReadHistory()
-		this.scheduleMeasureScrollHeight()
+		this.refreshDrillPracticePool()
+		this.scheduleMeasureScrollHeight(80)
+		this.scheduleMeasureScrollHeight(320)
 		this.$nextTick(() => {
 			this.tryAutoStartReadChain()
 		})
@@ -607,6 +673,39 @@ export default {
 		this.clearFollowReadStatusHint()
 	},
 	methods: {
+		async refreshDrillPracticePool(userInitiated = false) {
+			if (this.drillPracticeLoading) return
+			if (userInitiated) {
+				const g = await gateAndPrompt(VIP_FEATURE.DRILL_UNLIMITED, {
+					quotaKey: QUOTA_KEYS.DRILL_SHUFFLE,
+					quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DRILL_SHUFFLE],
+					quotaTitle: '今日换一批次数已用完',
+					quotaMessage: '免费版每日可换 3 批拼读练习。开通会员后不限次。'
+				})
+				if (!g.ok) return
+			}
+			this.drillPracticeLoading = true
+			try {
+				const [symbols, hint] = await Promise.all([
+					pickRandomPinyinPracticeSyllables(12),
+					describePinyinPracticeSource()
+				])
+				if (!symbols.length) return
+				this.$set(this.symbolMap, '拼读练习', symbols)
+				this.tabViewDrillRows = buildHomeworkDrillRows(symbols)
+				this._slotsDrill = autoReadSlotsFromDrillRows(this.tabViewDrillRows)
+				this.drillPracticeHint = hint
+				if (this.activeTab === '拼读练习' && this.autoReadRunning) {
+					this.stopAutoReadChain()
+					this.$nextTick(() => this.tryAutoStartReadChain())
+				}
+			} catch (e) {
+				console.warn('[pinyin] refreshDrillPracticePool', e)
+				this.drillPracticeHint = '抽取失败，已使用常用音节'
+			} finally {
+				this.drillPracticeLoading = false
+			}
+		},
 		setFollowReadStatusHint(hint, kind = 'warn', ttlMs = 6000) {
 			if (this._followReadHintTimer) {
 				clearTimeout(this._followReadHintTimer)
@@ -645,14 +744,22 @@ export default {
 			this.activeTab = next
 			this.pinyinScrollTop = 0
 			this._lastPinyinScrollTop = 0
-			this.scheduleMeasureScrollHeight()
+			if (next === '拼读练习') {
+				this.scheduleMeasureScrollHeight()
+			} else {
+				uni.pageScrollTo({ scrollTop: 0, duration: 0 })
+			}
 			if (this.autoReadPrefer) {
 				this.$nextTick(() => {
 					setTimeout(() => this.tryAutoStartReadChain(), 150)
 				})
 			}
 		},
-		toggleAutoReadPrefer() {
+		async toggleAutoReadPrefer() {
+			if (!this.autoReadPrefer) {
+				const g = await gateAndPrompt(VIP_FEATURE.PINYIN_AUTO_READ)
+				if (!g.ok) return
+			}
 			this.autoReadPrefer = !this.autoReadPrefer
 			if (this.autoReadPrefer) {
 				this.tryAutoStartReadChain()
@@ -667,24 +774,17 @@ export default {
 			if (!this.autoReadSlots.length) return
 			this.startAutoReadChain()
 		},
-		scheduleMeasureScrollHeight() {
-			if (this._measureScrollTimer != null) {
-				clearTimeout(this._measureScrollTimer)
-			}
-			this._measureScrollTimer = setTimeout(() => {
-				this._measureScrollTimer = null
-				this.measureScrollHeight()
-			}, 80)
-		},
 		sleep(ms) {
 			return new Promise((r) => setTimeout(r, ms))
 		},
-		toggleAutoReadChain() {
+		async toggleAutoReadChain() {
 			if (this.autoReadRunning) {
 				this.stopAutoReadChain()
 				uni.showToast({ title: '已停止连读', icon: 'none', duration: 1600 })
 				return
 			}
+			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_AUTO_READ)
+			if (!g.ok) return
 			this.startAutoReadChain()
 		},
 		startAutoReadChain(fromSlot) {
@@ -793,6 +893,10 @@ export default {
 				if (typeof onDone === 'function') onDone()
 				return
 			}
+			if (this.isLetterPinyinTab) {
+				this.scrollAutoReadToRowPage(anchorId, onDone)
+				return
+			}
 			const viewH =
 				this.scrollAreaHeightPx > 0 ? this.scrollAreaHeightPx : Math.floor((uni.getSystemInfoSync().windowHeight || 600) * 0.55)
 			const anchorRatio = 0.36
@@ -827,6 +931,47 @@ export default {
 				}, 420)
 			})
 		},
+		/** 字母 Tab：页面级滚动定位当前行 */
+		scrollAutoReadToRowPage(anchorId, onDone) {
+			const finish = () => {
+				if (typeof onDone === 'function') onDone()
+			}
+			try {
+				const winH = Number(uni.getSystemInfoSync().windowHeight) || 600
+				const desiredTop = Math.floor(winH * 0.36)
+				const query = uni.createSelectorQuery().in(this)
+				query.select(`#${anchorId}`).boundingClientRect()
+				query.selectViewport().scrollOffset()
+				query.exec((res) => {
+					const rowRect = res && res[0]
+					const viewport = res && res[1]
+					if (!rowRect || !viewport) {
+						finish()
+						return
+					}
+					if (Math.abs(rowRect.top - desiredTop) < 32) {
+						finish()
+						return
+					}
+					const current = viewport.scrollTop != null ? viewport.scrollTop : this._lastPinyinScrollTop || 0
+					const next = Math.max(0, Math.round(current + rowRect.top - desiredTop))
+					uni.pageScrollTo({
+						scrollTop: next,
+						duration: 300,
+						success: () => {
+							this._lastPinyinScrollTop = next
+							this._pinyinMascotScrollEndTimer = setTimeout(() => {
+								this._pinyinMascotScrollEndTimer = null
+								finish()
+							}, 320)
+						},
+						fail: finish
+					})
+				})
+			} catch (_) {
+				finish()
+			}
+		},
 		applyPinyinScrollTop(top) {
 			const t = Math.max(0, Math.round(top))
 			if (t === this.pinyinScrollTop) {
@@ -855,6 +1000,9 @@ export default {
 			if (top != null && !Number.isNaN(top)) {
 				this._lastPinyinScrollTop = top
 			}
+			this.handlePinyinScrollMotion()
+		},
+		handlePinyinScrollMotion() {
 			if (!this.autoReadRunning || !this.pinyinMascotReady) return
 			if (this._pinyinMascotScrollAnim) return
 			if (this._pinyinMascotScrollTimer != null) {
@@ -969,21 +1117,46 @@ export default {
 			if (slot.blockKey !== blockKey || slot.rowIdx !== rowIdx) return -1
 			return slot.ci
 		},
+		scheduleMeasureScrollHeight(delayMs = 0) {
+			if (this._measureScrollTimer != null) {
+				clearTimeout(this._measureScrollTimer)
+			}
+			this._measureScrollTimer = setTimeout(() => {
+				this._measureScrollTimer = null
+				this.measureScrollHeight()
+			}, Math.max(0, Number(delayMs) || 0))
+		},
 		measureScrollHeight() {
+			if (this.isLetterPinyinTab) return
 			const apply = () => {
 				try {
-					uni.createSelectorQuery()
-						.in(this)
-						.select('.pinyin-scroll-wrap')
-						.boundingClientRect((rect) => {
-							if (rect && rect.height > 0) {
-								this.scrollAreaHeightPx = Math.floor(rect.height)
+					const sys = uni.getSystemInfoSync()
+					const winH = Number(sys.windowHeight) || Number(sys.screenHeight) || 0
+					const q = uni.createSelectorQuery().in(this)
+					q.select('.pinyin-scroll-wrap').boundingClientRect()
+					q.select('.pinyin-footer').boundingClientRect()
+					q.exec((res) => {
+						const wrap = res && res[0]
+						const foot = res && res[1]
+						let h = 0
+						if (wrap && wrap.height > 40) {
+							h = Math.floor(wrap.height)
+						} else if (wrap && wrap.top > 0 && winH > 0) {
+							const footH = foot && foot.height ? foot.height : 72
+							h = Math.floor(winH - wrap.top - footH - 8)
+						}
+						if (h > 80) {
+							const next = Math.max(80, Math.ceil(h))
+							if (next !== this.scrollAreaHeightPx) {
+								this.scrollAreaHeightPx = next
 							}
-						})
-						.exec()
+						}
+					})
 				} catch (_) {}
 			}
-			this.$nextTick(apply)
+			this.$nextTick(() => {
+				this.$nextTick(apply)
+			})
 		},
 		/** 作业本分行（按音节宽度防重叠，见 utils/pinyin-homework-chunk.js） */
 		chunkHomeworkSymbols(symbols, options) {
@@ -1099,11 +1272,10 @@ export default {
 					if (played) return true
 					return speakPinyinSymbolAsync(text, narrator)
 				}
-				const useTone1Fb = this.activeTab === '拼读练习'
 				const blend = this.activeTab === '拼读练习'
 				return speakBlendedPinyinSyllable(text, {
 					narrator,
-					useTone1Fb,
+					useTone1Fb: false,
 					blend,
 					showFailToast: !this.autoReadRunning
 				})
@@ -1186,6 +1358,7 @@ export default {
 				this.pinyinMascotReady = false
 				this.pinyinMascotPosReady = false
 				this.setAutoReadHighlight(null)
+				recordPinyinAutoReadChainComplete()
 				uni.showToast({ title: '连读完成', icon: 'none', duration: 1800 })
 			}
 		},
@@ -1228,6 +1401,13 @@ export default {
 				return
 			}
 			if (this.followReadBusy || this.recording) return
+			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_FOLLOW_SCORE, {
+				quotaKey: QUOTA_KEYS.PINYIN_FOLLOW,
+				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.PINYIN_FOLLOW],
+				quotaTitle: '今日跟读评分次数已用完',
+				quotaMessage: '免费版每日可跟读评分 5 次。开通会员后不限次。'
+			})
+			if (!g.ok) return
 			if (this.autoReadRunning) {
 				this.stopAutoReadChain()
 			}
@@ -1282,6 +1462,17 @@ export default {
 		},
 		async finishFollowReadScoring(stopRes, autoEnded) {
 			this.recording = false
+			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_FOLLOW_SCORE, {
+				quotaKey: QUOTA_KEYS.PINYIN_FOLLOW,
+				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.PINYIN_FOLLOW],
+				quotaTitle: '今日跟读评分次数已用完',
+				quotaMessage: '免费版每日可跟读评分 5 次。开通会员后不限次。'
+			})
+			if (!g.ok) {
+				const chainWait = typeof this._autoReadFollowDone === 'function'
+				if (chainWait) this.releaseAutoReadFollowWait(false)
+				return
+			}
 			const chainRunId = this._autoReadFollowRunId
 			const chainWait = typeof this._autoReadFollowDone === 'function'
 			if (!stopRes?.ok) {
@@ -1310,6 +1501,7 @@ export default {
 			this.followReadHistory = getFollowReadHistory()
 			const verdict = scoreRes.details?.verdict || ''
 			if (scoreRes.ok && scoreRes.pass) {
+				recordPinyinFollowPass()
 				this.lastScoreText = `跟读 ${scoreRes.score} 分 · 与示范音相似 ${scoreRes.details?.targetMatch ?? 0}%`
 				this.setFollowReadStatusHint(
 					scoreRes.statusHint || `跟读 ${scoreRes.score} 分`,
@@ -1350,38 +1542,68 @@ export default {
 	flex-direction: column;
 	box-sizing: border-box;
 	overflow: hidden;
-	padding-left: 0;
-	padding-right: 0;
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		var(--meng-page-bg) 24%,
-		var(--meng-page-bg) 100%
-	);
+	width: 100%;
+	/* 为底部悬浮 tabBar 预留，避免玻璃面板下方露大段空白 */
+	padding-bottom: calc(108rpx + env(safe-area-inset-bottom));
+}
+
+/* 字母 Tab：整页自然滚动，不用内层 scroll-view */
+.pinyin-page--letters {
+	height: auto;
+	max-height: none;
+	overflow: visible;
+}
+
+.pinyin-page--letters > .tab-dock-overlap.pinyin-dock,
+.pinyin-page--letters .pinyin-dock-panel {
+	flex: none;
+	min-height: auto;
+}
+
+.pinyin-scroll-wrap--letters {
+	flex: none;
+	overflow: visible;
+	min-height: auto;
+}
+
+.pinyin-body {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pinyin-page .tab-dock-overlap {
+	margin-top: -20rpx;
+	width: 100%;
+}
+
+.pinyin-page .pinyin-dock-panel {
+	padding: 12rpx 4rpx 6rpx;
+	margin: 0;
+	border-left: none;
+	border-right: none;
+	border-radius: 24rpx 24rpx 0 0;
+}
+
+.pinyin-page > .tab-dock-overlap.pinyin-dock {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
 }
 
 .pinyin-dock {
-	position: relative;
 	flex: 1;
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
+	width: 100%;
 }
 
-.pinyin-dock-glass {
+.pinyin-dock-panel {
 	flex: 1;
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	margin: 12rpx 20rpx 16rpx;
-	padding: 22rpx 20rpx 16rpx;
-	border-radius: 40rpx 40rpx 28rpx 28rpx;
-	background: var(--meng-glass-bg);
-	border: 2rpx solid var(--meng-glass-border);
-	box-shadow: 0 -12rpx 48rpx var(--meng-shadow), 0 16rpx 40rpx var(--meng-shadow);
-	/* #ifdef H5 */
-	backdrop-filter: blur(24px);
-	/* #endif */
 }
 
 .pinyin-tab-scroll {
@@ -1407,7 +1629,7 @@ export default {
 }
 
 .pinyin-tab-chip--on {
-	background: linear-gradient(135deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: var(--meng-chip-active-border);
 	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.18);
 }
@@ -1468,6 +1690,8 @@ export default {
 	min-height: 0;
 	width: 100%;
 	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
 /* 全页最上层浮动层（fixed），logo 不被 glass / scroll 裁切 */
@@ -1502,8 +1726,8 @@ export default {
 
 .pinyin-footer {
 	flex-shrink: 0;
-	margin-top: 10rpx;
-	padding-top: 12rpx;
+	margin-top: 6rpx;
+	padding: 8rpx 4rpx 4rpx;
 	border-top: 2rpx solid var(--meng-border);
 }
 
@@ -1525,19 +1749,19 @@ export default {
 }
 
 .pinyin-quick-btn--drill {
-	background: linear-gradient(160deg, #b8e8c8 0%, #7fd49a 100%);
+	background: #7fd49a;
 }
 
 .pinyin-quick-btn--autoread {
-	background: linear-gradient(145deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	background: var(--meng-accent-solid);
 }
 
 .pinyin-quick-btn--autoread-on {
-	background: linear-gradient(145deg, #8a9aaa 0%, #6b7d8c 100%);
+	background: #6b7d8c;
 }
 
 .pinyin-quick-btn--stop {
-	background: linear-gradient(145deg, #ffb3c8 0%, #ff6b9d 100%);
+	background: #ff6b9d;
 }
 
 .pinyin-quick-btn--disabled {
@@ -1652,7 +1876,9 @@ export default {
 }
 .pinyin-scroll {
 	width: 100%;
-	height: 100%;
+	flex: 1;
+	min-height: 0;
+	box-sizing: border-box;
 }
 
 .follow-read-check {
@@ -1677,7 +1903,7 @@ export default {
 }
 
 .check-icon--on {
-	background: linear-gradient(145deg, #ffe0ec 0%, #ffd4f0 100%);
+	background: #ffd4f0;
 	border-color: #ff8aab;
 }
 
@@ -1702,14 +1928,14 @@ export default {
 	font-size: 24rpx;
 	font-weight: 700;
 	color: #fff;
-	background: linear-gradient(145deg, var(--meng-accent-from) 0%, var(--meng-accent-to) 100%);
+	background: var(--meng-accent-solid);
 	border: none;
 	border-radius: 999rpx;
 	box-shadow: 0 8rpx 20rpx var(--meng-shadow-warm);
 }
 
 .auto-read-btn--on {
-	background: linear-gradient(145deg, #8a9aaa 0%, #6b7d8c 100%);
+	background: #6b7d8c;
 	box-shadow: 0 6rpx 16rpx rgba(80, 90, 100, 0.25);
 }
 
@@ -1719,7 +1945,7 @@ export default {
 .legend {
 	flex-shrink: 0;
 	margin-bottom: 12rpx;
-	padding: 12rpx 14rpx;
+	padding: 12rpx 6rpx;
 	background: var(--meng-banner-soft);
 	border-radius: 16rpx;
 	border: 2rpx solid var(--meng-border-warm);
@@ -1749,6 +1975,69 @@ export default {
 	color: #3e3830;
 	line-height: 1.3;
 }
+.drill-practice-bar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16rpx;
+	margin-bottom: 16rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 16rpx;
+	background: var(--meng-banner-soft);
+	border: 2rpx solid var(--meng-border-warm);
+	box-sizing: border-box;
+}
+
+.drill-practice-hint {
+	flex: 1;
+	min-width: 0;
+	font-size: 22rpx;
+	color: var(--meng-text-secondary, #6d5e52);
+	line-height: 1.45;
+}
+
+.drill-practice-shuffle {
+	flex-shrink: 0;
+	padding: 10rpx 22rpx;
+	border-radius: 999rpx;
+	background: var(--meng-accent-solid);
+}
+
+.drill-practice-shuffle--busy {
+	opacity: 0.65;
+}
+
+.drill-practice-shuffle-text {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #fff;
+}
+
+.pinyin-homework-wrap--drill-one {
+	justify-content: flex-start;
+}
+
+.pinyin-homework-wrap--drill-one :deep(.pflr) {
+	width: 100%;
+	max-width: none;
+}
+
+.pinyin-content :deep(.pflr-sheet) {
+	width: 100%;
+}
+
+.pinyin-homework-strip {
+	width: 100%;
+}
+
+.clamp-2 {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
 .vowel-block {
 	margin-bottom: 28rpx;
 }

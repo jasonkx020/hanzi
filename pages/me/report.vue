@@ -1,5 +1,5 @@
 <template>
-	<view class="page meng-page-shell meng-page-pad">
+	<meng-sub-page title="家长报告" subtitle="本机统计，不上传服务器">
 		<view class="card head">
 			<text class="title">家长报告</text>
 			<text class="desc">统计基于本机当前教材设置，不会上传服务器。</text>
@@ -42,14 +42,28 @@
 			</view>
 		</view>
 
+		<view class="card export-card">
+			<text class="sub-title">周学习报告</text>
+			<text class="sub-desc">汇总近 7 日本机学习数据，可复制发给家人或自行保存（不上传服务器）。</text>
+			<view class="export-actions">
+				<view class="export-btn" @click="onExportWeekly">
+					<text class="export-btn-text">导出周报告</text>
+				</view>
+				<view class="export-btn export-btn--ghost" @click="onPreviewWeekly">
+					<text class="export-btn-text export-btn-text--ghost">预览</text>
+				</view>
+			</view>
+		</view>
+
 		<view class="foot-note">
 			<text class="foot-line">· 「听音找字」「跟读」不计入课次小测通关数。</text>
 			<text class="foot-line">· 切换教材与年级后，本页会显示对应册别数据。</text>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { getCurriculumPrefs, formatCurriculumSummary } from '@/utils/curriculum-storage.js'
 import {
@@ -58,8 +72,12 @@ import {
 	listWrongOftenCharsForCurriculumPrefs
 } from '@/utils/user-progress-storage.js'
 import { listLessonProgressForCurriculum } from '@/utils/user-lesson-progress-storage.js'
+import { buildWeeklyReport } from '@/services/weekly-report-service.js'
+import { gateAndPrompt, VIP_FEATURE } from '@/utils/vip-gate.js'
+import { copyTextToClipboard } from '@/utils/share-text.js'
 
 export default {
+	components: { MengSubPage },
 	data() {
 		return {
 			curriculumLine: '',
@@ -132,6 +150,32 @@ export default {
 			if (!t) return '—'
 			const d = new Date(t)
 			return `${d.getMonth() + 1}月${d.getDate()}日`
+		},
+		async onExportWeekly() {
+			const g = await gateAndPrompt(VIP_FEATURE.FAMILY_REPORT, {
+				quotaTitle: '周报告导出',
+				quotaMessage: '导出近 7 周学习摘要为会员家长功能，请家长开通后使用。'
+			})
+			if (!g.ok) return
+			const { text } = buildWeeklyReport(getCurriculumPrefs())
+			await copyTextToClipboard(text, '周报告已复制')
+		},
+		async onPreviewWeekly() {
+			const g = await gateAndPrompt(VIP_FEATURE.FAMILY_REPORT, {
+				quotaTitle: '周报告预览',
+				quotaMessage: '查看周报告需家长开通会员。'
+			})
+			if (!g.ok) return
+			const { text } = buildWeeklyReport(getCurriculumPrefs())
+			uni.showModal({
+				title: '周学习报告预览',
+				content: text.length > 900 ? `${text.slice(0, 900)}…` : text,
+				showCancel: false,
+				confirmText: '复制全文',
+				success: (res) => {
+					if (res.confirm) copyTextToClipboard(text)
+				}
+			})
 		}
 	}
 }
@@ -287,6 +331,43 @@ export default {
 .weak-count {
 	font-size: 24rpx;
 	color: #b85d42;
+}
+
+.export-card {
+	margin-top: 4rpx;
+}
+
+.export-actions {
+	display: flex;
+	flex-direction: row;
+	margin-top: 16rpx;
+}
+
+.export-actions > .export-btn + .export-btn {
+	margin-left: 16rpx;
+}
+
+.export-btn {
+	flex: 1;
+	padding: 18rpx 0;
+	border-radius: 999rpx;
+	background: var(--meng-accent-solid, #6bae7d);
+	text-align: center;
+}
+
+.export-btn--ghost {
+	background: #f5f0e6;
+	border: 1rpx solid #e0d8ca;
+}
+
+.export-btn-text {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #fff;
+}
+
+.export-btn-text--ghost {
+	color: #5a534c;
 }
 
 .foot-note {

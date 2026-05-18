@@ -1,5 +1,11 @@
 <template>
-	<view class="page quiz-page">
+	<meng-sub-page
+		:title="lessonTitle || '本课小测'"
+		subtitle="听音认字 · 看字选音"
+		:full-height="true"
+		:padded="false"
+		:overlap-body="false"
+	>
 		<view v-if="phase === 'quiz'" class="run-shell">
 			<view class="top-bar">
 				<image class="top-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
@@ -132,10 +138,11 @@
 				<button class="back-btn" type="primary" @click="goBackLesson">回字卡</button>
 			</view>
 		</view>
-	</view>
+	</meng-sub-page>
 </template>
 
 <script>
+import MengSubPage from '@/components/meng-sub-page.vue'
 import { takeLessonQuizTransfer } from '@/utils/lesson-mode-session.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
@@ -164,6 +171,7 @@ function filterValidPlan(plan, pool) {
 }
 
 export default {
+	components: { MengSubPage },
 	data() {
 		return {
 			phase: 'quiz',
@@ -476,27 +484,18 @@ export default {
 </script>
 
 <style scoped>
-.quiz-page {
-	height: 100vh;
-	max-height: 100vh;
-	overflow: hidden;
-	box-sizing: border-box;
-	padding: 8rpx 20rpx 0;
-	padding-bottom: constant(safe-area-inset-bottom);
-	padding-bottom: env(safe-area-inset-bottom);
-	background: linear-gradient(
-		180deg,
-		var(--meng-cream) 0%,
-		#fff6fa 28%,
-		var(--meng-page-bg, #f6f3ec) 100%
-	);
-}
-
 .run-shell {
+	width: 100%;
 	height: 100%;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
+}
+
+.done-shell {
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .top-bar {
@@ -549,7 +548,7 @@ export default {
 	align-items: center;
 	padding: 6rpx 14rpx;
 	border-radius: 14rpx;
-	background: linear-gradient(135deg, #ffc8dc, #ff9ec4);
+	background: #ff9ec4;
 }
 
 .top-hear:active {
@@ -557,7 +556,7 @@ export default {
 }
 
 .top-hear--muted {
-	background: linear-gradient(135deg, #f5e8ee, #efe0e8);
+	background: #efe0e8;
 }
 
 .top-hear-icon {
@@ -598,7 +597,7 @@ export default {
 
 .chip--accent {
 	color: #c44d6a;
-	background: linear-gradient(135deg, #ffe0ec, #ffd4f0);
+	background: #ffd4f0;
 }
 
 .dots-scroll {
@@ -631,7 +630,7 @@ export default {
 .dot--current {
 	width: 18rpx;
 	height: 18rpx;
-	background: linear-gradient(135deg, #ff7eb3, #e91e63);
+	background: #e91e63;
 	box-shadow: 0 0 0 4rpx rgba(233, 30, 99, 0.2);
 }
 
@@ -678,7 +677,7 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(145deg, #fff0f5, #ffe0ec);
+	background: #ffe0ec;
 	border: 3rpx solid rgba(255, 120, 160, 0.45);
 	box-shadow: 0 8rpx 24rpx rgba(255, 120, 160, 0.2);
 }
@@ -774,13 +773,13 @@ export default {
 
 .opt-square--ok {
 	border-color: #66bb6a;
-	background: linear-gradient(180deg, #f1f8e9 0%, #fff 100%);
+	background: #fff;
 	box-shadow: 0 4rpx 16rpx rgba(102, 187, 106, 0.2);
 }
 
 .opt-square--bad {
 	border-color: #e57373;
-	background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
+	background: #fff;
 	box-shadow: 0 4rpx 16rpx rgba(229, 115, 115, 0.15);
 }
 
@@ -831,7 +830,7 @@ export default {
 
 .opt-tile--correct {
 	border-color: #66bb6a;
-	background: linear-gradient(180deg, #f1f8e9, #fff);
+	background: #fff;
 }
 
 .opt-tile--py {
@@ -949,7 +948,7 @@ export default {
 	width: 100%;
 	border-radius: 18rpx;
 	font-size: 28rpx;
-	background: linear-gradient(135deg, #ff8fb8, #f06292);
+	background: #f06292;
 	color: #fff;
 	border: none;
 }
