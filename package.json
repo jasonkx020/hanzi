@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:build": "node scripts/build-db.mjs",
     "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
+    "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
     "pinyin:fingerprints": "node scripts/build-pinyin-audio-fingerprints.mjs",
     "assets:resize-mengmeng": "python scripts/resize-mengmeng-assets.py",
     "assets:remove-watermark": "python scripts/remove-doubao-watermark.py",

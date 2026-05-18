@@ -87,6 +87,36 @@ export function applyToneToSyllableStem(symbol, tone) {
 let _inner = null
 /** @type {(() => void)|null} */
 let _chainAbort = null
+/** @type {{ inner: object, reject: (err: Error) => void, timer: number|null }|null} */
+let _activePlay = null
+
+const PLAY_ABORT_MSG = 'play aborted'
+
+export function isPinyinPlayAborted(err) {
+	return !!(
+		err &&
+		(err.code === 'PINYIN_PLAY_ABORTED' || String(err.message || err) === PLAY_ABORT_MSG)
+	)
+}
+
+function makePlayAbortedError() {
+	return Object.assign(new Error(PLAY_ABORT_MSG), { code: 'PINYIN_PLAY_ABORTED' })
+}
+
+function abortActivePinyinPlay() {
+	if (!_activePlay) return
+	const ap = _activePlay
+	_activePlay = null
+	if (ap.timer != null) clearTimeout(ap.timer)
+	try {
+		ap.inner.stop()
+	} catch (_) {}
+	try {
+		ap.inner.destroy()
+	} catch (_) {}
+	if (_inner === ap.inner) _inner = null
+	ap.reject(makePlayAbortedError())
+}
 
 export function stopLocalPinyinAudio() {
 	if (_chainAbort) {
@@ -94,6 +124,7 @@ export function stopLocalPinyinAudio() {
 		_chainAbort = null
 		abort()
 	}
+	abortActivePinyinPlay()
 	if (!_inner) return
 	try {
 		_inner.stop()
@@ -104,16 +135,22 @@ export function stopLocalPinyinAudio() {
 	_inner = null
 }
 
+function normPinyinFileStem(symbol) {
+	return String(symbol || '')
+		.trim()
+		.normalize('NFC')
+}
 
 /** 演示读音：/static/pinyin/{stem}.opus（文件名与界面一致，使用拉丁 a / 带调 a） */
 export function getLocalPinyinAudioPath(symbol) {
-	const stem = String(symbol || '').trim()
+	const stem = normPinyinFileStem(symbol)
+	if (!stem) return ''
 	return `/static/pinyin/${stem}.opus`
 }
 
 /** 一声版文件名（带调字母），用于整体认读 / 拼读练习在无调 opus 缺失时的替补 */
 export function getLocalPinyinTone1AudioPath(symbol) {
-	const stem = applyToneToSyllableStem(symbol, 1)
+	const stem = normPinyinFileStem(applyToneToSyllableStem(symbol, 1))
 	if (!stem) return ''
 	return `/static/pinyin/${stem}.opus`
 }
@@ -141,10 +178,12 @@ export async function sleepUnlessCancelled(ms, isCancelled) {
  * 先试无调 opus，再试一声（可选）；任一成功返回 true。
  * @param {boolean} useTone1Fallback 整体认读 / 拼读练习等与格子逻辑一致
  */
-export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback) {
+export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, opts = {}) {
 	const tryUrls = []
-	const neutral = getLocalPinyinAudioPath(symbol)
-	if (neutral) tryUrls.push(neutral)
+	if (!opts.skipTonedExact) {
+		const neutral = getLocalPinyinAudioPath(symbol)
+		if (neutral) tryUrls.push(neutral)
+	}
 	if (useTone1Fallback) {
 		const tone1 = getLocalPinyinTone1AudioPath(symbol)
 		if (tone1 && tryUrls.indexOf(tone1) === -1) tryUrls.push(tone1)
@@ -170,6 +209,7 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback) 
 			logHanziSpeak('local.play_ok', { symbol, src })
 			return true
 		} catch (e) {
+			if (isPinyinPlayAborted(e)) return false
 			const err = e || {}
 			logHanziSpeak('local.play_err', {
 				symbol,
@@ -201,7 +241,8 @@ export async function playToneGridCell(symbol, opts = {}) {
 	try {
 		await playPinyinLocalAudio(path)
 		return true
-	} catch (_) {
+	} catch (e) {
+		if (isPinyinPlayAborted(e)) return false
 		const ok = await speakPinyinSymbolAsync(sym, narrator)
 		return !!ok
 	}
@@ -230,18 +271,23 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 		let played = false
 		const path = getLocalPinyinAudioPath(sym)
 		try {
-			await playPinyinLocalAudio(path)
+			await playPinyinLocalAudio(path, { timeoutMs: 3200 })
 			played = true
 			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path })
 		} catch (e) {
-			logHanziSpeak('lesson.display_pinyin.exact_fail', {
-				sym,
-				path,
-				err: e && (e.errMsg || e.message || String(e))
-			})
+			if (isPinyinPlayAborted(e) && typeof isCancelled === 'function' && isCancelled()) {
+				return anyOk
+			}
+			if (!isPinyinPlayAborted(e)) {
+				logHanziSpeak('lesson.display_pinyin.exact_fail', {
+					sym,
+					path,
+					err: e && (e.errMsg || e.message || String(e))
+				})
+			}
 		}
 		if (!played) {
-			played = await playLocalPinyinNeutralThenTone1(sym, true)
+			played = await playLocalPinyinNeutralThenTone1(sym, true, { skipTonedExact: true })
 			if (played) logHanziSpeak('lesson.display_pinyin.fallback_neutral_ok', { sym })
 		}
 		if (!played) {
@@ -277,20 +323,32 @@ export function playPinyinLocalAudio(src, opts = {}) {
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
 	inner.src = resolveLocalAudioSrc(src)
-	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 6000
+	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 3200
 	return new Promise((resolve, reject) => {
 		let settled = false
 		let timer = null
 		const finish = (fn) => {
 			if (settled) return
 			settled = true
+			if (_activePlay && _activePlay.inner === inner) _activePlay = null
 			if (timer != null) clearTimeout(timer)
-			stopLocalPinyinAudio()
+			try {
+				inner.stop()
+			} catch (_) {}
+			try {
+				inner.destroy()
+			} catch (_) {}
+			if (_inner === inner) _inner = null
 			fn()
 		}
+		_activePlay = { inner, reject, timer: null }
 		timer = setTimeout(() => finish(() => reject(new Error('play timeout'))), timeoutMs)
+		_activePlay.timer = timer
 		inner.onEnded(() => finish(() => resolve()))
 		inner.onError((err) => finish(() => reject(err || new Error('play error'))))
+		inner.onStop(() => {
+			if (!settled) finish(() => reject(makePlayAbortedError()))
+		})
 		try {
 			inner.play()
 		} catch (e) {

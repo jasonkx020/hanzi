@@ -130,6 +130,7 @@ export const MENG_VOICE_PLANNED = {
 	GAME_LOBBY_WELCOME: 'game_lobby_welcome',
 	GAME_PICK_CORRECT: 'game_pick_correct',
 	GAME_PICK_WRONG: 'game_pick_wrong',
+	GAME_ROUND_DONE: 'game_round_done',
 	STROKE_STEP_MODE: 'stroke_step_mode'
 }
 
@@ -145,6 +146,7 @@ export const MENG_VOICE_COPY_PLANNED = {
 	[MENG_VOICE_PLANNED.GAME_LOBBY_WELCOME]: '听一听、配一对，帮萌萌收集小星星！',
 	[MENG_VOICE_PLANNED.GAME_PICK_CORRECT]: '太棒啦，就是这个！',
 	[MENG_VOICE_PLANNED.GAME_PICK_WRONG]: '再听一听，再选一次。',
+	[MENG_VOICE_PLANNED.GAME_ROUND_DONE]: '这一轮玩完啦，你真棒！',
 	[MENG_VOICE_PLANNED.STROKE_STEP_MODE]: '一步一步来，点「下一笔」看萌萌写。'
 }
 

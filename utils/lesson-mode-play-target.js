@@ -16,15 +16,18 @@ export function normLessonPayloadPinyin(raw) {
  * @param {string} hanzi 单字
  * @param {string} displayPinyin 与字卡一致的展示拼音（来自识字表或 pyShow）
  */
-export async function playLessonTargetReading(hanzi, displayPinyin) {
+export async function playLessonTargetReading(hanzi, displayPinyin, opts = {}) {
 	const h = String(hanzi || '').trim().match(/[\u4e00-\u9fff]/)
 	const ch = h ? h[0] : ''
 	if (!ch) return
+	const cancelled = () =>
+		typeof opts.isCancelled === 'function' && opts.isCancelled()
 	const py = normLessonPayloadPinyin(displayPinyin)
 	if (py && py !== '-') {
-		const ok = await playOpusForDisplayPinyin(py)
+		const ok = await playOpusForDisplayPinyin(py, opts)
 		logHanziSpeak('lesson_mode.read', { hanzi: ch, py, via: ok ? 'pinyin' : 'hanzi_fallback' })
-		if (ok) return
+		if (ok || cancelled()) return
 	}
+	if (cancelled()) return
 	speakHanzi(ch)
 }

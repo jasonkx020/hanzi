@@ -43,7 +43,17 @@
 				>●</text>
 			</view>
 
-			<button class="hear-btn" type="default" @click="onHearAgain">再听一遍</button>
+			<view v-if="hearPinyinShow" class="play-hear-pinyin" :class="{ 'play-hear-pinyin--reading': hearLocked }">
+				<text class="play-hear-pinyin-label">正在读的拼音</text>
+				<pinyin-four-lines-row
+					class="play-hear-pflr"
+					:syllables="hearPinyinTokens"
+					size="lg"
+					:highlight-column-index="hearHighlightCol"
+				/>
+			</view>
+
+			<button class="hear-btn" type="default" :disabled="hearLocked" @click="onHearAgain">再听一遍</button>
 
 			<view class="opts" :class="optionColClass">
 				<button
@@ -51,14 +61,14 @@
 					:key="`${qIndex}-${i}-${c}`"
 					class="opt-btn"
 					type="default"
-					:disabled="optDisabled"
+					:disabled="optDisabled || hearLocked"
 					@click="onPick(c)"
 				>
 					<text class="opt-char">{{ c }}</text>
 				</button>
 			</view>
 
-			<text class="play-hint">先听一听，再点你听到的那个字</text>
+			<text class="play-hint">{{ hearLocked ? '听一听中，听完再选哦～' : '先听一听，再点你听到的那个字' }}</text>
 			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
 		</view>
 
@@ -117,25 +127,37 @@
 			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
 		</view>
 
-		<!-- 结算 -->
-		<view v-else class="done">
-			<text class="done-icon" aria-hidden="true">{{ doneIcon }}</text>
-			<text class="done-title">这一轮玩完啦</text>
-			<text class="done-score">{{ doneScoreLine }}</text>
-			<text class="done-msg">{{ doneEncourage }}</text>
-			<button class="done-btn" type="default" @click="replayLastRun">再玩一轮</button>
-			<button class="done-primary" type="primary" @click="goHome">回识字首页</button>
+		<!-- 结算模态框（先播提示音再弹出） -->
+		<view
+			v-if="doneModalVisible"
+			class="done-modal-mask"
+			@touchmove.stop.prevent
+		>
+			<view class="done-modal-panel" @click.stop>
+				<text class="done-icon" aria-hidden="true">{{ doneIcon }}</text>
+				<text class="done-title">这一轮玩完啦</text>
+				<text class="done-score">{{ doneScoreLine }}</text>
+				<text class="done-msg">{{ doneEncourage }}</text>
+				<button class="done-btn" type="default" @click="onDoneReplay">再玩一轮</button>
+				<button class="done-primary" type="primary" @click="onDoneGoHome">回识字首页</button>
+				<button class="done-ghost" type="default" @click="onDoneBackLobby">回营地</button>
+			</view>
 		</view>
 	</meng-sub-page>
 </template>
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
-import { COL, COL_PROGRESS } from '@/constants/curriculum-schema.js'
-import { queryCurriculumChars } from '@/utils/curriculum-db.js'
+import { COL, COL_PROGRESS, LIST_TYPE_PREFERENCE } from '@/constants/curriculum-schema.js'
+import { queryAllShiziCurriculumChars, queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
-import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
+import { normLessonPayloadPinyin, playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
+import { playOpusForDisplayPinyin, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { stopHanziSpeech } from '@/utils/speak-hanzi.js'
+import { getAudioNarrator } from '@/utils/audio-settings.js'
+import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
+import { MENG_VOICE_PLANNED, playMengmengVoice } from '@/utils/mengmeng-voice.js'
 import {
 	addCharWrongCount,
 	listWrongOftenCharsForCurriculumPrefs
@@ -151,6 +173,9 @@ const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
 const ROUND_PAIR = 4
 const MIXED_PAIR_PAIRS = 3
+/** 听音辨字至少需要 2 个不同汉字（1 目标 + 干扰项） */
+const MIN_GAME_POOL = 2
+const FALLBACK_GAME_CHARS = ['大', '小', '天', '口', '手', '人', '山', '水', '火', '木']
 
 function shuffle(arr) {
 	const a = (arr || []).slice()
@@ -204,7 +229,16 @@ export default {
 			targetHanzi: '',
 			targetPinyin: '',
 			optDisabled: false,
+			/** 读音未播完时禁止点选 */
+			hearLocked: true,
+			/** 连读时当前高亮音节列，-1 为无 */
+			hearHighlightCol: -1,
+			doneModalVisible: false,
+			_openingDoneModal: false,
 			autoHearTimer: null,
+			retryHearTimer: null,
+			/** 递增以取消在途读音，避免快速点选叠音 */
+			hearPlayGen: 0,
 			/** 混合闯关：{ type: 'hear'|'pair', n?: number } */
 			segmentPlan: [],
 			segmentIdx: 0,
@@ -221,6 +255,12 @@ export default {
 	computed: {
 		optionColClass() {
 			return this.options.length >= 3 ? 'opts-3' : 'opts-2'
+		},
+		hearPinyinTokens() {
+			return this.pinyinTokensFromDisplay(this.targetPinyin)
+		},
+		hearPinyinShow() {
+			return this.hearPinyinTokens.length > 0
 		},
 		doneIcon() {
 			if (this.lastRunMode === 'pair') return '⭐⭐⭐'
@@ -263,7 +303,12 @@ export default {
 		uni.setNavigationBarTitle({ title: '萌萌的气球营' })
 	},
 	onUnload() {
-		this.clearAutoHear()
+		this._openingDoneModal = false
+		this.doneModalVisible = false
+		this.stopGameAudio()
+	},
+	onHide() {
+		this.stopGameAudio()
 	},
 	methods: {
 		clearAutoHear() {
@@ -271,6 +316,31 @@ export default {
 				clearTimeout(this.autoHearTimer)
 				this.autoHearTimer = null
 			}
+		},
+		clearRetryHear() {
+			if (this.retryHearTimer != null) {
+				clearTimeout(this.retryHearTimer)
+				this.retryHearTimer = null
+			}
+		},
+		/** 停止自动听音、本地拼音与 TTS，并作废在途播放 */
+		stopGameAudio() {
+			this.hearPlayGen++
+			this.hearHighlightCol = -1
+			this.clearAutoHear()
+			this.clearRetryHear()
+			stopLocalPinyinAudio()
+			stopHanziSpeech()
+		},
+		pinyinTokensFromDisplay(pyRaw) {
+			const raw = normLessonPayloadPinyin(pyRaw)
+			if (!raw || raw === '-') return []
+			let tokens = splitPinyinDisplayTokens(raw)
+			if (!tokens.length) {
+				const s = raw.replace(/[()（）]/g, '').trim()
+				if (s && s !== '-') tokens = [s]
+			}
+			return tokens
 		},
 		onPreferWrongChange(e) {
 			const on = !!(e.detail && e.detail.value)
@@ -307,25 +377,55 @@ export default {
 				semester: p.semester === '下' ? '下' : '上'
 			}
 		},
-		async buildPool() {
-			const prefs = getCurriculumPrefs()
-			const raw = await queryCurriculumChars(prefs)
-			const curriculumMapped = (raw || []).map((row) => ({
+		mapRowsToPoolEntries(rows) {
+			return (rows || []).map((row) => ({
 				hanzi: String(row[COL.hanzi] || '').trim(),
 				pinyin: this.pyShowRow(row)
 			}))
-			const combined = []
-			if (this.preferWrongChars) {
-				const wrongList = listWrongOftenCharsForCurriculumPrefs(prefs, 20)
-				for (const w of wrongList) {
-					combined.push({
-						hanzi: String(w[COL_PROGRESS.hanzi] || '').trim(),
-						pinyin: this.pyFromWrongRec(w)
-					})
-				}
+		},
+		appendWrongCharsToPool(combined, prefs) {
+			if (!this.preferWrongChars) return
+			const wrongList = listWrongOftenCharsForCurriculumPrefs(prefs, 20)
+			for (const w of wrongList) {
+				combined.push({
+					hanzi: String(w[COL_PROGRESS.hanzi] || '').trim(),
+					pinyin: this.pyFromWrongRec(w)
+				})
 			}
-			combined.push(...curriculumMapped)
-			return shuffle(uniquePoolRows(combined))
+		},
+		async buildPool() {
+			const prefs = getCurriculumPrefs()
+			const combined = []
+
+			this.appendWrongCharsToPool(combined, prefs)
+			combined.push(...this.mapRowsToPoolEntries(await queryCurriculumChars(prefs)))
+
+			let pool = uniquePoolRows(combined)
+
+			// 教材设置里若只选了「写字表」等，当前年级可能只剩 0～1 字 → 放宽为全部字表
+			if (pool.length < MIN_GAME_POOL) {
+				const relaxed = { ...prefs, list_type_preference: LIST_TYPE_PREFERENCE.ALL }
+				const extra = []
+				this.appendWrongCharsToPool(extra, relaxed)
+				extra.push(...this.mapRowsToPoolEntries(await queryCurriculumChars(relaxed)))
+				pool = uniquePoolRows([...pool, ...extra])
+			}
+
+			// 仍不足：同版本全册识字表（跨年级）
+			if (pool.length < MIN_GAME_POOL) {
+				const tv = prefs.textbook_version_id
+				const allShizi = (await queryAllShiziCurriculumChars()).filter(
+					(r) => r.textbook_version_id === tv
+				)
+				pool = uniquePoolRows([...pool, ...this.mapRowsToPoolEntries(allShizi)])
+			}
+
+			if (pool.length < MIN_GAME_POOL) {
+				const fallback = FALLBACK_GAME_CHARS.map((hanzi) => ({ hanzi, pinyin: '' }))
+				pool = uniquePoolRows([...pool, ...fallback])
+			}
+
+			return shuffle(pool)
 		},
 		async startRun(mode) {
 			if (this.starting) return
@@ -347,8 +447,12 @@ export default {
 			this._hearBaseForSeg = 0
 			try {
 				this.pool = await this.buildPool()
-				if (this.pool.length < 2) {
-					uni.showToast({ title: '当前课本生字太少，先去换一本试试吧', icon: 'none' })
+				if (this.pool.length < MIN_GAME_POOL) {
+					uni.showToast({
+						title: '字库加载失败，请检查教材设置或稍后重试',
+						icon: 'none',
+						duration: 2800
+					})
 					return
 				}
 				if (mode === 'hear') {
@@ -381,6 +485,7 @@ export default {
 			}
 		},
 		replayLastRun() {
+			this.closeDoneModal()
 			this.startRun(this.lastRunMode || 'hear')
 		},
 		startHearRound(n) {
@@ -396,7 +501,7 @@ export default {
 		startMixedSegment() {
 			const seg = this.segmentPlan[this.segmentIdx]
 			if (!seg) {
-				this.phase = 'done'
+				this.enterDonePhase()
 				return
 			}
 			if (seg.type === 'hear') {
@@ -486,24 +591,109 @@ export default {
 			if (this.runMode === 'mixed') {
 				this.segmentIdx++
 				if (this.segmentIdx >= this.segmentPlan.length) {
-					this.phase = 'done'
+					this.enterDonePhase()
 					return
 				}
 				this.startMixedSegment()
 				return
 			}
-			this.phase = 'done'
+			this.enterDonePhase()
+		},
+		enterDonePhase() {
+			void this.openDoneModal()
+		},
+		async openDoneModal() {
+			if (this._openingDoneModal || this.doneModalVisible) return
+			this._openingDoneModal = true
+			this.hearHighlightCol = -1
+			this.stopGameAudio()
+			try {
+				await playMengmengVoice(MENG_VOICE_PLANNED.GAME_ROUND_DONE, { minGapMs: 0 })
+			} catch (_) {}
+			if (this._openingDoneModal) {
+				this.targetHanzi = ''
+				this.targetPinyin = ''
+				this.phase = 'done'
+				this.doneModalVisible = true
+			}
+			this._openingDoneModal = false
+		},
+		closeDoneModal() {
+			this.doneModalVisible = false
+			this._openingDoneModal = false
+		},
+		onDoneReplay() {
+			this.closeDoneModal()
+			this.phase = 'lobby'
+			this.replayLastRun()
+		},
+		onDoneGoHome() {
+			this.closeDoneModal()
+			this.goHome()
+		},
+		onDoneBackLobby() {
+			this.closeDoneModal()
+			this.backToLobby()
 		},
 		scheduleAutoHear() {
 			this.clearAutoHear()
+			const hanzi = this.targetHanzi
 			this.autoHearTimer = setTimeout(() => {
 				this.autoHearTimer = null
-				if (this.phase === 'play' && this.targetHanzi) this.playTargetSound()
+				if (this.phase === 'play' && this.targetHanzi === hanzi) {
+					void this.playTargetSound()
+				}
 			}, 400)
+		},
+		async playTargetHearReading(hanzi, py, gen) {
+			const cancelled = () => gen !== this.hearPlayGen || this.phase !== 'play'
+			const tokens = this.pinyinTokensFromDisplay(py)
+			stopLocalPinyinAudio()
+			stopHanziSpeech()
+			if (cancelled()) return
+			if (tokens.length > 1) {
+				const narrator = getAudioNarrator()
+				for (let i = 0; i < tokens.length; i++) {
+					if (cancelled()) return
+					this.hearHighlightCol = i
+					let ok = await playOpusForDisplayPinyin(tokens[i], {
+						isCancelled: cancelled,
+						gapMs: 0,
+						timeoutMs: 3200
+					})
+					if (!ok && !cancelled()) {
+						ok = await speakPinyinSymbolAsync(tokens[i], narrator)
+					}
+					if (ok && i < tokens.length - 1 && !cancelled()) {
+						await new Promise((r) => setTimeout(r, 80))
+					}
+				}
+				return
+			}
+			this.hearHighlightCol = tokens.length === 1 ? 0 : 0
+			await playLessonTargetReading(hanzi, py, { isCancelled: cancelled })
 		},
 		async playTargetSound() {
 			if (this.phase !== 'play' || !this.targetHanzi) return
-			await playLessonTargetReading(this.targetHanzi, this.targetPinyin)
+			const gen = ++this.hearPlayGen
+			const hanzi = this.targetHanzi
+			const py = this.targetPinyin
+			this.hearLocked = true
+			this.hearHighlightCol = -1
+			try {
+				if (gen !== this.hearPlayGen) return
+				await this.playTargetHearReading(hanzi, py, gen)
+			} catch (e) {
+				console.warn('[game] playTargetSound', e)
+			} finally {
+				this.hearHighlightCol = -1
+				if (this.phase !== 'play' || gen !== this.hearPlayGen) {
+					stopLocalPinyinAudio()
+					stopHanziSpeech()
+				} else {
+					this.hearLocked = false
+				}
+			}
 		},
 		buildOptions(target) {
 			const others = shuffle(this.pool.filter((r) => r.hanzi !== target.hanzi))
@@ -513,6 +703,7 @@ export default {
 			return shuffle([target.hanzi, others[0].hanzi])
 		},
 		loadQuestion(idx) {
+			this.stopGameAudio()
 			const t = this.targets[idx]
 			if (!t) {
 				this.finishHearPhase()
@@ -523,51 +714,59 @@ export default {
 			this.options = this.buildOptions(t)
 			this.attempt = 1
 			this.optDisabled = false
+			this.hearLocked = true
 			this.scheduleAutoHear()
 		},
 		finishHearPhase() {
 			if (this.runMode === 'mixed') {
 				this.mixedHearScore += this.score - this._hearBaseForSeg
-				this.clearAutoHear()
+				this.stopGameAudio()
 				this.segmentIdx++
 				if (this.segmentIdx >= this.segmentPlan.length) {
-					this.phase = 'done'
+					this.enterDonePhase()
 					return
 				}
 				this.startMixedSegment()
 				return
 			}
-			this.clearAutoHear()
-			this.phase = 'done'
+			this.enterDonePhase()
 		},
 		onHearAgain() {
-			if (this.phase !== 'play' || !this.targetHanzi) return
+			if (this.phase !== 'play' || !this.targetHanzi || this.hearLocked) return
 			this.clearAutoHear()
-			this.playTargetSound()
+			this.clearRetryHear()
+			void this.playTargetSound()
 		},
 		onPick(c) {
-			if (this.phase !== 'play' || this.optDisabled) return
+			if (this.phase !== 'play' || this.optDisabled || this.hearLocked) return
 			const pick = firstHanzi(c)
 			if (pick === this.targetHanzi) {
+				this.stopGameAudio()
 				this.score++
-				this.clearAutoHear()
 				this.advanceQuestion()
 				return
 			}
 			if (this.attempt === 1) {
 				this.attempt = 2
+				this.hearLocked = true
+				this.stopGameAudio()
+				const hanzi = this.targetHanzi
 				uni.showToast({ title: '再听一遍', icon: 'none' })
-				setTimeout(() => {
-					if (this.phase === 'play' && this.targetHanzi) this.playTargetSound()
+				this.retryHearTimer = setTimeout(() => {
+					this.retryHearTimer = null
+					if (this.phase !== 'play' || this.targetHanzi !== hanzi) return
+					void this.playTargetSound()
 				}, 280)
 				return
 			}
+			this.stopGameAudio()
 			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
 			uni.showToast({ title: `是「${this.targetHanzi}」`, icon: 'none' })
 			this.optDisabled = true
-			this.clearAutoHear()
+			this.hearLocked = true
 			setTimeout(() => {
 				this.optDisabled = false
+				this.stopGameAudio()
 				this.advanceQuestion()
 			}, 900)
 		},
@@ -581,11 +780,12 @@ export default {
 			this.loadQuestion(this.qIndex)
 		},
 		backToLobby() {
-			this.clearAutoHear()
+			this.closeDoneModal()
+			this.stopGameAudio()
 			this.phase = 'lobby'
 		},
 		goHome() {
-			this.clearAutoHear()
+			this.stopGameAudio()
 			uni.switchTab({ url: '/pages/home/home' })
 		}
 	}
@@ -765,6 +965,44 @@ export default {
 	color: #e0e0e0;
 }
 
+.play-hear-pinyin {
+	width: 100%;
+	max-width: 560rpx;
+	margin: 0 auto 28rpx;
+	padding: 20rpx 16rpx 12rpx;
+	box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.92);
+	border-radius: 20rpx;
+	border: 2rpx solid #f8bbd0;
+}
+
+.play-hear-pinyin-label {
+	display: block;
+	text-align: center;
+	font-size: 24rpx;
+	color: #ad1457;
+	margin-bottom: 12rpx;
+	font-weight: 600;
+}
+
+.play-hear-pflr {
+	width: 100%;
+}
+
+.play-hear-pinyin--reading ::v-deep .pflr-cell--reading .pflr-glyphs-row {
+	animation: game-hear-py-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes game-hear-py-pulse {
+	0%,
+	100% {
+		filter: brightness(1);
+	}
+	50% {
+		filter: brightness(1.22);
+	}
+}
+
 .hear-btn {
 	margin-bottom: 32rpx;
 	background: #fce4ec;
@@ -772,6 +1010,10 @@ export default {
 	font-size: 30rpx;
 	border-radius: 16rpx;
 	border: 2rpx solid #f8bbd0;
+}
+
+.hear-btn[disabled] {
+	opacity: 0.55;
 }
 
 .opts {
@@ -799,6 +1041,10 @@ export default {
 	border-radius: 16rpx;
 	border: 2rpx solid #f0e6d4;
 	box-sizing: border-box;
+}
+
+.opt-btn[disabled] {
+	opacity: 0.5;
 }
 
 .opt-char {
@@ -906,11 +1152,32 @@ export default {
 	color: #4e342e;
 }
 
-.done {
+.done-modal-mask {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	z-index: 1000;
+	background: rgba(45, 35, 35, 0.52);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40rpx 32rpx;
+	box-sizing: border-box;
+}
+
+.done-modal-panel {
+	width: 100%;
+	max-width: 620rpx;
+	background: #fff;
+	border-radius: 28rpx;
+	padding: 48rpx 36rpx 40rpx;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding-top: 56rpx;
+	box-shadow: 0 24rpx 64rpx rgba(173, 20, 87, 0.18);
 }
 
 .done-icon {
@@ -957,5 +1224,16 @@ export default {
 	width: 72%;
 	max-width: 420rpx;
 	border-radius: 16rpx;
+	margin-bottom: 12rpx;
+}
+
+.done-ghost {
+	width: 72%;
+	max-width: 420rpx;
+	border-radius: 16rpx;
+	background: transparent;
+	border: none;
+	color: #8a8279;
+	font-size: 26rpx;
 }
 </style>
