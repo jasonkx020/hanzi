@@ -1,15 +1,14 @@
 /**
  * 从 static/pinyin/*.opus 预提取 MFCC（Meyda），与 utils/pinyin-mfcc-extract.js 同参。
  * 运行：npm run pinyin:mfcc-fingerprints
- * 需 meyda；解码优先系统 ffmpeg，否则 `ffmpeg-static`（devDependency）。
+ * 需本机 ffmpeg + meyda。正式预提取推荐用外部 Python 脚本；本脚本仅供本地对照/调试。
  */
-import { spawnSync } from 'child_process'
+import { execSync, spawnSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { buildPinyinMfccMeta } from '../constants/pinyin-mfcc-config.js'
 import { extractMfccFromInt16, serializeMfccEntry } from '../utils/pinyin-mfcc-extract.js'
-import { resolveFfmpegExecutable } from './resolve-ffmpeg-bin.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pinyinDir = path.join(__dirname, '../static/pinyin')
@@ -17,17 +16,23 @@ const outFile = path.join(__dirname, '../data/pinyin-mfcc-fingerprints.json')
 
 const TARGET_SR = 16000
 
-const ffmpegBin = resolveFfmpegExecutable()
-if (!ffmpegBin) {
-	console.error(
-		'未找到 ffmpeg：请安装系统 ffmpeg，或执行 npm i -D ffmpeg-static 后重试'
-	)
+function hasFfmpeg() {
+	try {
+		execSync('ffmpeg -version', { stdio: 'ignore' })
+		return true
+	} catch (_) {
+		return false
+	}
+}
+
+if (!hasFfmpeg()) {
+	console.error('未找到 ffmpeg，请安装后重试：https://ffmpeg.org/download.html')
 	process.exit(1)
 }
 
 function decodeOpusToPcm(filePath) {
 	const r = spawnSync(
-		ffmpegBin,
+		'ffmpeg',
 		['-y', '-i', filePath, '-ac', '1', '-ar', String(TARGET_SR), '-f', 's16le', 'pipe:1'],
 		{ encoding: 'buffer', maxBuffer: 16 * 1024 * 1024 }
 	)

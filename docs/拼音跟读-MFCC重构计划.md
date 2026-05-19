@@ -12,7 +12,7 @@
 
 | 环节 | 实现 |
 |------|------|
-| 录音 | `uni.getRecorderManager` + 自研 VAD |
+| 录音 | App：`wxz-record` 实时 PCM；小程序：`RecorderManager` |
 | 参考特征 | `data/pinyin-audio-fingerprints.json`（`e` 包络 32 点 + `b` 8 频带） |
 | 用户特征 | `extractPcmFingerprint`（与构建脚本同逻辑） |
 | 比对 | 包络 DTW + 频带余弦（`pinyin-follow-read-audio-compare.js`） |
@@ -240,4 +240,4 @@ score = buildFollowReadScoreFromAudio({ matchScore, ... })  // 沿用 0～99 映
 | 日期 | 说明 |
 |------|------|
 | 2026-05-19 | 初版：Meyda+MFCC+DTW 重构时间步骤与预提取流程 |
-| 2026-05-19 | 落地：代码接入 + `npm run pinyin:mfcc-fingerprints` 全量 1420 条；构建依赖 `ffmpeg-static` |
+| 2026-05-19 | 落地：代码接入 + `npm run pinyin:mfcc-fingerprints` 全量 1420 条；预提取推荐外部 Python + 系统 ffmpeg |

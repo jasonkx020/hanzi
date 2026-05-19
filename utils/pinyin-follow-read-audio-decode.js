@@ -722,10 +722,39 @@ export async function decodeUserRecordingForScore(filePath, format = 'pcm', opti
 		})
 	}
 
-	let fileDecoded = await decodeRecordingForFeature(filePath, format, { recordDurationMs })
-
 	const frameSamples =
 		frameDecoded?.int16?.length || frameDecoded?.samples?.length || 0
+	if (frameSamples >= MIN_PCM_SAMPLES_FOR_SCORE) {
+		logFollowReadScore('score.decode.use_frames_only', {
+			frameSamples,
+			bytes: frameBuf?.byteLength || 0,
+			note: 'wxz-record 等无临时文件'
+		})
+		return frameDecoded
+	}
+
+	const path = String(filePath || '').trim()
+	if (!path) {
+		if (frameDecoded) return frameDecoded
+		const e = new Error('empty record path')
+		e.failureStage = 'empty_path'
+		throw e
+	}
+
+	let fileDecoded
+	try {
+		fileDecoded = await decodeRecordingForFeature(path, format, { recordDurationMs })
+	} catch (e) {
+		if (frameDecoded) {
+			logFollowReadScore('score.decode.file_fail_use_frames', {
+				err: String(e?.message || e),
+				frameSamples
+			})
+			return frameDecoded
+		}
+		throw e
+	}
+
 	const fileSamples = fileDecoded?.int16?.length || fileDecoded?.samples?.length || 0
 	if (frameSamples > fileSamples) {
 		logFollowReadScore('score.decode.prefer_frames', {

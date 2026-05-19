@@ -6,8 +6,25 @@
  * 且对带调拼音、教材 ɑ 等支持不如 Pinyin Regular。若做英文练字可另开模块。
  */
 
+import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
+
 export const PINYIN_FONT_FAMILY_NAME = 'Pinyin Regular'
 export const PINYIN_FONT_URL = '/static/fonts/Pinyin-Regular.ttf'
+
+function buildPinyinFontFaceSource() {
+	// #ifdef APP-PLUS
+	try {
+		const abs = resolveAppStaticAbsoluteUrl(PINYIN_FONT_URL)
+		if (abs) {
+			const fileUrl = /^file:\/\//i.test(abs) ? abs : `file://${String(abs).replace(/^\//, '')}`
+			return `url("${fileUrl}")`
+		}
+	} catch (e) {
+		console.warn('[pinyin-font] resolve static font path', e)
+	}
+	// #endif
+	return `url("${PINYIN_FONT_URL}")`
+}
 
 /** 与 static/styles/pinyin-font.css、.font-pinyin 一致 */
 export const PINYIN_FONT_FAMILY_CSS =
@@ -35,7 +52,7 @@ export function ensurePinyinFontLoaded() {
 			}
 			uni.loadFontFace({
 				family: PINYIN_FONT_FAMILY_NAME,
-				source: `url("${PINYIN_FONT_URL}")`,
+				source: buildPinyinFontFaceSource(),
 				global: true,
 				success: () => resolve(true),
 				fail: (e) => {

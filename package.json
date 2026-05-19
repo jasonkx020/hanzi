@@ -33,11 +33,10 @@
     "cnchar-trad": "^3.2.6",
     "cnchar-voice": "^3.2.6",
     "cnchar-words": "^3.2.6",
-    "cnchar-xhy": "^3.2.6",
-    "meyda": "^5.6.3"
+    "cnchar-xhy": "^3.2.6"
   },
   "devDependencies": {
-    "ffmpeg-static": "^5.2.0",
+    "meyda": "^5.6.3",
     "ogg-opus-decoder": "^1.7.3"
   }
 }

@@ -12,6 +12,8 @@ const DEFAULTS = {
 	maxWallMs: PINYIN_FOLLOW_READ_MAX_WALL_MS,
 	/** Int16 PCM RMS 阈值（约 0.012，儿童轻声） */
 	speechEnergy: 0.012,
+	/** wxz-record 分贝高于此视为有效发声（见插件 readme） */
+	speechDecibel: -42,
 	sampleRate: 16000,
 	/** frameSize 单位 KB，与 RecorderManager 一致 */
 	frameSizeKb: 4
@@ -60,7 +62,7 @@ export function createEffectiveAudioState(opts = {}) {
 /**
  * @returns {'continue'|'target_reached'|'max'}
  */
-export function tickEffectiveAudioFrame(state, frameBuffer, wallElapsedMs, pcmLike = true) {
+export function tickEffectiveAudioFrame(state, frameBuffer, wallElapsedMs, pcmLike = true, extra = {}) {
 	if (!state) return 'continue'
 	const { opts } = state
 	const wall = Number(wallElapsedMs) || 0
@@ -76,7 +78,15 @@ export function tickEffectiveAudioFrame(state, frameBuffer, wallElapsedMs, pcmLi
 			? durationMs
 			: ((opts.frameSizeKb * 1024) / 2 / opts.sampleRate) * 1000
 
-	if (energy >= opts.speechEnergy && frameMs > 0) {
+	const db = extra.decibel
+	const speechByDb =
+		db != null &&
+		db !== Infinity &&
+		db !== -Infinity &&
+		!Number.isNaN(db) &&
+		db >= (opts.speechDecibel ?? -42)
+
+	if ((energy >= opts.speechEnergy || speechByDb) && frameMs > 0) {
 		if (!state.speechStarted) state.speechStarted = true
 		state.effectiveMs += frameMs
 		if (state.effectiveMs >= opts.targetEffectiveMs) return 'target_reached'

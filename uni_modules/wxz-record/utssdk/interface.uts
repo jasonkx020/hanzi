@@ -1,0 +1,93 @@
+/**
+ * interface.uts
+ * uts插件接口定义文件，按规范定义接口文件可以在HBuilderX中更好的做到语法提示
+ */
+
+/**
+ * 录音配置参数
+ */
+export type RecordConfig = {
+  /** 采样率，默认16000 */
+  sampleRate ?: number
+  /** 声道数，1=单声道，2=立体声，默认1 */
+  channels ?: number
+  /** 位深，8/16/24/32，默认16 */
+  bitsPerSample ?: number
+  /** 帧大小（字节），每次回调的PCM数据大小，默认4096 */
+  frameSize ?: number
+}
+
+/**
+ * 开始录音的参数
+ */
+export type StartRecordOptions = {
+  /** 录音配置 */
+  config ?: RecordConfig
+  /** 实时帧回调，每次接收到PCM数据时调用 */
+  onFrame ?: (data : ArrayBuffer, decibel : number) => void
+  /** 成功回调 */
+  success ?: (res : StartRecordResult) => void
+  /** 失败回调 */
+  fail ?: (res : RecordFail) => void
+  /** 完成回调 */
+  complete ?: (res : any) => void
+}
+
+/**
+ * 开始录音的返回结果
+ */
+export type StartRecordResult = {
+  /** 是否成功 */
+  success : boolean
+  /** 实际使用的采样率 */
+  sampleRate : number
+  /** 实际使用的声道数 */
+  channels : number
+  /** 实际使用的位深 */
+  bitsPerSample : number
+}
+
+/**
+ * 停止录音的参数
+ */
+export type StopRecordOptions = {
+  /** 成功回调 */
+  success ?: (res : StopRecordResult) => void
+  /** 失败回调 */
+  fail ?: (res : RecordFail) => void
+  /** 完成回调 */
+  complete ?: (res : any) => void
+}
+
+/**
+ * 停止录音的返回结果
+ */
+export type StopRecordResult = {
+  /** 是否成功 */
+  success : boolean
+  /** 录音总时长（毫秒） */
+  duration : number
+}
+
+/**
+ * 错误码
+ * 根据uni错误码规范要求，建议错误码以90开头：
+ * - 9010001 录音权限被拒绝
+ * - 9010002 录音初始化失败
+ * - 9010003 录音启动失败
+ * - 9010004 录音停止失败
+ * - 9010005 录音过程中发生错误
+ * - 9010006 参数错误
+ */
+export type RecordErrorCode = 9010001 | 9010002 | 9010003 | 9010004 | 9010005 | 9010006;
+
+/**
+ * 录音错误回调参数
+ */
+export interface RecordFail extends IUniError {
+  errCode : RecordErrorCode
+}
+
+/* 异步函数定义 */
+export type StartRecord = (options : StartRecordOptions) => void
+export type StopRecord = (options ?: StopRecordOptions) => void

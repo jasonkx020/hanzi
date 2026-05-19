@@ -1,4 +1,5 @@
 import { renjiaoTextbookJsonFile } from '@/constants/renjiao-textbook-filenames.js'
+import { readAppStaticText } from '@/utils/read-app-static-text.js'
 
 const STATIC_BOOKTEXT_ROOT = '/static/booktext/renjiaoban/'
 
@@ -20,41 +21,6 @@ const TEXTBOOK_EXTRA_KEYS = [
 
 function buildFileName(grade, semester) {
 	return renjiaoTextbookJsonFile(grade, semester, 'main')
-}
-
-/**
- * App 端 uni.request 不接受 file://，static 下 JSON 需走 5+ 本地文件读取。
- * @param {string} url 须为 /static/... 形式
- */
-function readStaticTextAppPlus(url) {
-	return new Promise((resolve, reject) => {
-		if (typeof plus === 'undefined' || !plus.io || typeof url !== 'string' || !url.startsWith('/static/')) {
-			reject(new Error('readStaticTextAppPlus: not app or bad url'))
-			return
-		}
-		const fullPath = `${url}`
-		plus.io.resolveLocalFileSystemURL(
-			fullPath,
-			(entry) => {
-				entry.file(
-					(file) => {
-						try {
-							const reader = new plus.io.FileReader()
-							reader.onloadend = (evt) => {
-								resolve(String((evt.target && evt.target.result) || ''))
-							}
-							reader.onerror = () => reject(new Error('FileReader error'))
-							reader.readAsText(file, 'utf-8')
-						} catch (err) {
-							reject(err)
-						}
-					},
-					reject
-				)
-			},
-			reject
-		)
-	})
 }
 
 /** 将 uni.request / 本地读出的 payload 统一为可 JSON.parse 的字符串或已是数组 */
@@ -83,7 +49,7 @@ function parseTextbookJsonArray(payload) {
 function requestText(url) {
 	return new Promise((resolve, reject) => {
 		if (typeof plus !== 'undefined' && plus.io && typeof url === 'string' && url.startsWith('/static/')) {
-			readStaticTextAppPlus(url).then(resolve).catch(reject)
+			readAppStaticText(url).then(resolve).catch(reject)
 			return
 		}
 		uni.request({

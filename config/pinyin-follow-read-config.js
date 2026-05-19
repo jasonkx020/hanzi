@@ -30,6 +30,12 @@ export const PINYIN_FOLLOW_READ_FIXED_MS = 2000
 /** 是否使用固定墙钟定时结束 */
 export const PINYIN_FOLLOW_READ_USE_FIXED_DURATION = false
 
+/**
+ * App wxz-record：固定墙钟录音时长（含首尾静音，不按有效发声截断）
+ * 与 TARGET_EFFECTIVE_MS 对齐，便于评分拿到连续 2s PCM。
+ */
+export const PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS = PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS
+
 export function getFollowReadTargetEffectiveMs(options = {}) {
 	const v = Number(options?.targetEffectiveMs)
 	if (Number.isFinite(v) && v > 0) {
@@ -37,9 +43,6 @@ export function getFollowReadTargetEffectiveMs(options = {}) {
 	}
 	return PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS
 }
-
-/** 跟读录音优先 pcm 裸流（App 必开；跳过 decodeAudioData） */
-export const PINYIN_FOLLOW_READ_PREFER_PCM = true
 
 /** 手动 stop 等待 onStop 超时（毫秒） */
 export const PINYIN_FOLLOW_READ_STOP_TIMEOUT_MS = 5000

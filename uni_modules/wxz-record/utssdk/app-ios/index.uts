@@ -1,0 +1,388 @@
+/**
+ * 引用 iOS 系统库
+ */
+import { AVAudioEngine } from "AVFoundation";
+import { AVAudioFormat } from "AVFoundation";
+import { AVAudioCommonFormat } from "AVFoundation";
+import { AVAudioNode } from "AVFoundation";
+import { AVAudioInputNode } from "AVFoundation";
+import { AVAudioPCMBuffer } from "AVFoundation";
+import { AVAudioSession } from "AVFoundation";
+import { AVAudioSessionCategory } from "AVFoundation";
+import { AVAudioSessionCategoryOptions } from "AVFoundation";
+import { AVAudioSessionMode } from "AVFoundation";
+import { UTSiOS } from "DCloudUTSFoundation";
+
+/* 引入 interface.uts 文件中定义的变量 */
+import { StartRecordOptions, StopRecordOptions, StartRecordResult, StopRecordResult, StartRecord, StopRecord, RecordConfig } from '../interface.uts';
+
+/* 引入 unierror.uts 文件中定义的变量 */
+import { RecordFailImpl } from '../unierror';
+
+/**
+ * UTSiOS 为平台内置对象，不需要 import 可直接调用其API，[详见](https://uniapp.dcloud.net.cn/uts/utsios.html)
+ */
+
+// 全局变量
+let audioEngine: AVAudioEngine | null = null;
+let isRecording = false;
+let frameCallback: ((data: ArrayBuffer, decibel: number) => void) | null = null;
+let startTime = 0;
+
+/**
+ * 计算音频数据的实时分贝值（从 Float32 数据计算）
+ * @param channelData Float32 音频数据数组（范围 [-1, 1]）
+ * @param frameLength 帧长度
+ * @param channelCount 声道数
+ * @returns 分贝值（dB），范围通常在 -60 到 0 之间
+ */
+function calculateDecibelFromFloat32(
+  channelData: UnsafePointer<UnsafeMutablePointer<Float>> | null,
+  frameLength: AVAudioFrameCount,
+  channelCount: UInt32
+): number {
+  try {
+    if (channelData == null) {
+      return -Infinity;
+    }
+    
+    const frameLengthInt = Int(frameLength);
+    const channelCountInt = Int(channelCount);
+    
+    if (frameLengthInt <= 0 || channelCountInt <= 0) {
+      return -Infinity;
+    }
+    
+    const totalSamples = frameLengthInt * channelCountInt;
+    if (totalSamples == 0) {
+      return -Infinity;
+    }
+    
+    let sumSquares = 0.0;
+    const unwrappedChannelData = channelData!;
+    
+    // 计算 RMS (均方根)
+    // 注意：channelData 是 UnsafePointer<UnsafeMutablePointer<Float>>
+    // 访问方式：channelData[channel][frame]
+    // 在 Swift 中，这相当于 channelData.pointee[channel][frame]
+    for (let frame: Int = 0; frame < frameLengthInt; frame++) {
+      for (let channel: Int = 0; channel < channelCountInt; channel++) {
+        // 直接访问，如果失败会在外层 catch 捕获
+        const sample = unwrappedChannelData[channel][frame];
+        // Float32 数据已经在 [-1, 1] 范围内，直接计算平方
+        sumSquares += sample * sample;
+      }
+    }
+    
+    // 计算 RMS
+    const rms = Math.sqrt(sumSquares / totalSamples);
+    
+    // 避免 log(0) 的情况，使用一个很小的值作为最小值
+    if (rms <= 0.0001) {
+      return -Infinity;
+    }
+    
+    // 计算分贝值
+    // 公式：dB = 20 * log10(rms)
+    // Float32 数据的 reference 为 1.0（最大振幅）
+    const decibel = 20.0 * Math.log10(rms);
+    
+    // 检查分贝值是否有效
+    if (isNaN(decibel) || decibel === Infinity) {
+      return -Infinity;
+    }
+    
+    return decibel;
+  } catch (e: any) {
+    // 如果访问数据失败，返回 -Infinity
+    return -Infinity;
+  }
+}
+
+/**
+ * 配置音频会话
+ */
+function configureAudioSession(): boolean {
+  const audioSession = AVAudioSession.sharedInstance();
+  try {
+    // 设置音频会话类别
+    UTSiOS.try(audioSession.setCategory(AVAudioSession.Category.record));
+    // 激活音频会话
+    UTSiOS.try(audioSession.setActive(true));
+    return true;
+  } catch  {
+    console.error('配置音频会话失败');
+    return false;
+  }
+}
+
+/**
+ * 开始录音
+ * @UTSJS.keepAlive 保持回调函数存活，避免跨线程调用时被释放
+ */
+@UTSJS.keepAlive
+export function startRecord(options: StartRecordOptions): void {
+  try {
+    // 如果正在录音，先停止
+    if (isRecording && audioEngine != null) {
+      stopRecord({});
+    }
+
+    // 配置音频会话
+    if (!configureAudioSession()) {
+      const err = new RecordFailImpl(9010002);
+      options.fail?.(err);
+      options.complete?.(err);
+      return;
+    }
+
+    // 配置参数
+    const config: RecordConfig = options.config ?? {};
+    const sampleRate = config.sampleRate ?? 16000;
+    const channels = config.channels ?? 1;
+    const bitsPerSample = config.bitsPerSample ?? 16;
+
+    // 创建音频引擎
+    audioEngine = new AVAudioEngine();
+    if (audioEngine == null) {
+      const err = new RecordFailImpl(9010002);
+      options.fail?.(err);
+      options.complete?.(err);
+      return;
+    }
+    const localEngine = audioEngine!;
+    const inputNode = localEngine.inputNode;
+
+    // 获取输入节点的实际格式，必须使用输入节点的格式，不能创建新格式
+    // 这样可以避免格式不匹配的问题
+    const actualInputFormat = inputNode.inputFormat(forBus = 0);
+    
+    if (actualInputFormat == null) {
+      const err = new RecordFailImpl(9010002);
+      options.fail?.(err);
+      options.complete?.(err);
+      return;
+    }
+    
+    // 使用实际的输入格式
+    const tapFormat = actualInputFormat;
+    
+    // 获取实际的输入格式信息（用于返回给调用者）
+    let actualSampleRate = sampleRate;
+    let actualChannels = channels;
+    // 使用实际的采样率和通道数
+    actualSampleRate = NSNumber(value = actualInputFormat.sampleRate);
+    actualChannels = NSNumber(value = actualInputFormat.channelCount);
+
+    // 保存回调
+    frameCallback = options.onFrame ?? null;
+    isRecording = true;
+    startTime = Date.now();
+
+    // 安装tap来获取音频数据
+    // 使用 installTap 方法，参数使用 = 连接
+    // 必须使用输入节点的实际格式，不能使用 null 或自定义格式
+    const bufferSize = config.frameSize ?? 4096;
+    const bufferSizeUInt32 = bufferSize.uint32Value;
+    inputNode.installTap(onBus = 0, bufferSize = bufferSizeUInt32, format = tapFormat, block = (buffer: AVAudioPCMBuffer, time: any) => {
+      if (!isRecording || frameCallback == null || buffer == null) {
+        return;
+      }
+
+      try {
+        // 计算数据大小
+        // frameLength 是 AVAudioFrameCount (UInt32)，channelCount 是 UInt32
+        const frameLength = buffer.frameLength;
+        const channelCount = buffer.format.channelCount;
+        if (channelCount == 0 || frameLength == 0) {
+          console.log(`[分贝计算] 无效的 buffer: frameLength=${frameLength}, channelCount=${channelCount}`);
+          return;
+        }
+        
+        // 获取音频数据
+        const channelData = buffer.floatChannelData;
+        if (channelData == null) {
+          console.log('[分贝计算] floatChannelData 为 null，可能格式不匹配');
+          // 如果 floatChannelData 为 null，尝试使用 int16ChannelData
+          // 但通常 iOS 输入节点使用 Float32 格式
+          return;
+        }
+        
+        const bytesPerSample = bitsPerSample / 8;
+        const dataSize = Number(frameLength) * Number(channelCount) * bytesPerSample;
+        const dataSizeInt = Int(dataSize);
+
+        // 创建临时的 ArrayBuffer 和 DataView 来处理数据
+        const tempArrayBuffer = new ArrayBuffer(dataSize);
+        const dataView = new DataView(tempArrayBuffer);
+
+        // 解包 channelData
+        const unwrappedChannelData = channelData!;
+        
+        // 在数据转换循环中同时计算分贝值
+        let sumSquares = 0.0;
+        const frameLengthInt = Int(frameLength);
+        const channelCountInt = Int(channelCount);
+        const totalSamples = frameLengthInt * channelCountInt;
+
+        if (bitsPerSample == 16) {
+          // 16位PCM
+          let offset: Int = 0;
+          for (let frame: Int = 0; frame < frameLengthInt; frame++) {
+            for (let channel: Int = 0; channel < channelCountInt; channel++) {
+              const sample = unwrappedChannelData[channel][frame];
+              
+              // 计算分贝（使用原始 Float32 数据）
+              sumSquares += sample * sample;
+              
+              // 数据转换
+              const sampleNS = NSNumber(value = sample);
+              const minNS = NSNumber(value = -1);
+              const maxNS = NSNumber(value = 1);
+              const clampedSample = Math.max(minNS, Math.min(maxNS, sampleNS));
+              const maxValue = NSNumber(value = 32767);
+              const floatValue = clampedSample * maxValue;
+              const int16Sample: Int16 = Int16(Int(floatValue));
+              dataView.setInt16(offset, int16Sample, true); // little endian
+              offset += 2;
+            }
+          }
+        } else if (bitsPerSample == 32) {
+          // 32位浮点PCM
+          let offset: Int = 0;
+          for (let frame: Int = 0; frame < frameLengthInt; frame++) {
+            for (let channel: Int = 0; channel < channelCountInt; channel++) {
+              const sample = unwrappedChannelData[channel][frame];
+              
+              // 计算分贝（使用原始 Float32 数据）
+              sumSquares += sample * sample;
+              
+              // 数据转换
+              dataView.setFloat32(offset, sample, true); // little endian
+              offset += 4;
+            }
+          }
+        } else {
+          // 其他格式暂不支持
+          return;
+        }
+        
+        // 计算分贝值
+        // 使用计算表达式来避免类型推断问题
+        let decibel: number = -1.0 / 0.0;
+        if (totalSamples > 0 && sumSquares > 0) {
+          const rms = Math.sqrt(sumSquares / totalSamples);
+          if (rms > 0.0001) {
+            decibel = 20.0 * Math.log10(rms);
+            if (isNaN(decibel) || decibel === Infinity) {
+              decibel = -1.0 / 0.0;
+            }
+          }
+        }
+
+        // 将 ArrayBuffer 转换为 Data，然后使用 ArrayBuffer.fromData() 处理
+        // 参考 Android 实现：ArrayBuffer.fromByteBuffer()
+        // iOS 使用 ArrayBuffer.fromData() 将 Data 转换为 ArrayBuffer
+        const data = tempArrayBuffer.toData();
+        const arrayBuffer = ArrayBuffer.fromData(data);
+
+        // 回调，传递 ArrayBuffer 和分贝值
+        frameCallback(arrayBuffer, decibel);
+      } catch {
+        // 忽略错误
+      }
+    });
+
+    // 准备并启动引擎
+    // 此时 audioEngine 已经在上面的检查中确认不为 null
+    const localEngineForStart = audioEngine!;
+    localEngineForStart.prepare();
+    try {
+      UTSiOS.try(localEngineForStart.start());
+    } catch {
+      const err = new RecordFailImpl(9010003);
+      options.fail?.(err);
+      options.complete?.(err);
+      audioEngine = null;
+      isRecording = false;
+      return;
+    }
+
+    // 返回成功
+    // 返回实际的采样率和通道数，而不是配置的值
+    const res: StartRecordResult = {
+      success: true,
+      sampleRate: actualSampleRate,
+      channels: actualChannels,
+      bitsPerSample: bitsPerSample
+    };
+    options.success?.(res);
+    options.complete?.(res);
+
+  } catch {
+    const err = new RecordFailImpl(9010003);
+    options.fail?.(err);
+    options.complete?.(err);
+  }
+}
+
+/**
+ * 停止录音
+ */
+export const stopRecord: StopRecord = function (options?: StopRecordOptions) {
+  try {
+    if (!isRecording || audioEngine == null) {
+      const res: StopRecordResult = {
+        success: false,
+        duration: 0
+      };
+      options?.success?.(res);
+      options?.complete?.(res);
+      return;
+    }
+
+    isRecording = false;
+
+    // 保存 audioEngine 的引用，确保类型安全
+    // 由于上面已经检查了 audioEngine == null 并 return，这里可以安全使用
+    const localAudioEngine = audioEngine!;
+
+    // 移除tap
+    const inputNode = localAudioEngine.inputNode;
+    inputNode.removeTap(onBus = 0);
+
+    // 停止引擎
+    localAudioEngine.stop();
+    audioEngine = null;
+
+    // 停用音频会话
+    const audioSession = AVAudioSession.sharedInstance();
+    try {
+      UTSiOS.try(audioSession.setActive(false));
+    } catch  {
+      // 忽略错误
+      console.error('停止音频会话失败');
+    }
+
+    frameCallback = null;
+
+    // 计算录音时长
+    const duration = Date.now() - startTime;
+
+    const res: StopRecordResult = {
+      success: true,
+      duration: duration
+    };
+    options?.success?.(res);
+    options?.complete?.(res);
+
+  } catch {
+    const err = new RecordFailImpl(9010004);
+    options?.fail?.(err);
+    options?.complete?.(err);
+  }
+}
+
+/**
+ * 更多插件开发的信息详见：https://uniapp.dcloud.net.cn/plugin/uts-plugin.html
+ */

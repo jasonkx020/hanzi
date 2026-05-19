@@ -357,6 +357,7 @@ import {
 	startFollowReadRecord,
 	stopFollowReadRecord,
 	cancelFollowReadAutoStop,
+	clearFollowReadAutoStopCallback,
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
 import {
@@ -374,7 +375,10 @@ import {
 	stopFollowReadDebugPlayback
 } from '@/utils/pinyin-follow-read-debug-playback.js'
 import { getFollowReadEffectiveProgress } from '@/services/pinyin-follow-read-service.js'
-import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
+import {
+	startFollowReadEffectiveProgressTicker,
+	startFollowReadRecordProgressTicker
+} from '@/utils/pinyin-follow-read-record-progress.js'
 import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import {
 	describePinyinPracticeSource,
@@ -807,6 +811,21 @@ export default {
 			this.stopFollowReadRecordUi()
 			this.followReadScoring = false
 			this.followReadRecordProgress = 0
+			const fixedMs = Number(startRes?.fixedDurationMs) || 0
+			const useFixedWall = fixedMs > 0 && (startRes?.wxzFixedWall || !startRes?.useEffectiveDuration)
+			if (useFixedWall) {
+				this.followReadSpeechStarted = true
+				this._stopFollowReadRecordProgress = startFollowReadRecordProgressTicker(
+					fixedMs,
+					(p) => {
+						this.followReadRecordProgress = p
+					},
+					() => {
+						this.onFollowReadRecordDurationEnd()
+					}
+				)
+				return
+			}
 			this.followReadSpeechStarted = false
 			this._stopFollowReadRecordProgress = startFollowReadEffectiveProgressTicker(
 				() => getFollowReadEffectiveProgress(),
@@ -823,12 +842,20 @@ export default {
 		async onFollowReadRecordDurationEnd() {
 			if (this._followReadScoreBusy) return
 			if (getFollowReadState().recording) {
-				cancelFollowReadAutoStop()
 				const stopRes = await stopFollowReadRecord()
 				await this.onFollowReadAutoEnded(stopRes)
 				return
 			}
-			if (!this.recording && !this.followReadScoring) return
+			if (this.recording && !this.followReadScoring) {
+				await new Promise((r) => setTimeout(r, 60))
+				if (!this.recording || this.followReadScoring || this._followReadScoreBusy) return
+				const stopRes = await stopFollowReadRecord()
+				if (stopRes?.ok) await this.onFollowReadAutoEnded(stopRes)
+				else {
+					this.recording = false
+					this.stopFollowReadRecordUi()
+				}
+			}
 		},
 		stopFollowReadRecordUi() {
 			if (this._stopFollowReadRecordProgress) {
@@ -922,12 +949,14 @@ export default {
 			this.autoReadRunId += 1
 			this.releaseAutoReadFollowWait(false)
 			stopLocalPinyinAudio()
+			clearFollowReadAutoStopCallback()
 			cancelFollowReadAutoStop()
 			this.cancelAutoReadSpeech()
 			this.setAutoReadHighlight(null)
 			if (this.recording) {
 				stopFollowReadRecord().catch(() => {})
 				this.recording = false
+				this.stopFollowReadRecordUi()
 			}
 			this.followReadBusy = false
 		},

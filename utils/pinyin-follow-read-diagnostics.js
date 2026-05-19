@@ -1,13 +1,13 @@
 /**
- * 跟读录音 / 评分环境诊断（权限、Meyda、读盘能力）
+ * 跟读录音 / 评分环境诊断（权限、Meyda、wxz-record）
  */
-import { isAppPlus, getUniFileSystemManager, mustUsePlusIoForLocalFiles } from '@/utils/pinyin-follow-read-platform.js'
+import { isAppPlus, getUniFileSystemManager } from '@/utils/pinyin-follow-read-platform.js'
 import { isMfccRuntimeAvailable } from '@/utils/pinyin-mfcc-extract.js'
 import {
 	shouldUseMfccScoring,
-	USE_MFCC_SCORING,
-	PINYIN_FOLLOW_READ_PREFER_PCM
+	USE_MFCC_SCORING
 } from '@/config/pinyin-follow-read-config.js'
+import { isPcmRealtimeAvailable } from '@/utils/pinyin-pcm-realtime.js'
 
 function getMicAuthorizeState() {
 	try {
@@ -26,16 +26,8 @@ export async function probeMicPermission() {
 		micAuthorize: getMicAuthorizeState(),
 		hasRecorderManager: typeof uni?.getRecorderManager === 'function',
 		hasFileSystemManager: !!getUniFileSystemManager(),
-		mustUsePlusIo: mustUsePlusIoForLocalFiles(),
-		hasPlusIo: typeof plus !== 'undefined' && !!plus?.io?.resolveLocalFileSystemURL
+		wxzRecord: isPcmRealtimeAvailable()
 	}
-	try {
-		// #ifdef APP-PLUS
-		if (typeof plus !== 'undefined' && plus.os?.name === 'Android') {
-			out.androidOs = true
-		}
-		// #endif
-	} catch (_) {}
 	return out
 }
 
@@ -43,14 +35,13 @@ export async function probeMicPermission() {
 export function getFollowReadScoringDiagnostics() {
 	return {
 		isAppPlus: isAppPlus(),
-		preferPcmFormat: PINYIN_FOLLOW_READ_PREFER_PCM,
+		wxzRecord: isPcmRealtimeAvailable(),
 		useMfccConfig: USE_MFCC_SCORING,
 		mfccRuntimeAvailable: isMfccRuntimeAvailable(),
 		shouldUseMfccScoring: shouldUseMfccScoring(),
 		micAuthorize: getMicAuthorizeState(),
-		featureExtractionImplemented: true,
 		featureExtractionNote:
-			'已实现：wav/pcm 解码 → Meyda MFCC（utils/pinyin-mfcc-extract.js）→ DTW（utils/pinyin-mfcc-compare.js）；App 另支持录音帧直出 PCM 绕过 readFile'
+			'App：wxz-record 实时 PCM → Meyda MFCC → DTW；小程序：RecorderManager 录音文件解码'
 	}
 }
 
@@ -59,10 +50,8 @@ export function formatDiagnosticsLines(diag) {
 	const lines = [
 		`平台：${diag.platform || '—'}`,
 		`麦克风授权：${diag.micAuthorize || '—'}`,
-		`RecorderManager：${diag.hasRecorderManager ? '有' : '无'}`,
-		`FileSystemManager：${diag.hasFileSystemManager ? '有' : '无（App 正常，读文件走 plus.io）'}`,
-		`读录音策略：${diag.mustUsePlusIo ? 'plus.io' : 'uni FS 优先'}`,
-		`plus.io：${diag.hasPlusIo ? '有' : '无'}`
+		`wxz-record：${diag.wxzRecord ? '已集成' : '未集成'}`,
+		`RecorderManager：${diag.hasRecorderManager ? '有（小程序）' : '无'}`
 	]
 	const s = getFollowReadScoringDiagnostics()
 	lines.push('—— 特征提取 ——')

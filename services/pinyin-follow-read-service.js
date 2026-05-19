@@ -7,7 +7,6 @@ import { comparePcmFingerprints } from '@/utils/pinyin-follow-read-audio-compare
 import { extractPcmFingerprint } from '@/utils/pinyin-follow-read-audio-features.js'
 import {
 	decodeUserRecordingForScore,
-	decodeRecordingToMono,
 	getReferenceFingerprint,
 	getReferenceMfccFeature
 } from '@/utils/pinyin-follow-read-audio-decode.js'
@@ -19,15 +18,17 @@ import {
 	PINYIN_FOLLOW_READ_USE_EFFECTIVE_DURATION,
 	PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS,
 	PINYIN_FOLLOW_READ_MAX_WALL_MS,
+	PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS,
 	getFollowReadTargetEffectiveMs,
-	PINYIN_FOLLOW_READ_PREFER_PCM,
 	PINYIN_FOLLOW_READ_STOP_TIMEOUT_MS
 } from '@/config/pinyin-follow-read-config.js'
+import { isAppPlus, mustUsePlusIoForLocalFiles } from '@/utils/pinyin-follow-read-platform.js'
 import {
-	isAppPlus,
-	isAndroidAppPlus,
-	mustUsePlusIoForLocalFiles
-} from '@/utils/pinyin-follow-read-platform.js'
+	isPcmRealtimeAvailable,
+	requestPcmRealtimePermission,
+	startPcmRealtimeCapture,
+	stopPcmRealtimeCapture
+} from '@/utils/pinyin-pcm-realtime.js'
 import {
 	logFollowReadScore,
 	logFollowReadSimilarity,
@@ -60,10 +61,6 @@ import {
 	followReadStatusBarHint,
 	followReadUserMessage
 } from '@/utils/pinyin-follow-read-ui-messages.js'
-import {
-	isUniRecorderFrameCallbackSupported,
-	startAppFollowReadFramePump
-} from '@/utils/pinyin-follow-read-app-frame-pump.js'
 import {
 	passesMfccSpeechGate,
 	passesLegacySpeechGate
@@ -105,23 +102,16 @@ let autoStopCallback = null
 let vadState = null
 /** @type {ReturnType<typeof createEffectiveAudioState>|null} */
 let effectiveAudioState = null
-/** App 无法拉起 AudioRecord 时，用墙钟 2s 兜底（如 iOS） */
-let effectiveWallClockFallback = false
-let effectiveWallClockStartedAt = 0
-let effectiveWallClockTargetMs = 0
+/** 停止计时器后仍供进度条展示的最近一次有效发声进度 */
+let lastEffectiveProgressSnapshot = null
 let vadFallbackTimer = null
 let fixedDurationTimer = null
 let autoStopInProgress = false
-let frameListenerBound = false
-/** @type {(() => void)|null} */
-let appFramePumpStop = null
 let effectiveWallTickTimer = null
-let appPumpProbeTimer = null
-let appPumpFrameCount = 0
 /** @type {string} */
-let lastRecordFormat = 'mp3'
+let lastRecordFormat = 'pcm'
 
-/** 录音测试（按住录、松开停），与跟读共用 RecorderManager */
+/** 录音测试（按住录、松开停） */
 let recordTestRecording = false
 let recordTestStartedAt = 0
 /** @type {string} */
@@ -135,12 +125,13 @@ let activePcmFrameChunks = null
 /** 最近一次 onStop 合并的 PCM（评分兜底） */
 let lastScoringPcmBuffer = null
 
+function useAppPcmRealtime() {
+	return isAppPlus() && isPcmRealtimeAvailable()
+}
+
 function resolveFollowReadRecordFormat() {
-	if (!isAppPlus()) return 'mp3'
-	if (!PINYIN_FOLLOW_READ_PREFER_PCM) return 'mp3'
-	// 无 uni FS 时用裸 pcm，便于 plus.io 读取与帧回调
-	if (mustUsePlusIoForLocalFiles()) return 'pcm'
-	return 'wav'
+	if (useAppPcmRealtime()) return 'pcm'
+	return 'mp3'
 }
 
 function beginPcmFrameCapture() {
@@ -187,8 +178,7 @@ function attachPcmBufferToStopPayload(payload) {
 	logFollowReadScore('score.record.pcm_capture', {
 		chunks: chunksBefore,
 		bytes: buf?.byteLength || 0,
-		noUniFs: mustUsePlusIoForLocalFiles(),
-		pumpFrames: appPumpFrameCount
+		source: useAppPcmRealtime() ? 'wxz-record' : 'recorder'
 	})
 	if (buf?.byteLength) {
 		payload.recordPcmBuffer = buf
@@ -231,67 +221,6 @@ function startEffectiveWallTick() {
 			triggerFollowReadAutoStop('timeout')
 		}
 	}, 250)
-}
-
-function clearAppPumpProbe() {
-	if (appPumpProbeTimer != null) {
-		clearTimeout(appPumpProbeTimer)
-		appPumpProbeTimer = null
-	}
-}
-
-function enableAndroidEffectiveWallAssist(options = {}, reason = 'pump_no_frames') {
-	if (effectiveWallClockFallback) return
-	const targetMs = getFollowReadTargetEffectiveMs(options)
-	effectiveWallClockFallback = true
-	effectiveWallClockStartedAt = recordStartedAt
-	effectiveWallClockTargetMs = targetMs
-	scheduleFixedDurationStop(targetMs)
-	logFollowReadScore('score.record.effective_wall_fallback', {
-		targetMs,
-		reason,
-		recorderManager: true
-	})
-}
-
-function disableAndroidEffectiveWallAssist() {
-	if (!effectiveWallClockFallback) return
-	effectiveWallClockFallback = false
-	effectiveWallClockStartedAt = 0
-	effectiveWallClockTargetMs = 0
-	clearFixedDurationTimer()
-}
-
-function scheduleAppPumpProbe(options = {}) {
-	clearAppPumpProbe()
-	appPumpFrameCount = 0
-	appPumpProbeTimer = setTimeout(() => {
-		appPumpProbeTimer = null
-		if (!recording) return
-		if (appPumpFrameCount > 0) return
-		logFollowReadScore('score.record.app_pump_no_frames', { recorderManager: true })
-		enableAndroidEffectiveWallAssist(options, 'pump_no_frames')
-	}, 900)
-}
-
-let appPumpDelayTimer = null
-
-function clearDelayedAndroidPump() {
-	if (appPumpDelayTimer != null) {
-		clearTimeout(appPumpDelayTimer)
-		appPumpDelayTimer = null
-	}
-}
-
-/** RecorderManager 已占麦后再尝试帧泵（部分机型可读） */
-function scheduleDelayedAndroidPump(useEffective, useLegacyVad, options = {}) {
-	clearDelayedAndroidPump()
-	if (!useEffective && !useLegacyVad) return
-	appPumpDelayTimer = setTimeout(() => {
-		appPumpDelayTimer = null
-		if (!recording) return
-		startAndroidParallelFramePump(useEffective, useLegacyVad, options)
-	}, 450)
 }
 
 const RECORD_HISTORY_KEY = 'pinyin_follow_read_history_v1'
@@ -351,35 +280,13 @@ export function getFollowReadFixedDurationMs(options = {}) {
 }
 
 export function getFollowReadEffectiveProgress() {
-	if (effectiveWallClockFallback) {
-		const elapsed = Math.max(0, Date.now() - effectiveWallClockStartedAt)
-		const targetMs = effectiveWallClockTargetMs || PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS
-		const speechStarted = elapsed >= 80
-		const effectiveMs = Math.min(elapsed, targetMs)
-		return {
-			effectiveMs,
-			targetMs,
-			progress: speechStarted
-				? Math.min(100, (effectiveMs / Math.max(1, targetMs)) * 100)
-				: 0,
-			speechStarted,
-			wallAssist: true
-		}
-	}
-	const real = getEffectiveAudioProgress(effectiveAudioState)
+	const real = effectiveAudioState
+		? getEffectiveAudioProgress(effectiveAudioState)
+		: lastEffectiveProgressSnapshot || getEffectiveAudioProgress(null)
 	return { ...real, wallAssist: false }
 }
 
 export { getFollowReadTargetEffectiveMs }
-
-function stopAppFramePump() {
-	if (appFramePumpStop) {
-		try {
-			appFramePumpStop()
-		} catch (_) {}
-		appFramePumpStop = null
-	}
-}
 
 function clearVadTimers() {
 	if (vadFallbackTimer != null) {
@@ -388,60 +295,18 @@ function clearVadTimers() {
 	}
 	clearFixedDurationTimer()
 	stopEffectiveWallTick()
-	clearAppPumpProbe()
-	clearDelayedAndroidPump()
 	vadState = null
 	effectiveAudioState = null
-	effectiveWallClockFallback = false
-	effectiveWallClockStartedAt = 0
-	effectiveWallClockTargetMs = 0
+	lastEffectiveProgressSnapshot = null
 }
 
-function startAndroidParallelFramePump(useEffective, useLegacyVad, options = {}) {
-	if (!isAndroidAppPlus() || (!useEffective && !useLegacyVad)) return
-	stopAppFramePump()
-	const pump = startAppFollowReadFramePump(
-		(buf) => onRecorderFrame(buf),
-		{
-			onStats: (s) => {
-				if (s?.event === 'first_frame') {
-					logFollowReadScore('score.record.app_frame_pump_frame', s)
-				}
-				if (s?.event === 'read_error' || s?.event === 'exception') {
-					logFollowReadScore('score.record.app_frame_pump_diag', s)
-				}
-			}
-		}
-	)
-	if (pump.ok) {
-		appFramePumpStop = pump.stop
-		logFollowReadScore('score.record.app_frame_pump', {
-			ok: true,
-			mode: 'parallel_after_rm'
-		})
-	} else {
-		logFollowReadScore('score.record.app_frame_pump', {
-			ok: false,
-			reason: pump.reason || 'unavailable',
-			mode: 'parallel_after_rm'
-		})
-		if (useEffective) {
-			enableAndroidEffectiveWallAssist(options, 'pump_start_failed')
-		}
-	}
-}
-
-function startAppFramePumpIfNeeded(useEffective, useLegacyVad, options = {}) {
-	if (!isAppPlus()) return
-	if (isAndroidAppPlus()) {
-		return
-	}
-	startAndroidParallelFramePump(useEffective, useLegacyVad, options)
-}
-
+/** 仅取消定时/VAD，不停止录音流（避免与自动结束竞态清空 onAutoStop） */
 export function cancelFollowReadAutoStop() {
-	stopAppFramePump()
 	clearVadTimers()
+}
+
+/** 用户打断连读/切页：不再触发 onAutoStop 评分 */
+export function clearFollowReadAutoStopCallback() {
 	autoStopCallback = null
 }
 
@@ -469,8 +334,10 @@ function initFollowReadEffectiveCapture(symbol, options = {}) {
 	const targetEffectiveMs = getFollowReadTargetEffectiveMs(options)
 	effectiveAudioState = createEffectiveAudioState({
 		targetEffectiveMs,
-		maxWallMs: PINYIN_FOLLOW_READ_MAX_WALL_MS
+		maxWallMs: PINYIN_FOLLOW_READ_MAX_WALL_MS,
+		frameSizeKb: useAppPcmRealtime() ? 8 : 4
 	})
+	lastEffectiveProgressSnapshot = null
 	scheduleWallRecordTimeout(PINYIN_FOLLOW_READ_MAX_WALL_MS)
 	logFollowReadScore('score.record.effective_mode', {
 		symbol: String(symbol || '').trim(),
@@ -479,29 +346,45 @@ function initFollowReadEffectiveCapture(symbol, options = {}) {
 	})
 }
 
-function onRecorderFrame(frameBuffer) {
-	if (autoStopInProgress || !frameBuffer) return
+let followReadPcmFrameLogged = 0
+
+function onRecorderFrame(frameBuffer, frameMeta) {
+	if (autoStopInProgress || !frameBuffer) {
+		if (!frameBuffer && (recording || recordTestRecording)) {
+			console.warn('[follow-read:onRecorderFrame] 收到空 frameBuffer', {
+				recording,
+				recordTestRecording
+			})
+		}
+		return
+	}
 	const inFollow = recording
 	const inTest = recordTestRecording
 	if (!inFollow && !inTest) return
-	appPumpFrameCount++
+	followReadPcmFrameLogged++
+	if (followReadPcmFrameLogged <= 3 || followReadPcmFrameLogged % 30 === 0) {
+		console.log('[follow-read:onRecorderFrame] ✓ 已写入 PCM 缓存', {
+			seq: followReadPcmFrameLogged,
+			byteLength: frameBuffer.byteLength,
+			inFollow,
+			inTest
+		})
+	}
 	appendPcmFrameChunk(frameBuffer)
 	if (!inFollow) return
-	if (effectiveWallClockFallback && appPumpFrameCount >= 2) {
-		disableAndroidEffectiveWallAssist()
-	}
 
 	const elapsed = Date.now() - recordStartedAt
-	const pcmLike =
-		lastRecordFormat === 'pcm' || lastRecordFormat === 'wav'
+	const pcmLike = true
 
 	if (effectiveAudioState) {
 		const verdict = tickEffectiveAudioFrame(
 			effectiveAudioState,
 			frameBuffer,
 			elapsed,
-			pcmLike
+			pcmLike,
+			{ decibel: frameMeta?.decibel }
 		)
+		lastEffectiveProgressSnapshot = getEffectiveAudioProgress(effectiveAudioState)
 		if (verdict === 'target_reached') {
 			logFollowReadScore('score.record.effective_done', {
 				effectiveMs: effectiveAudioState.effectiveMs,
@@ -530,24 +413,67 @@ function onRecorderFrame(frameBuffer) {
 	}
 }
 
-async function triggerFollowReadAutoStop(_reason) {
+async function triggerFollowReadAutoStop(reason) {
 	if (!recording || autoStopInProgress) return
 	autoStopInProgress = true
-	const cb = autoStopCallback
-	autoStopCallback = null
-	clearVadTimers()
+	logFollowReadScore('score.record.auto_stop', { reason: String(reason || '') })
 	try {
-		const stopRes = await stopFollowReadRecord()
-		if (cb && typeof cb === 'function') cb(stopRes)
+		await stopFollowReadRecord()
 	} finally {
 		autoStopInProgress = false
 	}
 }
 
-function bindFrameListenerIfNeeded(rm) {
-	if (frameListenerBound || !rm || typeof rm.onFrameRecorded !== 'function') return
-	if (!isUniRecorderFrameCallbackSupported()) return
-	frameListenerBound = true
+function buildStopPayloadFromPcm(durationMs) {
+	return markFollowReadStopOk({
+		ok: false,
+		tempFilePath: '',
+		durationMs,
+		sampleRate: 16000,
+		recordFormat: 'pcm',
+		message: ''
+	})
+}
+
+function deliverFollowReadStop(marked, { isTest = false } = {}) {
+	if (isTest) {
+		const finish = recordTestStopResolve
+		recordTestStopResolve = null
+		recordTestRecording = false
+		if (finish) finish(marked)
+		return
+	}
+	recording = false
+	clearVadTimers()
+	if (marked.tempFilePath) {
+		appendHistory({
+			tempFilePath: marked.tempFilePath,
+			durationMs: marked.durationMs,
+			sampleRate: marked.sampleRate,
+			createdAt: Date.now()
+		})
+	}
+	if (currentResolve) {
+		currentResolve(marked)
+		currentResolve = null
+	}
+	const cb = autoStopCallback
+	autoStopCallback = null
+	if (cb) {
+		try {
+			logFollowReadScore('score.record.ui_onAutoStop', {
+				ok: !!marked?.ok,
+				bytes: marked?.frameCaptureBytes || 0
+			})
+			cb(marked)
+		} catch (e) {
+			console.warn('[pinyin-follow] onAutoStop', e)
+		}
+	}
+}
+
+function bindMpFrameListenerIfNeeded(rm) {
+	if (!rm || typeof rm.onFrameRecorded !== 'function' || useAppPcmRealtime()) return
 	rm.onFrameRecorded((res) => {
 		const buf = res?.frameBuffer
 		if (buf) onRecorderFrame(buf)
@@ -555,12 +481,12 @@ function bindFrameListenerIfNeeded(rm) {
 }
 
 function getRecorderManagerSafe() {
+	if (useAppPcmRealtime()) return null
 	if (recorderManager) return recorderManager
 	if (typeof uni === 'undefined' || typeof uni.getRecorderManager !== 'function') return null
 	recorderManager = uni.getRecorderManager()
-	bindFrameListenerIfNeeded(recorderManager)
+	bindMpFrameListenerIfNeeded(recorderManager)
 	recorderManager.onStop((res) => {
-		stopAppFramePump()
 		if (recordTestStopResolve) {
 			const finish = recordTestStopResolve
 			recordTestStopResolve = null
@@ -575,47 +501,25 @@ function getRecorderManagerSafe() {
 				recordFormat: recordTestFormat,
 				message: tempFilePath ? '' : '未生成录音文件'
 			}
-			markFollowReadStopOk(attachPcmBufferToStopPayload(testPayload))
-			finish(testPayload)
+			const markedTest = markFollowReadStopOk(attachPcmBufferToStopPayload(testPayload))
+			finish(markedTest)
 			return
 		}
 		const durationMs = Date.now() - recordStartedAt
-		recording = false
-		clearVadTimers()
 		const tempFilePath = String(res?.tempFilePath || '').trim()
-		const payload = {
-			ok: !!tempFilePath,
-			tempFilePath,
-			durationMs: Number(res?.duration || durationMs) || durationMs,
-			sampleRate: 16000,
-			recordFormat: lastRecordFormat,
-			message: tempFilePath ? '' : '未生成录音文件'
-		}
-		markFollowReadStopOk(attachPcmBufferToStopPayload(payload))
-		if (payload.tempFilePath) {
-			appendHistory({
-				tempFilePath: payload.tempFilePath,
-				durationMs: payload.durationMs,
-				sampleRate: payload.sampleRate,
-				createdAt: Date.now()
+		const marked = markFollowReadStopOk(
+			attachPcmBufferToStopPayload({
+				ok: !!tempFilePath,
+				tempFilePath,
+				durationMs: Number(res?.duration || durationMs) || durationMs,
+				sampleRate: 16000,
+				recordFormat: lastRecordFormat,
+				message: tempFilePath ? '' : '未生成录音文件'
 			})
-		}
-		if (currentResolve) {
-			currentResolve(payload)
-			currentResolve = null
-		}
-		const cb = autoStopCallback
-		autoStopCallback = null
-		if (cb) {
-			try {
-				cb(payload)
-			} catch (e) {
-				console.warn('[pinyin-follow] onAutoStop', e)
-			}
-		}
+		)
+		deliverFollowReadStop(marked, { isTest: false })
 	})
 	recorderManager.onError((err) => {
-		stopAppFramePump()
 		if (recordTestStopResolve) {
 			const finish = recordTestStopResolve
 			recordTestStopResolve = null
@@ -787,6 +691,11 @@ function requestMicPermissionMp() {
 
 export async function requestMicPermission() {
 	// #ifdef APP-PLUS
+	if (useAppPcmRealtime()) {
+		const android = await requestMicPermissionApp()
+		if (!android.ok) return android
+		return requestPcmRealtimePermission()
+	}
 	return requestMicPermissionApp()
 	// #endif
 	// #ifdef MP
@@ -818,16 +727,29 @@ export async function startFollowReadRecord(options = {}) {
 	if (recording) return { ok: false, message: '录音进行中' }
 	const perm = await requestMicPermission()
 	if (!perm.ok) return perm
-	const rm = getRecorderManagerSafe()
-	if (!rm) return { ok: false, message: '当前环境不支持录音' }
+	if (isAppPlus() && !isPcmRealtimeAvailable()) {
+		return {
+			ok: false,
+			message: '请安装 uni_modules/wxz-record 插件后使用跟读录音'
+		}
+	}
 
 	const symbol = String(options.symbol || '').trim()
 	const autoStop = options.autoStop !== false
+	const wxzFixedWall =
+		useAppPcmRealtime() &&
+		autoStop &&
+		options.useWxzFixedWall !== false
 	const useEffective =
+		!wxzFixedWall &&
 		autoStop &&
 		PINYIN_FOLLOW_READ_USE_EFFECTIVE_DURATION &&
 		options.useEffectiveDuration !== false
-	const fixedMs = useEffective ? 0 : getFollowReadFixedDurationMs(options)
+	const fixedMs = wxzFixedWall
+		? Math.max(300, Number(PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS) || 2000)
+		: useEffective
+			? 0
+			: getFollowReadFixedDurationMs(options)
 	const useLegacyVad = autoStop && fixedMs <= 0 && !useEffective
 	autoStopCallback = typeof options.onAutoStop === 'function' ? options.onAutoStop : null
 
@@ -841,13 +763,67 @@ export async function startFollowReadRecord(options = {}) {
 	}
 
 	recording = true
+	followReadPcmFrameLogged = 0
 	autoStopInProgress = false
 	recordStartedAt = Date.now()
 	beginPcmFrameCapture()
-
 	lastRecordFormat = resolveFollowReadRecordFormat()
-	const useWav = lastRecordFormat === 'wav'
-	const usePcm = lastRecordFormat === 'pcm'
+
+	logFollowReadScore('score.record.start', {
+		symbol,
+		fixedMs,
+		useEffective,
+		wxzFixedWall,
+		targetEffectiveMs: useEffective ? getFollowReadTargetEffectiveMs(options) : 0,
+		maxWallMs: useEffective ? PINYIN_FOLLOW_READ_MAX_WALL_MS : fixedMs || 0,
+		format: lastRecordFormat,
+		capture: useAppPcmRealtime() ? 'wxz-record' : 'recorder_manager'
+	})
+
+	if (useAppPcmRealtime()) {
+		try {
+			await startPcmRealtimeCapture({
+				sampleRate: 16000,
+				frameSize: 4096,
+				onFrame: (buf, meta) => onRecorderFrame(buf, meta),
+				onError: (err) => {
+					logFollowReadScore('score.record.wxz_record_error', {
+						err: err?.errMsg || err?.message || String(err),
+						code: err?.code
+					})
+					if (recording) {
+						recording = false
+						clearVadTimers()
+						if (currentResolve) {
+							currentResolve({
+								ok: false,
+								message: err?.errMsg || '录音失败'
+							})
+							currentResolve = null
+						}
+					}
+				}
+			})
+		} catch (e) {
+			recording = false
+			clearVadTimers()
+			return { ok: false, message: String(e?.message || e) }
+		}
+		if (useEffective) startEffectiveWallTick()
+		logFollowReadScore('score.record.wxz_record_started', { useEffective, wxzFixedWall, fixedMs })
+		return {
+			ok: true,
+			fixedDurationMs: fixedMs,
+			useEffectiveDuration: useEffective,
+			wxzFixedWall,
+			targetEffectiveMs: useEffective ? getFollowReadTargetEffectiveMs(options) : 0,
+			maxWallMs: useEffective ? PINYIN_FOLLOW_READ_MAX_WALL_MS : fixedMs || 0,
+			recordFormat: lastRecordFormat
+		}
+	}
+
+	const rm = getRecorderManagerSafe()
+	if (!rm) return { ok: false, message: '当前环境不支持录音' }
 
 	const recorderMaxMs = useEffective
 		? PINYIN_FOLLOW_READ_MAX_WALL_MS + 3000
@@ -859,37 +835,18 @@ export async function startFollowReadRecord(options = {}) {
 		duration: recorderMaxMs,
 		sampleRate: 16000,
 		numberOfChannels: 1,
-		format: lastRecordFormat
+		format: lastRecordFormat,
+		frameSize: 4
 	}
-	if (!useWav && !usePcm) {
+	if (lastRecordFormat === 'mp3') {
 		startOpts.encodeBitRate = 48000
 	}
-	if (isAppPlus() || useEffective || useLegacyVad) {
-		startOpts.frameSize = 4
-	}
-
-	logFollowReadScore('score.record.start', {
-		symbol,
-		fixedMs,
-		useEffective,
-		targetEffectiveMs: useEffective ? getFollowReadTargetEffectiveMs(options) : 0,
-		maxWallMs: useEffective ? PINYIN_FOLLOW_READ_MAX_WALL_MS : 0,
-		format: lastRecordFormat,
-		duration: startOpts.duration
-	})
 
 	rm.start(startOpts)
 	startEffectiveWallTick()
-	if (useEffective && isAndroidAppPlus()) {
-		scheduleAppPumpProbe(options)
-		scheduleDelayedAndroidPump(useEffective, useLegacyVad, options)
-	} else {
-		startAppFramePumpIfNeeded(useEffective, useLegacyVad, options)
-	}
 	logFollowReadScore('score.record.rm_started', {
 		format: lastRecordFormat,
-		useEffective,
-		android: isAndroidAppPlus()
+		useEffective
 	})
 	return {
 		ok: true,
@@ -905,8 +862,20 @@ export function stopFollowReadRecord() {
 	if (!recording && !currentResolve) {
 		return Promise.resolve({ ok: false, message: '未在录音中' })
 	}
-	stopAppFramePump()
 	clearVadTimers()
+
+	if (useAppPcmRealtime()) {
+		const wallMs = Date.now() - recordStartedAt
+		return stopPcmRealtimeCapture().then(({ durationMs: pluginMs }) => {
+			const durationMs = Math.max(wallMs, Number(pluginMs) || 0)
+			const marked = markFollowReadStopOk(
+				attachPcmBufferToStopPayload(buildStopPayloadFromPcm(durationMs))
+			)
+			deliverFollowReadStop(marked, { isTest: false })
+			return marked
+		})
+	}
+
 	const rm = getRecorderManagerSafe()
 	if (!rm) return Promise.resolve({ ok: false, message: '当前环境不支持录音' })
 	return new Promise((resolve) => {
@@ -1349,52 +1318,57 @@ export async function startHoldRecordTest() {
 	}
 	const perm = await requestMicPermission()
 	if (!perm.ok) return perm
-	const rm = getRecorderManagerSafe()
-	if (!rm) return { ok: false, message: '当前环境不支持录音' }
+	if (isAppPlus() && !isPcmRealtimeAvailable()) {
+		return { ok: false, message: '请安装 uni_modules/wxz-record 插件' }
+	}
 
 	recordTestFormat = resolveFollowReadRecordFormat()
-	const useWav = recordTestFormat === 'wav'
-	const usePcm = recordTestFormat === 'pcm'
 	recordTestRecording = true
+	followReadPcmFrameLogged = 0
 	recordTestStartedAt = Date.now()
 	beginPcmFrameCapture()
 
-	const startOpts = {
-		duration: RECORD_TEST_MAX_MS,
-		sampleRate: 16000,
-		numberOfChannels: 1,
-		format: recordTestFormat
-	}
-	if (!useWav && !usePcm) {
-		startOpts.encodeBitRate = 48000
-	}
-	if (isAppPlus()) {
-		startOpts.frameSize = 4
-	}
-
 	logFollowReadScore('record_test.start', {
 		format: recordTestFormat,
-		sampleRate: startOpts.sampleRate
+		capture: useAppPcmRealtime() ? 'wxz-record' : 'recorder_manager'
 	})
 
 	try {
-		rm.start(startOpts)
-		if (isAppPlus()) {
-			const pump = startAppFollowReadFramePump((buf) => onRecorderFrame(buf))
-			if (pump.ok) {
-				appFramePumpStop = pump.stop
-				logFollowReadScore('record_test.app_frame_pump', { ok: true })
-			} else {
-				logFollowReadScore('record_test.app_frame_pump', {
-					ok: false,
-					reason: pump.reason || 'unavailable'
-				})
-			}
+		if (useAppPcmRealtime()) {
+			await startPcmRealtimeCapture({
+				sampleRate: 16000,
+				frameSize: 4096,
+				onFrame: (buf, meta) => onRecorderFrame(buf, meta),
+				onError: (err) => {
+					recordTestRecording = false
+					if (recordTestStopResolve) {
+						recordTestStopResolve({
+							ok: false,
+							message: err?.errMsg || '录音失败'
+						})
+						recordTestStopResolve = null
+					}
+				}
+			})
+			return { ok: true, recordFormat: recordTestFormat }
 		}
+		const rm = getRecorderManagerSafe()
+		if (!rm) return { ok: false, message: '当前环境不支持录音' }
+		const startOpts = {
+			duration: RECORD_TEST_MAX_MS,
+			sampleRate: 16000,
+			numberOfChannels: 1,
+			format: recordTestFormat,
+			frameSize: 4
+		}
+		if (recordTestFormat === 'mp3') {
+			startOpts.encodeBitRate = 48000
+		}
+		rm.start(startOpts)
 		return { ok: true, recordFormat: recordTestFormat }
 	} catch (e) {
 		recordTestRecording = false
-		stopAppFramePump()
+		await stopPcmRealtimeCapture().catch(() => {})
 		return { ok: false, message: String(e?.message || e) }
 	}
 }
@@ -1403,17 +1377,39 @@ export async function startHoldRecordTest() {
  * 松开结束录音（录音测试页）
  * @returns {Promise<{ ok: boolean, tempFilePath?: string, durationMs?: number, recordFormat?: string, message?: string }>}
  */
-export function stopHoldRecordTest() {
+export async function stopHoldRecordTest() {
 	if (!recordTestRecording) {
-		return Promise.resolve({ ok: false, message: '未在录音中' })
+		return { ok: false, message: '未在录音中' }
 	}
+	const heldMs = Date.now() - recordTestStartedAt
+	const tooShort = heldMs < RECORD_TEST_MIN_HOLD_MS
+
+	if (useAppPcmRealtime()) {
+		const { durationMs: pluginMs } = await stopPcmRealtimeCapture()
+		const durationMs = Math.max(heldMs, Number(pluginMs) || 0)
+		const base = buildStopPayloadFromPcm(durationMs)
+		recordTestRecording = false
+		const marked = markFollowReadStopOk(attachPcmBufferToStopPayload({ ...base }))
+		if (tooShort) {
+			return {
+				ok: false,
+				message: `请按住至少 ${Math.ceil(RECORD_TEST_MIN_HOLD_MS / 1000)} 秒再松开`
+			}
+		}
+		logFollowReadScore('record_test.stop', {
+			ok: !!marked.ok,
+			durationMs: marked.durationMs,
+			format: marked.recordFormat,
+			frameBytes: marked.frameCaptureBytes || 0
+		})
+		return marked
+	}
+
 	const rm = getRecorderManagerSafe()
 	if (!rm) {
 		recordTestRecording = false
 		return Promise.resolve({ ok: false, message: '当前环境不支持录音' })
 	}
-	const heldMs = Date.now() - recordTestStartedAt
-	const tooShort = heldMs < RECORD_TEST_MIN_HOLD_MS
 	return new Promise((resolve) => {
 		let settled = false
 		const finish = (payload) => {
@@ -1461,7 +1457,8 @@ export function cancelHoldRecordTest() {
 	if (!recordTestRecording) return
 	recordTestRecording = false
 	recordTestStopResolve = null
-	stopAppFramePump()
+	void stopPcmRealtimeCapture().catch(() => {})
+	activePcmFrameChunks = null
 	const rm = getRecorderManagerSafe()
 	try {
 		rm?.stop()

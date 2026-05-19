@@ -1,0 +1,268 @@
+/**
+ * 引用 HarmonyOS 系统库
+ */
+import { AudioCapturer } from "ohos.multimedia.audio";
+import { AudioStreamInfo } from "ohos.multimedia.audio";
+import { AudioCapturerInfo } from "ohos.multimedia.audio";
+import { AudioSourceType } from "ohos.multimedia.audio";
+import { AudioSampleRate } from "ohos.multimedia.audio";
+import { AudioChannel } from "ohos.multimedia.audio";
+import { AudioSampleFormat } from "ohos.multimedia.audio";
+import { TaskPool } from "ohos.taskpool.taskpool";
+
+/* 引入 interface.uts 文件中定义的变量 */
+import { StartRecordOptions, StopRecordOptions, StartRecordResult, StopRecordResult, StartRecord, StopRecord, RecordConfig } from '../interface.uts';
+
+/* 引入 unierror.uts 文件中定义的变量 */
+import { RecordFailImpl } from '../unierror';
+
+/**
+ * 更多插件开发的信息详见：https://doc.dcloud.net.cn/uni-app-x/plugin/uts-for-harmony.html
+ */
+
+// 全局变量
+let audioCapturer: AudioCapturer | null = null;
+let isRecording = false;
+let frameCallback: ((data: ArrayBuffer) => void) | null = null;
+let startTime = 0;
+let readTask: any = null;
+
+/**
+ * 获取采样率枚举
+ */
+function getSampleRate(sampleRate: number): AudioSampleRate {
+  if (sampleRate == 8000) {
+    return AudioSampleRate.SAMPLE_RATE_8000;
+  } else if (sampleRate == 16000) {
+    return AudioSampleRate.SAMPLE_RATE_16000;
+  } else if (sampleRate == 24000) {
+    return AudioSampleRate.SAMPLE_RATE_24000;
+  } else if (sampleRate == 32000) {
+    return AudioSampleRate.SAMPLE_RATE_32000;
+  } else if (sampleRate == 44100) {
+    return AudioSampleRate.SAMPLE_RATE_44100;
+  } else if (sampleRate == 48000) {
+    return AudioSampleRate.SAMPLE_RATE_48000;
+  } else if (sampleRate == 64000) {
+    return AudioSampleRate.SAMPLE_RATE_64000;
+  } else if (sampleRate == 96000) {
+    return AudioSampleRate.SAMPLE_RATE_96000;
+  } else {
+    return AudioSampleRate.SAMPLE_RATE_16000;
+  }
+}
+
+/**
+ * 获取声道枚举
+ */
+function getChannel(channels: number): AudioChannel {
+  if (channels == 1) {
+    return AudioChannel.CHANNEL_1;
+  } else if (channels == 2) {
+    return AudioChannel.CHANNEL_2;
+  } else if (channels == 3) {
+    return AudioChannel.CHANNEL_3;
+  } else if (channels == 4) {
+    return AudioChannel.CHANNEL_4;
+  } else if (channels == 5) {
+    return AudioChannel.CHANNEL_5;
+  } else if (channels == 6) {
+    return AudioChannel.CHANNEL_6;
+  } else if (channels == 7) {
+    return AudioChannel.CHANNEL_7;
+  } else if (channels == 8) {
+    return AudioChannel.CHANNEL_8;
+  } else {
+    return AudioChannel.CHANNEL_1;
+  }
+}
+
+/**
+ * 获取采样格式枚举
+ */
+function getSampleFormat(bitsPerSample: number): AudioSampleFormat {
+  if (bitsPerSample == 8) {
+    return AudioSampleFormat.SAMPLE_FORMAT_U8;
+  } else if (bitsPerSample == 16) {
+    return AudioSampleFormat.SAMPLE_FORMAT_S16LE;
+  } else if (bitsPerSample == 24) {
+    return AudioSampleFormat.SAMPLE_FORMAT_S24LE;
+  } else if (bitsPerSample == 32) {
+    return AudioSampleFormat.SAMPLE_FORMAT_S32LE;
+  } else {
+    return AudioSampleFormat.SAMPLE_FORMAT_S16LE;
+  }
+}
+
+/**
+ * 读取音频数据的任务
+ */
+async function readAudioData(capturer: AudioCapturer, frameSize: number, callback: (data: ArrayBuffer) => void) {
+  while (isRecording && capturer != null) {
+    try {
+      // HarmonyOS的read方法需要传入Uint8Array
+      const buffer = new ArrayBuffer(frameSize);
+      const uint8Array = new Uint8Array(buffer);
+      const bytesRead = await capturer.read(uint8Array, false);
+      if (bytesRead > 0 && isRecording) {
+        // 截取实际读取的数据
+        const actualData = buffer.slice(0, bytesRead);
+        callback(actualData);
+      } else if (bytesRead <= 0) {
+        break;
+      }
+    } catch (e: any) {
+      if (isRecording) {
+        isRecording = false;
+      }
+      break;
+    }
+  }
+}
+
+/**
+ * 开始录音
+ */
+export const startRecord: StartRecord = function (options: StartRecordOptions) {
+  try {
+    // 如果正在录音，先停止
+    if (isRecording && audioCapturer != null) {
+      stopRecord();
+    }
+
+    // 配置参数
+    const config: RecordConfig = options.config ?? {};
+    const sampleRate = config.sampleRate ?? 16000;
+    const channels = config.channels ?? 1;
+    const bitsPerSample = config.bitsPerSample ?? 16;
+    const frameSize = config.frameSize ?? 4096;
+
+    // 创建音频流信息
+    const audioStreamInfo: AudioStreamInfo = {
+      samplingRate: getSampleRate(sampleRate),
+      channels: getChannel(channels),
+      sampleFormat: getSampleFormat(bitsPerSample),
+      encodingType: 0 // PCM
+    };
+
+    // 创建录音器信息
+    const audioCapturerInfo: AudioCapturerInfo = {
+      source: AudioSourceType.SOURCE_TYPE_MIC,
+      capturerFlags: 0
+    };
+
+    // 创建AudioCapturer
+    try {
+      audioCapturer = new AudioCapturer(audioStreamInfo, audioCapturerInfo);
+    } catch (e: any) {
+      const err = new RecordFailImpl(9010002);
+      options.fail?.(err);
+      options.complete?.(err);
+      return;
+    }
+
+    // 保存回调
+    frameCallback = options.onFrame ?? null;
+    isRecording = true;
+    startTime = Date.now();
+
+    // 开始录音
+    try {
+      audioCapturer.start();
+    } catch (e: any) {
+      const err = new RecordFailImpl(9010003);
+      options.fail?.(err);
+      options.complete?.(err);
+      audioCapturer = null;
+      isRecording = false;
+      return;
+    }
+
+    // 启动读取任务
+    if (frameCallback != null) {
+      readTask = TaskPool.execute(readAudioData, audioCapturer, frameSize, frameCallback);
+    }
+
+    // 返回成功
+    const res: StartRecordResult = {
+      success: true,
+      sampleRate: sampleRate,
+      channels: channels,
+      bitsPerSample: bitsPerSample
+    };
+    options.success?.(res);
+    options.complete?.(res);
+
+  } catch (e: any) {
+    const err = new RecordFailImpl(9010003);
+    options.fail?.(err);
+    options.complete?.(err);
+  }
+}
+
+/**
+ * 停止录音
+ */
+export const stopRecord: StopRecord = function (options?: StopRecordOptions) {
+  try {
+    if (!isRecording || audioCapturer == null) {
+      const res: StopRecordResult = {
+        success: false,
+        duration: 0
+      };
+      options?.success?.(res);
+      options?.complete?.(res);
+      return;
+    }
+
+    isRecording = false;
+
+    // 停止录音
+    try {
+      if (audioCapturer.state == 2) { // STATE_RECORDING = 2
+        audioCapturer.stop();
+      }
+    } catch (e: any) {
+      // 忽略错误
+    }
+
+    // 释放资源
+    try {
+      audioCapturer.release();
+    } catch (e: any) {
+      // 忽略错误
+    }
+    audioCapturer = null;
+
+    // 取消读取任务
+    if (readTask != null) {
+      try {
+        TaskPool.cancel(readTask);
+      } catch (e: any) {
+        // 忽略错误
+      }
+      readTask = null;
+    }
+
+    frameCallback = null;
+
+    // 计算录音时长
+    const duration = Date.now() - startTime;
+
+    const res: StopRecordResult = {
+      success: true,
+      duration: duration
+    };
+    options?.success?.(res);
+    options?.complete?.(res);
+
+  } catch (e: any) {
+    const err = new RecordFailImpl(9010004);
+    options?.fail?.(err);
+    options?.complete?.(err);
+  }
+}
+
+/**
+ * 更多插件开发的信息详见：https://doc.dcloud.net.cn/uni-app-x/plugin/uts-for-harmony.html
+ */

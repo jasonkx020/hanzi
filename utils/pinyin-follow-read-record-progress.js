@@ -113,7 +113,7 @@ export function startFollowReadEffectiveProgressTicker(getProgress, onUpdate, on
 
 		}
 
-		timer = setTimeout(tick, 40)
+		timer = setTimeout(tick, 80)
 
 	}
 
@@ -193,7 +193,7 @@ export function startFollowReadRecordProgressTicker(durationMs, onUpdate, onComp
 
 		}
 
-		timer = setTimeout(tick, 40)
+		timer = setTimeout(tick, 80)
 
 	}
 

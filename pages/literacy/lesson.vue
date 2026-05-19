@@ -160,6 +160,7 @@ import {
 	startFollowReadRecord,
 	stopFollowReadRecord,
 	cancelFollowReadAutoStop,
+	clearFollowReadAutoStopCallback,
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
 import { followReadToastTitle } from '@/utils/pinyin-follow-read-ui-messages.js'
@@ -170,7 +171,10 @@ import {
 } from '@/config/pinyin-follow-read-config.js'
 import { playFollowReadDebugRecording } from '@/utils/pinyin-follow-read-debug-playback.js'
 import { getFollowReadEffectiveProgress } from '@/services/pinyin-follow-read-service.js'
-import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
+import {
+	startFollowReadEffectiveProgressTicker,
+	startFollowReadRecordProgressTicker
+} from '@/utils/pinyin-follow-read-record-progress.js'
 import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
@@ -463,10 +467,25 @@ export default {
 			}
 			this.beginFollowRecordUi(res, idx, token)
 		},
-		beginFollowRecordUi(_startRes, idx, token) {
+		beginFollowRecordUi(startRes, idx, token) {
 			this.stopFollowRecordUi()
 			this.followRecordScoring = false
 			this.followRecordProgress = 0
+			const fixedMs = Number(startRes?.fixedDurationMs) || 0
+			const useFixedWall = fixedMs > 0 && (startRes?.wxzFixedWall || !startRes?.useEffectiveDuration)
+			if (useFixedWall) {
+				this.followRecordSpeechStarted = true
+				this._stopFollowRecordProgress = startFollowReadRecordProgressTicker(
+					fixedMs,
+					(p) => {
+						this.followRecordProgress = p
+					},
+					() => {
+						this.onFollowRecordDurationEnd(idx, token)
+					}
+				)
+				return
+			}
 			this.followRecordSpeechStarted = false
 			this._stopFollowRecordProgress = startFollowReadEffectiveProgressTicker(
 				() => getFollowReadEffectiveProgress(),
@@ -485,9 +504,18 @@ export default {
 			if (token !== this.followSessionToken || this.followPhase !== 'active') return
 			if (this.followIdx !== idx) return
 			if (getFollowReadState().recording) {
-				cancelFollowReadAutoStop()
 				const stopRes = await stopFollowReadRecord()
 				await this.onFollowRecordEnded(idx, token, stopRes)
+				return
+			}
+			if (this.followRecording && !this.followRecordScoring) {
+				await new Promise((r) => setTimeout(r, 60))
+				if (token !== this.followSessionToken || !this.followRecording || this.followRecordScoring) {
+					return
+				}
+				const stopRes = await stopFollowReadRecord()
+				if (stopRes?.ok) await this.onFollowRecordEnded(idx, token, stopRes)
+				else this.stopFollowRecordUi()
 			}
 		},
 		stopFollowRecordUi() {
