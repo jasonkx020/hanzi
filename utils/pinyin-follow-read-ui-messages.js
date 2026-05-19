@@ -36,7 +36,7 @@ export function followReadUserMessage(verdict, target = '') {
 		case 'too_short':
 			return '录音太短，请大声读完再停'
 		case 'decode_error':
-			return '录音无法读取，请靠近麦克风大声再读一次'
+			return '录音无法提取，请再试一次（靠近麦克风、安静环境）'
 		case 'ref_error':
 			return '示范音暂时无法加载，请稍后重试'
 		case 'analysis_error':
@@ -68,13 +68,61 @@ export function classifyFollowReadThrowable(err) {
 	return 'analysis_error'
 }
 
+/** 是否已完成声学比对（有相似度百分比） */
+export function hasFollowReadSimilarity(scoreRes) {
+	if (!scoreRes?.ok) return false
+	const v = scoreRes?.details?.verdict || ''
+	return v === 'match' || v === 'mismatch'
+}
+
+/** @returns {number|null} 0–100 */
+export function followReadSimilarityPercent(scoreRes) {
+	if (!hasFollowReadSimilarity(scoreRes)) return null
+	const n = Number(scoreRes?.details?.targetMatch)
+	return Number.isFinite(n) ? Math.round(n) : null
+}
+
 /**
- * Toast 标题：分析类失败用短句，避免过长被截断。
- * @param {{ ok?: boolean, pass?: boolean, score?: number, message?: string, statusHint?: string, details?: { verdict?: string } }} scoreRes
+ * 模式栏 / 结果条：分数 + 相似度（通过与不通过均展示）
+ * @param {{ ok?: boolean, pass?: boolean, score?: number, message?: string, details?: { verdict?: string, targetMatch?: number, dtwSim?: number } }} scoreRes
+ */
+export function followReadStatusWithSimilarity(scoreRes, target = '') {
+	const t = String(target || '').trim()
+	const pct = followReadSimilarityPercent(scoreRes)
+	const sim = pct != null ? `相似 ${pct}%` : ''
+
+	if (scoreRes?.ok && scoreRes?.pass) {
+		const score = Number(scoreRes.score) || 0
+		return sim ? `跟读 ${score} 分 · ${sim}` : `跟读 ${score} 分`
+	}
+
+	if (hasFollowReadSimilarity(scoreRes)) {
+		const score = Number(scoreRes.score) || 0
+		if (sim) {
+			return t ? `${sim} · ${score} 分 · 再试「${t}」` : `${sim} · ${score} 分 · 再试一次`
+		}
+		return t ? `再试试「${t}」` : '再试一次'
+	}
+
+	return ''
+}
+
+/**
+ * Toast 标题：分析类失败用短句；比对完成时带相似度。
+ * @param {{ ok?: boolean, pass?: boolean, score?: number, message?: string, statusHint?: string, details?: { verdict?: string, targetMatch?: number } }} scoreRes
  */
 export function followReadToastTitle(scoreRes, target = '') {
 	if (scoreRes?.ok && scoreRes?.pass) {
+		const line = followReadStatusWithSimilarity(scoreRes, target)
+		if (line) return line
 		return `跟读 ${scoreRes.score} 分`
+	}
+	if (hasFollowReadSimilarity(scoreRes)) {
+		const pct = followReadSimilarityPercent(scoreRes)
+		const t = String(target || '').trim()
+		if (pct != null) {
+			return t ? `相似 ${pct}% · 再试「${t}」` : `相似 ${pct}% · 再试一次`
+		}
 	}
 	const verdict = scoreRes?.details?.verdict || ''
 	if (verdict === 'analysis_error' || verdict === 'decode_error' || verdict === 'no_speech') {

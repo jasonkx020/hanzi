@@ -52,6 +52,30 @@
 					</view>
 				</view>
 
+				<pinyin-follow-read-record-hint
+					:visible="followReadRecordBarVisible"
+					:progress="followReadRecordProgress"
+					:target="followReadTarget"
+					:scoring="followReadScoring"
+					:speech-started="followReadSpeechStarted"
+					:show-debug-playback="followReadDebugPlayVisible && followReadRecordBarVisible"
+					@debug-play="onFollowReadDebugPlay"
+				/>
+				<view
+					v-if="followReadDebugPlayVisible && !followReadRecordBarVisible"
+					class="fr-debug-play-standalone"
+					@click="onFollowReadDebugPlay"
+				>
+					<text class="fr-debug-play-standalone-text">🔊 试听上次跟读录音</text>
+				</view>
+				<view
+					v-if="showRecordTestEntry"
+					class="fr-debug-play-standalone fr-debug-play-standalone--link"
+					@click="goRecordTestPage"
+				>
+					<text class="fr-debug-play-standalone-text">🎤 麦克风录音测试（按住录、松开播）</text>
+				</view>
+
 				<view v-if="activeLegend.length" class="legend">
 					<text class="legend-title">颜色分类</text>
 					<view class="legend-row">
@@ -337,8 +361,21 @@ import {
 } from '@/services/pinyin-follow-read-service.js'
 import {
 	followReadStatusBarHint,
-	followReadToastTitle
+	followReadToastTitle,
+	followReadStatusWithSimilarity
 } from '@/utils/pinyin-follow-read-ui-messages.js'
+import { logFollowReadSimilarity } from '@/utils/pinyin-follow-read-debug-log.js'
+import {
+	FOLLOW_READ_DEBUG_PLAY_RECORDING,
+	PINYIN_RECORD_TEST_ENTRY_ALWAYS
+} from '@/config/pinyin-follow-read-config.js'
+import {
+	playFollowReadDebugRecording,
+	stopFollowReadDebugPlayback
+} from '@/utils/pinyin-follow-read-debug-playback.js'
+import { getFollowReadEffectiveProgress } from '@/services/pinyin-follow-read-service.js'
+import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
+import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import {
 	describePinyinPracticeSource,
 	FALLBACK_BLEND_SYLLABLES,
@@ -452,7 +489,8 @@ export default {
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
-		MengTabHero
+		MengTabHero,
+		PinyinFollowReadRecordHint
 	},
 	data() {
 		return {
@@ -495,7 +533,13 @@ export default {
 			followReadStatusHint: '',
 			followReadStatusKind: '',
 			_followReadHintTimer: null,
+			followReadRecordProgress: 0,
+			followReadScoring: false,
+			followReadSpeechStarted: false,
+			_stopFollowReadRecordProgress: null,
+			_followReadScoreBusy: false,
 			lastRecordFile: '',
+			followReadDebugPlayEnabled: FOLLOW_READ_DEBUG_PLAY_RECORDING,
 			vowelSections: VOWEL_SECTIONS,
 			initialSections: INITIAL_SECTIONS,
 			wholeReadingSections: WHOLE_READING_SECTIONS,
@@ -623,6 +667,19 @@ export default {
 			const h = this.followReadStatusHint || ''
 			return /[a-züɑ]/i.test(h)
 		},
+		followReadRecordBarVisible() {
+			return !!(this.recording || this.followReadScoring) && (this.followReadMode || this.followReadTarget)
+		},
+		followReadDebugPlayVisible() {
+			return !!(
+				this.followReadDebugPlayEnabled &&
+				this.lastRecordFile &&
+				(this.followReadMode || this.followReadTarget)
+			)
+		},
+		showRecordTestEntry() {
+			return PINYIN_RECORD_TEST_ENTRY_ALWAYS
+		},
 		/** 工具栏中间一行状态（替代原连读大卡片） */
 		pinyinModeStatusText() {
 			if (this.followReadBusy) return '播放示范…'
@@ -631,6 +688,7 @@ export default {
 				return t ? `跟读中 · ${t}` : '跟读中'
 			}
 			if (this.followReadStatusHint) return this.followReadStatusHint
+			if (this.followReadMode && this.lastScoreText) return this.lastScoreText
 			if (this.autoReadRunning) {
 				const sym = this.autoReadActiveLabel
 				const k = this.autoReadBannerKicker
@@ -668,8 +726,10 @@ export default {
 	},
 	onHide() {
 		stopMengmengVoice()
+		stopFollowReadDebugPlayback()
 		this.stopAutoReadChain()
 		cancelFollowReadAutoStop()
+		this.stopFollowReadRecordUi()
 		this.clearFollowReadStatusHint()
 	},
 	methods: {
@@ -721,6 +781,20 @@ export default {
 				}, ttlMs)
 			}
 		},
+		goRecordTestPage() {
+			uni.navigateTo({ url: '/pages/debug/record-test' })
+		},
+		onFollowReadDebugPlay() {
+			if (!this.lastRecordFile) {
+				uni.showToast({ title: '暂无录音文件', icon: 'none' })
+				return
+			}
+			playFollowReadDebugRecording(this.lastRecordFile, { force: true }).then((r) => {
+				if (!r?.ok && !r?.skipped) {
+					uni.showToast({ title: r?.message || '播放失败', icon: 'none' })
+				}
+			})
+		},
 		clearFollowReadStatusHint() {
 			if (this._followReadHintTimer) {
 				clearTimeout(this._followReadHintTimer)
@@ -728,6 +802,42 @@ export default {
 			}
 			this.followReadStatusHint = ''
 			this.followReadStatusKind = ''
+		},
+		beginFollowReadRecordUi(startRes) {
+			this.stopFollowReadRecordUi()
+			this.followReadScoring = false
+			this.followReadRecordProgress = 0
+			this.followReadSpeechStarted = false
+			this._stopFollowReadRecordProgress = startFollowReadEffectiveProgressTicker(
+				() => getFollowReadEffectiveProgress(),
+				(p, _effMs, speechStarted) => {
+					this.followReadRecordProgress = p
+					this.followReadSpeechStarted = speechStarted
+				},
+				() => {
+					this.onFollowReadRecordDurationEnd()
+				},
+				() => getFollowReadState().recording
+			)
+		},
+		async onFollowReadRecordDurationEnd() {
+			if (this._followReadScoreBusy) return
+			if (getFollowReadState().recording) {
+				cancelFollowReadAutoStop()
+				const stopRes = await stopFollowReadRecord()
+				await this.onFollowReadAutoEnded(stopRes)
+				return
+			}
+			if (!this.recording && !this.followReadScoring) return
+		},
+		stopFollowReadRecordUi() {
+			if (this._stopFollowReadRecordProgress) {
+				this._stopFollowReadRecordProgress()
+				this._stopFollowReadRecordProgress = null
+			}
+			this.followReadRecordProgress = 0
+			this.followReadScoring = false
+			this.followReadSpeechStarted = false
 		},
 		onPickTab(tab) {
 			const next = String(tab || '')
@@ -1391,6 +1501,7 @@ export default {
 					this.recording = true
 					this.lastScoreText = ''
 					this.clearFollowReadStatusHint()
+					this.beginFollowReadRecordUi(res)
 				})
 			})
 		},
@@ -1437,10 +1548,23 @@ export default {
 			this.recording = true
 			this.lastScoreText = ''
 			this.clearFollowReadStatusHint()
+			this.beginFollowReadRecordUi(res)
 		},
 		async onFollowReadAutoEnded(stopRes) {
-			if (!this.recording) return
-			await this.finishFollowReadScoring(stopRes, true)
+			if (this._followReadScoreBusy) return
+			this._followReadScoreBusy = true
+			this.recording = false
+			if (this._stopFollowReadRecordProgress) {
+				this._stopFollowReadRecordProgress()
+				this._stopFollowReadRecordProgress = null
+			}
+			this.followReadRecordProgress = 100
+			this.followReadScoring = true
+			try {
+				await this.finishFollowReadScoring(stopRes, true)
+			} finally {
+				this._followReadScoreBusy = false
+			}
 		},
 		goDrill() {
 			uni.navigateTo({ url: '/pages/pinyin/drill' })
@@ -1455,13 +1579,14 @@ export default {
 			}
 		},
 		async stopRecordAndScore() {
-			if (!this.recording) return
+			if (!this.recording || this._followReadScoreBusy) return
 			cancelFollowReadAutoStop()
 			const stopRes = await stopFollowReadRecord()
-			await this.finishFollowReadScoring(stopRes, false)
+			await this.onFollowReadAutoEnded(stopRes)
 		},
 		async finishFollowReadScoring(stopRes, autoEnded) {
 			this.recording = false
+			try {
 			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_FOLLOW_SCORE, {
 				quotaKey: QUOTA_KEYS.PINYIN_FOLLOW,
 				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.PINYIN_FOLLOW],
@@ -1496,22 +1621,24 @@ export default {
 				durationMs: stopRes.durationMs,
 				sampleRate: stopRes.sampleRate,
 				tempFilePath: stopRes.tempFilePath,
-				recordFormat: stopRes.recordFormat
+				recordFormat: stopRes.recordFormat,
+				recordPcmBuffer: stopRes.recordPcmBuffer,
+				frameCaptureBytes: stopRes.frameCaptureBytes
 			})
 			this.followReadHistory = getFollowReadHistory()
 			const verdict = scoreRes.details?.verdict || ''
+			const simHint = followReadStatusWithSimilarity(scoreRes, symbol)
+			logFollowReadSimilarity(scoreRes, symbol, { source: 'pinyin-index' })
 			if (scoreRes.ok && scoreRes.pass) {
 				recordPinyinFollowPass()
-				this.lastScoreText = `跟读 ${scoreRes.score} 分 · 与示范音相似 ${scoreRes.details?.targetMatch ?? 0}%`
-				this.setFollowReadStatusHint(
-					scoreRes.statusHint || `跟读 ${scoreRes.score} 分`,
-					'ok',
-					2800
-				)
+				this.lastScoreText = simHint || `跟读 ${scoreRes.score} 分`
+				this.setFollowReadStatusHint(this.lastScoreText, 'ok', 4500)
 				playMengmengVoice(MENG_VOICE.PINYIN_FOLLOW_GOOD, { minGapMs: 1200 }).catch(() => {})
 			} else {
-				this.lastScoreText = scoreRes.message || '跟读未通过，请再试一次'
+				this.lastScoreText =
+					simHint || scoreRes.message || '跟读未通过，请再试一次'
 				const hint =
+					simHint ||
 					scoreRes.statusHint ||
 					followReadStatusBarHint(verdict, symbol)
 				const hintTtl =
@@ -1527,6 +1654,13 @@ export default {
 			}
 			if (chainWait) {
 				this.releaseAutoReadFollowWait(true)
+			}
+			} finally {
+				this.followReadScoring = false
+				this.followReadRecordProgress = 0
+				if (this.followReadDebugPlayEnabled && this.lastRecordFile) {
+					playFollowReadDebugRecording(this.lastRecordFile, { delayMs: 500 })
+				}
 			}
 		}
 	}
@@ -1888,6 +2022,30 @@ export default {
 	gap: 10rpx;
 	flex: 1;
 	min-width: 0;
+}
+
+.fr-debug-play-standalone {
+	margin: 8rpx 8rpx 4rpx;
+	padding: 14rpx 18rpx;
+	border-radius: 16rpx;
+	background: rgba(80, 120, 200, 0.1);
+	border: 1rpx dashed rgba(80, 120, 200, 0.4);
+}
+
+.fr-debug-play-standalone-text {
+	font-size: 24rpx;
+	color: #4a6a9a;
+	text-align: center;
+	display: block;
+}
+
+.fr-debug-play-standalone--link {
+	border-color: rgba(232, 120, 48, 0.45);
+	background: rgba(240, 160, 96, 0.08);
+}
+
+.fr-debug-play-standalone--link .fr-debug-play-standalone-text {
+	color: #8b4518;
 }
 
 .check-icon {

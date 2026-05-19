@@ -180,19 +180,18 @@ export async function sleepUnlessCancelled(ms, isCancelled) {
  */
 export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, opts = {}) {
 	const tryUrls = []
+	let neutral = ''
 	if (!opts.skipTonedExact) {
-		const neutral = getLocalPinyinAudioPath(symbol)
+		neutral = getLocalPinyinAudioPath(symbol) || ''
 		if (neutral) tryUrls.push(neutral)
 	}
+	let tone1 = ''
 	if (useTone1Fallback) {
-		const tone1 = getLocalPinyinTone1AudioPath(symbol)
+		tone1 = getLocalPinyinTone1AudioPath(symbol) || ''
 		if (tone1 && tryUrls.indexOf(tone1) === -1) tryUrls.push(tone1)
 	}
 	const neutralStem = neutral ? neutral.replace(/^.*\//, '').replace(/\.opus$/i, '') : ''
-	const tone1Stem =
-		useTone1Fallback && tryUrls[1]
-			? tryUrls[1].replace(/^.*\//, '').replace(/\.opus$/i, '')
-			: ''
+	const tone1Stem = tone1 ? tone1.replace(/^.*\//, '').replace(/\.opus$/i, '') : ''
 	logHanziSpeak('local.try_urls', {
 		symbol,
 		useTone1Fallback,

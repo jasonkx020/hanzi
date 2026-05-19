@@ -6,6 +6,7 @@
 			<button class="tb-btn" size="mini" type="warn" @click="onClear">清空缓冲</button>
 			<button class="tb-btn" size="mini" type="primary" @click="copyAll">复制全部</button>
 			<button class="tb-btn" size="mini" type="default" @click="selfTest">自检写入</button>
+			<button class="tb-btn" size="mini" type="primary" @click="goRecordTest">录音测试</button>
 		</view>
 		<text class="hint"
 			>共 {{ lines.length }} 条 · 最多 {{ maxHint }} 条 · console 无法改写时仍可用「自检写入」验证列表是否可见</text
@@ -95,6 +96,9 @@ export default {
 			appendDebugLog('log', '[自检]', '若能看到本条，说明日志列表区域可见；与时间戳同时出现的还有启动时的 hook 说明。')
 			this.refresh()
 			uni.showToast({ title: '已写入一条', icon: 'none' })
+		},
+		goRecordTest() {
+			uni.navigateTo({ url: '/pages/debug/record-test' })
 		},
 		copyAll() {
 			const body = this.lines.map((r) => `[${r.ts}] [${r.level}] ${r.text}`).join('\n')

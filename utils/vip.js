@@ -6,6 +6,7 @@
 import { clearTodayQuotasForDebug } from '@/utils/vip-quota.js'
 import { clearVipEntitlementsForDebug } from '@/utils/vip-entitlements.js'
 import { clearLearningProfilesForDebug } from '@/utils/learning-profile-storage.js'
+import { purchaseProduct } from '@/services/vip-pay-service.js'
 
 const STORAGE_EXPIRE_MS = 'vip_expire_at_ms'
 const STORAGE_ORDER_HINT = 'vip_last_order_id'
@@ -121,7 +122,6 @@ export function tryClaimInstallTrialIfEligible(days = 7) {
 /**
  * 发起会员购买（P1：家长验证 → 下单 → 平台支付 → 服务端/本地确认写 expireAt）
  */
-export async function requestPurchase(productId) {
-	const { purchaseProduct } = await import('@/services/vip-pay-service.js')
+export function requestPurchase(productId) {
 	return purchaseProduct(productId)
 }

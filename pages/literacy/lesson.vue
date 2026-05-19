@@ -27,9 +27,21 @@
 		<view class="lesson-sheet">
 		<view v-if="followPhase === 'active'" class="follow-reading-bar">
 			<image class="follow-reading-bar-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
-			<view class="follow-reading-bar-text">
-				<text class="follow-reading-label">跟读 · 第 {{ followIdx + 1 }}/{{ lessonChars.length }} 字</text>
-				<text class="follow-reading-sub">点跳动 logo 停止 · 点「点重听」可重听</text>
+			<view class="follow-reading-bar-main">
+				<view class="follow-reading-bar-text">
+					<text class="follow-reading-label">跟读 · 第 {{ followIdx + 1 }}/{{ lessonChars.length }} 字</text>
+					<text class="follow-reading-sub">点跳动 logo 停止 · 点「点重听」可重听</text>
+				</view>
+				<pinyin-follow-read-record-hint
+					v-if="followRecording || followRecordScoring || followDebugPlayVisible"
+					:visible="true"
+					:progress="followRecordProgress"
+					:target="followRecordSymbol"
+					:scoring="followRecordScoring"
+					:speech-started="followRecordSpeechStarted"
+					:show-debug-playback="followDebugPlayVisible"
+					@debug-play="onFollowDebugPlay"
+				/>
 			</view>
 			<text class="follow-exit" @click="exitFollow">退出</text>
 		</view>
@@ -144,11 +156,22 @@ import { playOpusForDisplayPinyin, stopLocalPinyinAudio } from '@/utils/play-pin
 import { speakChinese } from '@/utils/speak-hanzi.js'
 import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
 import {
+	getFollowReadState,
 	startFollowReadRecord,
 	stopFollowReadRecord,
 	cancelFollowReadAutoStop,
 	requestFollowReadScore
 } from '@/services/pinyin-follow-read-service.js'
+import { followReadToastTitle } from '@/utils/pinyin-follow-read-ui-messages.js'
+import { logFollowReadSimilarity } from '@/utils/pinyin-follow-read-debug-log.js'
+import {
+	FOLLOW_READ_DEBUG_PLAY_RECORDING,
+	PINYIN_FOLLOW_READ_MAX_WALL_MS
+} from '@/config/pinyin-follow-read-config.js'
+import { playFollowReadDebugRecording } from '@/utils/pinyin-follow-read-debug-playback.js'
+import { getFollowReadEffectiveProgress } from '@/services/pinyin-follow-read-service.js'
+import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
+import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
@@ -172,7 +195,8 @@ export default {
 		PinyinFourLinesRow,
 		MengAvatar,
 		MengPageNav,
-		MengStatusBarSpacer
+		MengStatusBarSpacer,
+		PinyinFollowReadRecordHint
 	},
 	data() {
 		return {
@@ -193,6 +217,14 @@ export default {
 			/** @type {Array<'pending'|'reading'|'pass'|'miss'>} */
 			followStatuses: [],
 			followRecording: false,
+			followRecordProgress: 0,
+			followRecordSpeechStarted: false,
+			followRecordScoring: false,
+			followRecordSymbol: '',
+			lastFollowRecordFile: '',
+			followDebugPlayEnabled: FOLLOW_READ_DEBUG_PLAY_RECORDING,
+			_stopFollowRecordProgress: null,
+			_followReadScoreBusy: false,
 			followRecordWatchdog: null,
 			/** 防止录音结束回调重复触发导致卡住 */
 			followEndHandledKey: '',
@@ -242,6 +274,13 @@ export default {
 			const miss = this.followStatuses.filter((s) => s === 'miss').length
 			if (!miss) return '太棒了，本课生字都跟读通过啦'
 			return `有 ${miss} 个字标了「再读」，可以多练几遍`
+		},
+		followDebugPlayVisible() {
+			return !!(
+				this.followDebugPlayEnabled &&
+				this.lastFollowRecordFile &&
+				this.followPhase === 'active'
+			)
 		}
 	},
 	onUnload() {
@@ -370,7 +409,7 @@ export default {
 						this.$set(this.followStatuses, idx, 'miss')
 						this.advanceFollow(idx, token)
 					})
-			}, 22000)
+			}, PINYIN_FOLLOW_READ_MAX_WALL_MS + 8000)
 		},
 		syncFollowUi(idx) {
 			this.$nextTick(() => {
@@ -405,6 +444,7 @@ export default {
 				return this.advanceFollow(idx, token)
 			}
 			this.followRecording = true
+			this.followRecordSymbol = symbol
 			this.scheduleFollowRecordWatchdog(idx, token)
 			const res = await startFollowReadRecord({
 				symbol,
@@ -414,50 +454,121 @@ export default {
 			if (token !== this.followSessionToken || this.followPhase !== 'active') return
 			if (!res.ok) {
 				this.followRecording = false
+				this.stopFollowRecordUi()
 				this.clearFollowRecordWatchdog()
 				this.$set(this.followStatuses, idx, 'miss')
 				uni.showToast({ title: res.message || '无法开始录音', icon: 'none' })
 				await delay(1100)
 				return this.advanceFollow(idx, token)
 			}
+			this.beginFollowRecordUi(res, idx, token)
+		},
+		beginFollowRecordUi(_startRes, idx, token) {
+			this.stopFollowRecordUi()
+			this.followRecordScoring = false
+			this.followRecordProgress = 0
+			this.followRecordSpeechStarted = false
+			this._stopFollowRecordProgress = startFollowReadEffectiveProgressTicker(
+				() => getFollowReadEffectiveProgress(),
+				(p, _effMs, speechStarted) => {
+					this.followRecordProgress = p
+					this.followRecordSpeechStarted = speechStarted
+				},
+				() => {
+					this.onFollowRecordDurationEnd(idx, token)
+				},
+				() => getFollowReadState().recording
+			)
+		},
+		async onFollowRecordDurationEnd(idx, token) {
+			if (this._followReadScoreBusy) return
+			if (token !== this.followSessionToken || this.followPhase !== 'active') return
+			if (this.followIdx !== idx) return
+			if (getFollowReadState().recording) {
+				cancelFollowReadAutoStop()
+				const stopRes = await stopFollowReadRecord()
+				await this.onFollowRecordEnded(idx, token, stopRes)
+			}
+		},
+		stopFollowRecordUi() {
+			if (this._stopFollowRecordProgress) {
+				this._stopFollowRecordProgress()
+				this._stopFollowRecordProgress = null
+			}
+			this.followRecordProgress = 0
+			this.followRecordSpeechStarted = false
+			this.followRecordScoring = false
+			this.followRecordSymbol = ''
 		},
 		async onFollowRecordEnded(idx, token, stopRes) {
 			if (token !== this.followSessionToken || this.followPhase !== 'active') return
 			if (this.followIdx !== idx) return
+			if (this._followReadScoreBusy) return
+			this._followReadScoreBusy = true
+			this.followRecording = false
+			if (this._stopFollowRecordProgress) {
+				this._stopFollowRecordProgress()
+				this._stopFollowRecordProgress = null
+			}
+			this.followRecordProgress = 100
+			this.followRecordScoring = true
 			const endKey = `${token}-${idx}`
-			if (this.followEndHandledKey === endKey) return
+			if (this.followEndHandledKey === endKey) {
+				this.followRecordScoring = false
+				this._followReadScoreBusy = false
+				return
+			}
 			this.followEndHandledKey = endKey
 			this.clearFollowRecordWatchdog()
-			this.followRecording = false
-			if (!stopRes?.ok) {
-				this.$set(this.followStatuses, idx, 'miss')
-				await delay(900)
-				return this.advanceFollow(idx, token)
-			}
-			const row = this.lessonChars[idx]
-			const symbol = this.followScoreSymbol(row)
-			const scoreRes = await requestFollowReadScore({
-				symbol,
-				durationMs: stopRes?.durationMs,
-				sampleRate: stopRes?.sampleRate,
-				tempFilePath: stopRes?.tempFilePath,
-				recordFormat: stopRes?.recordFormat
-			})
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			const pass = !!(scoreRes.ok && scoreRes.pass)
-			this.$set(this.followStatuses, idx, pass ? 'pass' : 'miss')
-			if (!pass) {
-				const ch = firstHanzi(row.hanzi)
-				uni.showToast({
-					title: ch ? `再读「${ch}」` : '再试一次',
-					icon: 'none',
-					duration: 2200
+			try {
+				if (!stopRes?.ok) {
+					this.$set(this.followStatuses, idx, 'miss')
+					await delay(900)
+					return this.advanceFollow(idx, token)
+				}
+				this.lastFollowRecordFile = stopRes?.tempFilePath || ''
+				const row = this.lessonChars[idx]
+				const symbol = this.followScoreSymbol(row)
+				const scoreRes = await requestFollowReadScore({
+					symbol,
+					durationMs: stopRes?.durationMs,
+					sampleRate: stopRes?.sampleRate,
+					tempFilePath: stopRes?.tempFilePath,
+					recordFormat: stopRes?.recordFormat,
+					recordPcmBuffer: stopRes?.recordPcmBuffer,
+					frameCaptureBytes: stopRes?.frameCaptureBytes
 				})
-				await delay(1300)
-			} else {
-				await delay(480)
+				if (token !== this.followSessionToken || this.followPhase !== 'active') return
+				const pass = !!(scoreRes.ok && scoreRes.pass)
+				this.$set(this.followStatuses, idx, pass ? 'pass' : 'miss')
+				logFollowReadSimilarity(scoreRes, symbol, { source: 'lesson-follow' })
+				const toastTitle = followReadToastTitle(scoreRes, symbol)
+				uni.showToast({
+					title: toastTitle,
+					icon: 'none',
+					duration: pass ? 1800 : 2600
+				})
+				if (!pass) {
+					await delay(1300)
+				} else {
+					await delay(480)
+				}
+				this.advanceFollow(idx, token)
+			} finally {
+				this.followRecordScoring = false
+				this.followRecordProgress = 0
+				this._followReadScoreBusy = false
+				if (this.followDebugPlayEnabled && this.lastFollowRecordFile) {
+					playFollowReadDebugRecording(this.lastFollowRecordFile, { delayMs: 200 })
+				}
 			}
-			this.advanceFollow(idx, token)
+		},
+		onFollowDebugPlay() {
+			if (!this.lastFollowRecordFile) {
+				uni.showToast({ title: '暂无录音文件', icon: 'none' })
+				return
+			}
+			playFollowReadDebugRecording(this.lastFollowRecordFile, { force: true })
 		},
 		advanceFollow(idx, token) {
 			if (token !== this.followSessionToken || this.followPhase !== 'active') return
@@ -494,6 +605,7 @@ export default {
 		teardownFollowRecording() {
 			this.clearFollowRecordWatchdog()
 			cancelFollowReadAutoStop()
+			this.stopFollowRecordUi()
 			if (this.followRecording) {
 				this.followRecording = false
 				stopFollowReadRecord().catch(() => {})
@@ -1093,9 +1205,18 @@ export default {
 	margin-right: 14rpx;
 }
 
-.follow-reading-bar-text {
+.follow-reading-bar-main {
 	flex: 1;
 	min-width: 0;
+}
+
+.follow-reading-bar-text {
+	width: 100%;
+}
+
+.follow-reading-bar-main :deep(.fr-record-hint) {
+	margin: 10rpx 0 0;
+	padding: 12rpx 14rpx;
 }
 
 .follow-reading-label {

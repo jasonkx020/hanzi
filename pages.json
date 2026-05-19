@@ -189,6 +189,14 @@
 				"navigationBarBackgroundColor": "#252526",
 				"navigationBarTextStyle": "white"
 			}
+		},
+		{
+			"path": "pages/debug/record-test",
+			"style": {
+				"navigationBarTitleText": "录音测试",
+				"navigationBarBackgroundColor": "#F6F3EC",
+				"navigationBarTextStyle": "black"
+			}
 		}
 	],
 	"globalStyle": {
