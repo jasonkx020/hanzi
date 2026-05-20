@@ -46,15 +46,11 @@ export function comparePcmFingerprints(refFp, userFp) {
 	const userDur = Number(userFp.durationMs) || 0
 	const durRatio = userDur <= 0 ? 0 : Math.min(refDur, userDur) / Math.max(refDur, userDur)
 
-	let durFactor = 1
-	if (durRatio < 0.35) durFactor = 0.45
-	else if (durRatio < 0.55) durFactor = 0.72
-	else if (durRatio > 2.2) durFactor = 0.65
-
+	/** 与 MFCC 路径一致：重视谱形状相似，不按 1s/2s 时长差压分 */
 	const voiced = Number(userFp.voicedRatio) || 0
 	const voiceFactor = voiced < 0.08 ? 0.35 : voiced < 0.15 ? 0.7 : 1
 
-	const raw = (0.58 * envSim + 0.32 * bandSim + 0.1 * durRatio) * durFactor * voiceFactor
+	const raw = (0.58 * envSim + 0.42 * bandSim) * voiceFactor
 	const matchScore = Math.max(0, Math.min(1, raw))
 
 	return { matchScore, envSim, bandSim, durRatio }

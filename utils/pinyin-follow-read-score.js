@@ -123,9 +123,6 @@ export function messageForAudioCompare(target, cmp, pass) {
 	const targetNorm = String(target || '').trim()
 	if (!pass) {
 		const pct = Math.round((cmp?.matchScore || 0) * 100)
-		if ((cmp?.durRatio || 0) < 0.35) {
-			return `读得太短或没听清，请大声读「${targetNorm}」一遍`
-		}
 		return `和示范音还不太像（相似 ${pct}%），再试试「${targetNorm}」`
 	}
 	return ''

@@ -56,22 +56,16 @@ export function compareMfccFeatures(refFeat, userFeat) {
 	const userDur = Number(userFeat.durationMs) || 0
 	const durRatio = userDur <= 0 ? 0 : Math.min(refDur, userDur) / Math.max(refDur, userDur)
 
-	let durFactor = 1
-	if (durRatio < 0.35) durFactor = 0.45
-	else if (durRatio < 0.55) durFactor = 0.72
-	else if (durRatio > 2.2) durFactor = 0.65
-
+	/** 只关心「是否同一音」：DTW 已按帧对齐，不再用时长比例压分；durRatio 仅作调试字段保留 */
 	const voiced = Number(userFeat.voicedRatio) || 0
 	const voiceFactor = voiced < 0.08 ? 0.35 : voiced < 0.15 ? 0.7 : 1
 
+	/** 帧过少时特征不稳，略降权；有足够帧则与参考长短无关 */
+	const nUser = userFeat.frames.length
 	const frameFactor =
-		userFeat.frames.length < 2
-			? 0.5
-			: userFeat.frames.length < 4
-				? 0.82
-				: 1
+		nUser < 2 ? 0.55 : nUser < 4 ? 0.9 : nUser < 6 ? 0.97 : 1
 
-	const raw = (0.88 * dtwSim + 0.12 * durRatio) * durFactor * voiceFactor * frameFactor
+	const raw = dtwSim * voiceFactor * frameFactor
 	const matchScore = Math.max(0, Math.min(1, raw))
 
 	return {

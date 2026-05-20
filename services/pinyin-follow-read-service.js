@@ -142,6 +142,14 @@ function beginPcmFrameCapture() {
 	activePcmFrameChunks = []
 }
 
+/** 16-bit 单声道 PCM 时长（毫秒） */
+function pcmS16leMonoDurationMs(byteLength, sampleRate = 16000) {
+	const bytes = Number(byteLength) || 0
+	const sr = Number(sampleRate) || 16000
+	if (bytes < 2 || sr <= 0) return 0
+	return Math.round((bytes / 2 / sr) * 1000)
+}
+
 function appendPcmFrameChunk(frameBuffer) {
 	if (!activePcmFrameChunks || !frameBuffer?.byteLength) return
 	try {
@@ -175,14 +183,22 @@ function endPcmFrameCapture() {
 function attachPcmBufferToStopPayload(payload) {
 	const chunksBefore = activePcmFrameChunks?.length || 0
 	const buf = endPcmFrameCapture()
+	const sampleRate = Number(payload?.sampleRate) || 16000
+	const pcmBytes = buf?.byteLength || 0
+	const pcmDurationMs = pcmS16leMonoDurationMs(pcmBytes, sampleRate)
 	logFollowReadScore('score.record.pcm_capture', {
 		chunks: chunksBefore,
-		bytes: buf?.byteLength || 0,
+		bytes: pcmBytes,
+		pcmDurationMs,
+		pcmDurationSec: Number((pcmDurationMs / 1000).toFixed(3)),
+		sampleRate,
+		recorderDurationMs: Number(payload?.durationMs) || 0,
 		source: useAppPcmRealtime() ? 'wxz-record' : 'recorder'
 	})
 	if (buf?.byteLength) {
 		payload.recordPcmBuffer = buf
 		payload.frameCaptureBytes = buf.byteLength
+		payload.recordPcmDurationMs = pcmDurationMs
 		lastScoringPcmBuffer = buf
 	}
 	return payload
@@ -915,12 +931,22 @@ async function requestFollowReadScoreMfcc(payload) {
 	const tempFilePath = String(payload?.tempFilePath || '').trim()
 	const recordFormat = String(payload?.recordFormat || 'mp3')
 
+	const frameCaptureBytes =
+		Number(payload?.frameCaptureBytes) || payload?.recordPcmBuffer?.byteLength || 0
+	const pcmDurationMs =
+		Number(payload?.recordPcmDurationMs) ||
+		pcmS16leMonoDurationMs(frameCaptureBytes, sampleRate)
+
 	logFollowReadScore('score.mfcc.start', {
 		target,
 		durationMs,
 		sampleRate,
 		recordFormat,
-		tempFilePath: tempFilePath ? '(set)' : ''
+		tempFilePath: tempFilePath ? '(set)' : '',
+		frameCaptureBytes,
+		pcmDurationMs,
+		pcmDurationSec: Number((pcmDurationMs / 1000).toFixed(3)),
+		scoringAudioMs: pcmDurationMs > 0 ? pcmDurationMs : durationMs
 	})
 
 	let refFeat
@@ -1247,13 +1273,23 @@ export async function requestFollowReadScore(payload) {
 		recordPcmBuffer = lastScoringPcmBuffer
 		payload.recordPcmBuffer = recordPcmBuffer
 		payload.frameCaptureBytes = lastScoringPcmBuffer.byteLength
+		if (!payload.recordPcmDurationMs) {
+			payload.recordPcmDurationMs = pcmS16leMonoDurationMs(
+				lastScoringPcmBuffer.byteLength,
+				Number(payload?.sampleRate) || 16000
+			)
+		}
 	}
 	const frameCaptureBytes = Number(payload?.frameCaptureBytes) || recordPcmBuffer?.byteLength || 0
+	const sampleRate = Number(payload?.sampleRate) || 16000
+	const pcmDurationMs =
+		Number(payload?.recordPcmDurationMs) ||
+		pcmS16leMonoDurationMs(frameCaptureBytes, sampleRate)
 
 	logFollowReadScore('score.request', {
 		target,
 		durationMs,
-		sampleRate: Number(payload?.sampleRate) || 16000,
+		sampleRate,
 		recordFormat: String(payload?.recordFormat || 'mp3'),
 		useMfcc: shouldUseMfccScoring(),
 		useMfccConfig: USE_MFCC_SCORING,
@@ -1261,7 +1297,10 @@ export async function requestFollowReadScore(payload) {
 		isAppPlus: isAppPlus(),
 		noUniFs: mustUsePlusIoForLocalFiles(),
 		hasFile: !!tempFilePath,
-		frameCaptureBytes
+		frameCaptureBytes,
+		pcmDurationMs,
+		pcmDurationSec: Number((pcmDurationMs / 1000).toFixed(3)),
+		scoringAudioMs: pcmDurationMs > 0 ? pcmDurationMs : durationMs
 	})
 
 	if (!tempFilePath && !frameCaptureBytes) {
