@@ -1,18 +1,20 @@
 /**
- * 拼音跟读 MFCC 参数（构建脚本与运行时必须一致）
+ * 拼音跟读 MFCC 参数（构建脚本 scripts/lib/mfcc-node-test-core.mjs 须与此一致）
  */
+import { PINYIN_PCM_SAMPLE_RATE } from './pinyin-audio-sample-rate.js'
 
-export const PINYIN_MFCC_META_VERSION = 2
+export const PINYIN_MFCC_META_VERSION = 3
 
-export const PINYIN_MFCC_SAMPLE_RATE = 16000
-export const PINYIN_MFCC_FRAME_SIZE = 512
-export const PINYIN_MFCC_HOP_SIZE = 160
+export const PINYIN_MFCC_SAMPLE_RATE = PINYIN_PCM_SAMPLE_RATE
+/** Meyda bufferSize，须为 2 的幂 */
+export const PINYIN_MFCC_FRAME_SIZE = 2048
+export const PINYIN_MFCC_HOP_SIZE = 512
 export const PINYIN_MFCC_COEFFS = 13
 
 /** Meyda extractor 名称 */
 export const PINYIN_MFCC_EXTRACTOR = 'mfcc'
 
-/** 去静音 RMS 阈值（与 v1 trimSilence 一致） */
+/** 去静音 RMS 阈值 */
 export const PINYIN_MFCC_TRIM_THRESHOLD = 0.014
 
 /** 有效发音最短时长（毫秒）；有足够 MFCC 帧时可由门控函数放宽 */
@@ -33,7 +35,11 @@ export const PINYIN_MFCC_PASS_SCORE = 0.5
 export function buildPinyinMfccMeta(extractorLabel = 'meyda') {
 	return {
 		version: PINYIN_MFCC_META_VERSION,
+		opusNativeSampleRate: PINYIN_PCM_SAMPLE_RATE,
 		sampleRate: PINYIN_MFCC_SAMPLE_RATE,
+		channels: 1,
+		bitsPerSample: 16,
+		pcmFormat: 's16le',
 		frameSize: PINYIN_MFCC_FRAME_SIZE,
 		hopSize: PINYIN_MFCC_HOP_SIZE,
 		mfccCoeffs: PINYIN_MFCC_COEFFS,

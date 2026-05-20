@@ -1,20 +1,28 @@
 /**
- * 从 static/pinyin/*.opus 预提取 MFCC（Meyda），与 utils/pinyin-mfcc-extract.js 同参。
+ * 从 static/pinyin/*.opus 预提取 MFCC（Meyda）
  * 运行：npm run pinyin:mfcc-fingerprints
- * 需本机 ffmpeg + meyda。正式预提取推荐用外部 Python 脚本；本脚本仅供本地对照/调试。
+ * 需本机 ffmpeg + meyda（devDependency）
+ *
+ * 仅 import .mjs，避免 Node 将项目内 .js 当 CommonJS 解析报错。
  */
 import { execSync, spawnSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { buildPinyinMfccMeta } from '../constants/pinyin-mfcc-config.js'
-import { extractMfccFromInt16, serializeMfccEntry } from '../utils/pinyin-mfcc-extract.js'
+import {
+	PINYIN_AUDIO_SAMPLE_RATE,
+	FFMPEG_PCM_ARGS
+} from './lib/pinyin-audio-build-constants.mjs'
+import {
+	extractMfccFromInt16,
+	serializeMfccEntry,
+	buildPinyinMfccMeta,
+	TARGET_SR
+} from './lib/mfcc-node-test-core.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pinyinDir = path.join(__dirname, '../static/pinyin')
 const outFile = path.join(__dirname, '../data/pinyin-mfcc-fingerprints.json')
-
-const TARGET_SR = 16000
 
 function hasFfmpeg() {
 	try {
@@ -33,8 +41,8 @@ if (!hasFfmpeg()) {
 function decodeOpusToPcm(filePath) {
 	const r = spawnSync(
 		'ffmpeg',
-		['-y', '-i', filePath, '-ac', '1', '-ar', String(TARGET_SR), '-f', 's16le', 'pipe:1'],
-		{ encoding: 'buffer', maxBuffer: 16 * 1024 * 1024 }
+		['-y', '-i', filePath, ...FFMPEG_PCM_ARGS, 'pipe:1'],
+		{ encoding: 'buffer', maxBuffer: 32 * 1024 * 1024 }
 	)
 	if (r.status !== 0) throw new Error(r.stderr?.toString?.() || 'ffmpeg fail')
 	return new Int16Array(r.stdout.buffer, r.stdout.byteOffset, r.stdout.length / 2)
@@ -47,6 +55,12 @@ try {
 	)
 	meydaVer = `meyda@${pkg.version || ''}`
 } catch (_) {}
+
+if (TARGET_SR !== PINYIN_AUDIO_SAMPLE_RATE) {
+	console.warn(
+		`[mfcc-build] TARGET_SR=${TARGET_SR} 与 PINYIN_AUDIO_SAMPLE_RATE=${PINYIN_AUDIO_SAMPLE_RATE} 不一致`
+	)
+}
 
 const out = {
 	_meta: buildPinyinMfccMeta(meydaVer)

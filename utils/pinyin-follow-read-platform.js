@@ -65,3 +65,8 @@ export function shouldPreferPlusIoForLocalAudio(filePath = '') {
 	if (/^file:\/\//i.test(p)) return true
 	return false
 }
+
+/** 跟读 MFCC 评分是否在本端支持（仅 App） */
+export function isFollowReadScoringSupported() {
+	return isAppPlus()
+}

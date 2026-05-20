@@ -4,19 +4,25 @@
 import { isAppPlus } from '@/utils/pinyin-follow-read-platform.js'
 import { requestMicPermission } from '@/services/pinyin-follow-read-service.js'
 import {
-	logWxzRecordOnFrame,
-	logWxzRecordFrameSummary,
+	countWxzRecordOnFrame,
+	printWxzRecordFrameSummary,
 	resetWxzRecordFrameLog
 } from '@/utils/wxz-record-frame-log.js'
+import {
+	PINYIN_RECORD_PCM_SAMPLE_RATE,
+	PINYIN_RECORD_WXZ_FRAME_BYTES,
+	PINYIN_RECORD_CAPTURE_MS,
+	PINYIN_RECORD_TARGET_PCM_BYTES
+} from '@/constants/pinyin-audio-sample-rate.js'
 
 // #ifdef APP-PLUS
 import { startRecord, stopRecord } from '@/uni_modules/wxz-record'
 // #endif
 
-const SAMPLE_RATE = 16000
-const FRAME_SIZE = 4096
-const MIN_HOLD_MS = 280
-const MIN_PCM_BYTES = 1600
+const SAMPLE_RATE = PINYIN_RECORD_PCM_SAMPLE_RATE
+const FRAME_SIZE = PINYIN_RECORD_WXZ_FRAME_BYTES
+const MIN_HOLD_MS = PINYIN_RECORD_CAPTURE_MS
+const MIN_PCM_BYTES = PINYIN_RECORD_TARGET_PCM_BYTES
 
 let recording = false
 let startedAt = 0
@@ -158,7 +164,7 @@ export async function startWxzRecordTest(onLiveStats) {
 				frameSize: FRAME_SIZE
 			},
 			onFrame: (data, decibel) => {
-				const hasPcm = logWxzRecordOnFrame(data, decibel, 'record-test')
+				const hasPcm = countWxzRecordOnFrame(data, decibel, 'record-test')
 				if (!hasPcm) return
 				try {
 					chunks.push(data.slice(0))
@@ -206,7 +212,7 @@ export async function stopWxzRecordTest() {
 	const durationMs = Math.max(heldMs, pluginDuration)
 	const pcmBuffer = mergeChunks()
 	const frameCaptureBytes = pcmBuffer?.byteLength || 0
-	logWxzRecordFrameSummary('record-test', {
+	printWxzRecordFrameSummary('record-test', {
 		heldMs,
 		pluginDuration,
 		mergedBytes: frameCaptureBytes,
@@ -214,7 +220,7 @@ export async function stopWxzRecordTest() {
 	})
 
 	if (tooShort) {
-		logWxzRecordFrameSummary('record-test', { reason: 'too_short', heldMs })
+		printWxzRecordFrameSummary('record-test', { reason: 'too_short', heldMs })
 		resetStats()
 		return {
 			ok: false,
@@ -223,7 +229,7 @@ export async function stopWxzRecordTest() {
 	}
 
 	if (frameCaptureBytes < MIN_PCM_BYTES) {
-		logWxzRecordFrameSummary('record-test', {
+		printWxzRecordFrameSummary('record-test', {
 			reason: 'pcm_too_small',
 			mergedBytes: frameCaptureBytes,
 			chunkCount: chunks.length

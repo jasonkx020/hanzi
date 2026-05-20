@@ -1,7 +1,7 @@
 /**
  * 裸 PCM / WAV 转 Float32（App 录音 format=pcm 或 wav）
  */
-import { FOLLOW_READ_TARGET_SR } from './pinyin-follow-read-audio-features.js'
+import { PINYIN_PCM_SAMPLE_RATE } from '@/constants/pinyin-audio-sample-rate.js'
 
 /** @param {Uint8Array} u8 */
 export function findPcmPayloadOffset(u8) {
@@ -31,7 +31,7 @@ function int16ToFloat32(int16) {
 }
 
 /** 裸 PCM s16le，无文件头 */
-export function decodeRawPcmS16le(arrayBuffer, sampleRate = FOLLOW_READ_TARGET_SR) {
+export function decodeRawPcmS16le(arrayBuffer, sampleRate = PINYIN_PCM_SAMPLE_RATE) {
 	if (!arrayBuffer?.byteLength) throw new Error('empty pcm')
 	const n = Math.floor(arrayBuffer.byteLength / 2)
 	if (n < 1) throw new Error('pcm too short')
@@ -39,7 +39,7 @@ export function decodeRawPcmS16le(arrayBuffer, sampleRate = FOLLOW_READ_TARGET_S
 	return { int16, samples: int16ToFloat32(int16), sampleRate }
 }
 
-export function decodePcmOrWavToMono(arrayBuffer, sampleRate = FOLLOW_READ_TARGET_SR) {
+export function decodePcmOrWavToMono(arrayBuffer, sampleRate = PINYIN_PCM_SAMPLE_RATE) {
 	if (!arrayBuffer?.byteLength) {
 		throw new Error('empty pcm')
 	}
@@ -55,7 +55,7 @@ export function decodePcmOrWavToMono(arrayBuffer, sampleRate = FOLLOW_READ_TARGE
 }
 
 /** wav / pcm 统一出口 */
-export function decodePcmLikeToInt16(arrayBuffer, sniffKind, sampleRate = FOLLOW_READ_TARGET_SR) {
+export function decodePcmLikeToInt16(arrayBuffer, sniffKind, sampleRate = PINYIN_PCM_SAMPLE_RATE) {
 	if (sniffKind === 'pcm_raw') {
 		return decodeRawPcmS16le(arrayBuffer, sampleRate)
 	}
@@ -81,7 +81,7 @@ export function isPcmLikeRecording(format, filePath = '') {
  * ArrayBuffer → Int16 单声道（pcm/wav）
  * @returns {{ int16: Int16Array, sampleRate: number, decodePath: 'pcm' }}
  */
-export function arrayBufferToPcmInt16(arrayBuffer, sampleRate = FOLLOW_READ_TARGET_SR, sniffKind = 'wav') {
+export function arrayBufferToPcmInt16(arrayBuffer, sampleRate = PINYIN_PCM_SAMPLE_RATE, sniffKind = 'wav') {
 	const { int16, samples } = decodePcmLikeToInt16(arrayBuffer, sniffKind, sampleRate)
 	return { int16, samples, sampleRate, decodePath: 'pcm' }
 }

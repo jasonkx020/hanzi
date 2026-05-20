@@ -23,10 +23,10 @@ import { startRecord, stopRecord, StartRecordOptions, StopRecordOptions } from '
 ```typescript
 startRecord({
   config: {
-    sampleRate: 16000,      // 采样率，默认16000
+    sampleRate: 48000,      // 采样率（本项目跟读/MFCC 统一 48000）
     channels: 1,            // 声道数，1=单声道，2=立体声，默认1
     bitsPerSample: 16,       // 位深，8/16/24/32，默认16
-    frameSize: 4096         // 帧大小（字节），每次回调的PCM数据大小，默认4096
+    frameSize: 3840         // 帧大小（字节）；Android 每次 read≈frameSize×2，宜偏小（2s 约 25+ 次回调@48k）
   },
   onFrame: (data: ArrayBuffer, decibel: number) => {
     // 实时接收PCM数据帧和分贝值

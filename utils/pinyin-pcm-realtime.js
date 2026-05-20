@@ -4,8 +4,12 @@
  */
 import { isAppPlus } from '@/utils/pinyin-follow-read-platform.js'
 import {
-	logWxzRecordOnFrame,
-	logWxzRecordFrameSummary,
+	PINYIN_RECORD_PCM_SAMPLE_RATE,
+	PINYIN_RECORD_WXZ_FRAME_BYTES
+} from '@/constants/pinyin-audio-sample-rate.js'
+import {
+	countWxzRecordOnFrame,
+	printWxzRecordFrameSummary,
 	resetWxzRecordFrameLog
 } from '@/utils/wxz-record-frame-log.js'
 
@@ -13,9 +17,9 @@ import {
 import { startRecord, stopRecord } from '@/uni_modules/wxz-record'
 // #endif
 
-const DEFAULT_SAMPLE_RATE = 16000
-/** 与 wxz-record 默认一致；约 128ms/帧 @16kHz 单声道 16bit */
-const DEFAULT_FRAME_SIZE = 4096
+const DEFAULT_SAMPLE_RATE = PINYIN_RECORD_PCM_SAMPLE_RATE
+/** 约 40ms/次配置帧；Android 实际 read 约 frameSize×2 字节 */
+const DEFAULT_FRAME_SIZE = PINYIN_RECORD_WXZ_FRAME_BYTES
 
 let streamRunning = false
 let activeLogSource = 'follow-read'
@@ -64,6 +68,7 @@ export function requestPcmRealtimePermission() {
  * @param {(pcmBuffer: ArrayBuffer, meta: { decibel?: number }) => void} options.onFrame
  * @param {() => void} [options.onStart]
  * @param {(err: object) => void} [options.onError]
+ * @param {string} [options.logSource]
  * @returns {Promise<void>}
  */
 export function startPcmRealtimeCapture(options = {}) {
@@ -75,21 +80,21 @@ export function startPcmRealtimeCapture(options = {}) {
 		return Promise.reject(new Error('录音流已在运行'))
 	}
 	const onFrame = options.onFrame
+	const sampleRate = options.sampleRate || DEFAULT_SAMPLE_RATE
+	const frameSize = options.frameSize || DEFAULT_FRAME_SIZE
 	activeLogSource = options.logSource || 'follow-read'
-	resetWxzRecordFrameLog(activeLogSource)
+	resetWxzRecordFrameLog(activeLogSource, { sampleRate, frameBytes: frameSize })
 	return new Promise((resolve, reject) => {
 		startRecord({
 			config: {
-				sampleRate: options.sampleRate || DEFAULT_SAMPLE_RATE,
+				sampleRate,
 				channels: 1,
 				bitsPerSample: 16,
-				frameSize: options.frameSize || DEFAULT_FRAME_SIZE
+				frameSize
 			},
 			onFrame: (data, decibel) => {
-				const hasPcm = logWxzRecordOnFrame(data, decibel, activeLogSource)
-				if (hasPcm) {
-					onFrame?.(data, { decibel })
-				}
+				if (!countWxzRecordOnFrame(data, decibel, activeLogSource)) return
+				onFrame?.(data, { decibel })
 			},
 			success: () => {
 				streamRunning = true
@@ -123,7 +128,7 @@ export function stopPcmRealtimeCapture() {
 			success: (res) => {
 				streamRunning = false
 				const durationMs = Number(res?.duration) || 0
-				logWxzRecordFrameSummary(activeLogSource, {
+				printWxzRecordFrameSummary(activeLogSource, {
 					pluginDurationMs: durationMs
 				})
 				pendingStopResolve = null
@@ -131,8 +136,7 @@ export function stopPcmRealtimeCapture() {
 			},
 			fail: (err) => {
 				streamRunning = false
-				console.warn('[wxz-record] stopRecord fail', err)
-				logWxzRecordFrameSummary(activeLogSource, { stopFail: true })
+				printWxzRecordFrameSummary(activeLogSource, { stopFail: true, err })
 				pendingStopResolve = null
 				resolve({ durationMs: 0 })
 			}

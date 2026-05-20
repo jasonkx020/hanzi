@@ -6,6 +6,10 @@ import {
 	PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS,
 	PINYIN_FOLLOW_READ_MAX_WALL_MS
 } from '@/config/pinyin-follow-read-config.js'
+import {
+	PINYIN_RECORD_PCM_SAMPLE_RATE,
+	PINYIN_RECORD_PCM_FRAME_SIZE_KB
+} from '@/constants/pinyin-audio-sample-rate.js'
 
 const DEFAULTS = {
 	targetEffectiveMs: PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS,
@@ -14,9 +18,10 @@ const DEFAULTS = {
 	speechEnergy: 0.012,
 	/** wxz-record 分贝高于此视为有效发声（见插件 readme） */
 	speechDecibel: -42,
-	sampleRate: 16000,
-	/** frameSize 单位 KB，与 RecorderManager 一致 */
-	frameSizeKb: 4
+	sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
+	/** frameSize 单位 KB；wxz 约 12KB≈128ms@48k，RecorderManager 仍用 4KB */
+	frameSizeKb: 4,
+	wxzFrameSizeKb: PINYIN_RECORD_PCM_FRAME_SIZE_KB
 }
 
 /**
@@ -24,7 +29,11 @@ const DEFAULTS = {
  * @param {number} sampleRate
  * @param {boolean} [pcmLike]
  */
-export function measureFrameSpeech(frameBuffer, sampleRate = 16000, pcmLike = true) {
+export function measureFrameSpeech(
+	frameBuffer,
+	sampleRate = PINYIN_RECORD_PCM_SAMPLE_RATE,
+	pcmLike = true
+) {
 	if (!frameBuffer?.byteLength) {
 		return { energy: 0, durationMs: 0 }
 	}

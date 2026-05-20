@@ -1,5 +1,5 @@
 /**
- * wxz-record onFrame 调试日志：区分「回调触发但无 PCM」与「有 PCM 数据」。
+ * wxz-record onFrame 计数（回调内不打日志，停止录音时汇总一行）。
  */
 
 const sessions = new Map()
@@ -11,78 +11,99 @@ function getSession(source) {
 			seq: 0,
 			withData: 0,
 			empty: 0,
-			firstDataAt: 0,
-			firstEmptyAt: 0
+			totalPcmBytes: 0,
+			frameMs: 0,
+			sampleRate: 0,
+			frameBytes: 0
 		})
 	}
 	return sessions.get(key)
 }
 
-export function resetWxzRecordFrameLog(source) {
+/** @param {number} frameBytes 传给插件的 config.frameSize @param {number} sampleRate */
+export function pcmFrameDurationMs(frameBytes, sampleRate) {
+	if (!frameBytes || !sampleRate) return 0
+	return (frameBytes / (sampleRate * 2)) * 1000
+}
+
+/** Android 单次 onFrame 常见为 frameSize×2 字节（见 wxz-record app-android） */
+export function androidReadBytesPerCallback(configFrameBytes) {
+	return (Number(configFrameBytes) || 0) * 2
+}
+
+/** @param {number} durationMs @param {number} frameBytes @param {number} sampleRate */
+export function estimatePcmFrameCount(durationMs, frameBytes, sampleRate) {
+	const readBytes = androidReadBytesPerCallback(frameBytes)
+	const frameMs = pcmFrameDurationMs(readBytes, sampleRate)
+	if (!frameMs) return 0
+	return Math.max(1, Math.ceil(durationMs / frameMs))
+}
+
+/**
+ * @param {string} [source]
+ * @param {{ sampleRate?: number, frameBytes?: number }} [opts]
+ */
+export function resetWxzRecordFrameLog(source, opts = {}) {
 	const key = source || 'default'
+	const sampleRate = Number(opts.sampleRate) || 0
+	const frameBytes = Number(opts.frameBytes) || 0
+	const readBytes = androidReadBytesPerCallback(frameBytes)
+	const frameMs = pcmFrameDurationMs(readBytes, sampleRate)
 	sessions.set(key, {
 		seq: 0,
 		withData: 0,
 		empty: 0,
-		firstDataAt: 0,
-		firstEmptyAt: 0
+		totalPcmBytes: 0,
+		frameMs,
+		sampleRate,
+		frameBytes
 	})
-	console.log(`[wxz-record:onFrame] reset · source=${key}`)
 }
 
 /**
  * @param {*} data onFrame 第一个参数
- * @param {number} [decibel]
- * @param {string} [source] 如 record-test | follow-read
+ * @param {number} [_decibel]
+ * @param {string} [source]
  * @returns {boolean} 是否有有效 PCM 字节
  */
-export function logWxzRecordOnFrame(data, decibel, source = 'default') {
+export function countWxzRecordOnFrame(data, _decibel, source = 'default') {
 	const s = getSession(source)
 	s.seq++
 	const byteLength = Number(data?.byteLength) || 0
 	const hasPcm = byteLength > 0
 	if (hasPcm) {
 		s.withData++
-		if (!s.firstDataAt) s.firstDataAt = s.seq
+		s.totalPcmBytes += byteLength
 	} else {
 		s.empty++
-		if (!s.firstEmptyAt) s.firstEmptyAt = s.seq
 	}
-
-	const payload = {
-		source,
-		seq: s.seq,
-		hasPcm,
-		byteLength,
-		decibel,
-		withDataTotal: s.withData,
-		emptyTotal: s.empty,
-		firstDataAtSeq: s.firstDataAt || null,
-		dataCtor: data?.constructor?.name ?? (data == null ? 'null' : typeof data),
-		isArrayBuffer: typeof ArrayBuffer !== 'undefined' && data instanceof ArrayBuffer
-	}
-
-	if (hasPcm) {
-		if (s.withData <= 5 || s.withData % 20 === 0) {
-			console.log('[wxz-record:onFrame] ✓ 有 PCM 数据', payload)
-		}
-	} else {
-		if (s.empty <= 10 || s.empty % 30 === 0) {
-			console.warn('[wxz-record:onFrame] ✗ 回调无 PCM（byteLength=0 或非 ArrayBuffer）', payload)
-		}
-	}
-
 	return hasPcm
 }
 
-export function logWxzRecordFrameSummary(source, extra = {}) {
+/** @deprecated 使用 countWxzRecordOnFrame */
+export const logWxzRecordOnFrame = countWxzRecordOnFrame
+
+/**
+ * 停止录音时打印 onFrame 次数（仅此一处日志）。
+ * @param {string} [source]
+ * @param {object} [extra]
+ */
+export function printWxzRecordFrameSummary(source, extra = {}) {
 	const s = getSession(source)
-	console.log('[wxz-record:onFrame] 会话汇总', {
-		source,
-		totalCallbacks: s.seq,
-		withData: s.withData,
-		empty: s.empty,
-		firstDataAtSeq: s.firstDataAt || null,
-		...extra
-	})
+	const impliedPcmMs =
+		s.sampleRate > 0 ? (s.totalPcmBytes / 2 / s.sampleRate) * 1000 : 0
+	const parts = [
+		`[wxz-record:onFrame] ${source || 'default'} 结束`,
+		`回调${s.seq}次`,
+		`有PCM${s.withData}次`,
+		s.empty ? `空${s.empty}次` : null,
+		`PCM ${s.totalPcmBytes}B`,
+		impliedPcmMs ? `~${Math.round(impliedPcmMs)}ms` : null
+	].filter(Boolean)
+	const tail = extra && Object.keys(extra).length ? extra : null
+	if (tail) console.log(parts.join(', '), tail)
+	else console.log(parts.join(', '))
 }
+
+/** @deprecated 使用 printWxzRecordFrameSummary */
+export const logWxzRecordFrameSummary = printWxzRecordFrameSummary

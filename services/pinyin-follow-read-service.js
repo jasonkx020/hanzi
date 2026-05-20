@@ -1,28 +1,26 @@
+import { decodeUserRecordingForScore } from '@/utils/pinyin-follow-read-audio-decode.js'
+// #ifdef APP-PLUS
+import { getReferenceMfccFeature } from '@/utils/pinyin-follow-read-audio-decode.js'
+// #endif
 import {
-	buildFollowReadScoreFromAudio,
-	messageForAudioCompare,
-	FOLLOW_READ_PASS_SCORE
-} from '@/utils/pinyin-follow-read-score.js'
-import { comparePcmFingerprints } from '@/utils/pinyin-follow-read-audio-compare.js'
-import { extractPcmFingerprint } from '@/utils/pinyin-follow-read-audio-features.js'
-import {
-	decodeUserRecordingForScore,
-	getReferenceFingerprint,
-	getReferenceMfccFeature
-} from '@/utils/pinyin-follow-read-audio-decode.js'
-import {
-	shouldUseMfccScoring,
-	USE_MFCC_SCORING,
 	PINYIN_FOLLOW_READ_FIXED_MS,
 	PINYIN_FOLLOW_READ_USE_FIXED_DURATION,
 	PINYIN_FOLLOW_READ_USE_EFFECTIVE_DURATION,
 	PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS,
 	PINYIN_FOLLOW_READ_MAX_WALL_MS,
 	PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS,
+	PINYIN_FOLLOW_READ_PCM_CAPTURE_GRACE_MS,
 	getFollowReadTargetEffectiveMs,
 	PINYIN_FOLLOW_READ_STOP_TIMEOUT_MS
 } from '@/config/pinyin-follow-read-config.js'
-import { isAppPlus, mustUsePlusIoForLocalFiles } from '@/utils/pinyin-follow-read-platform.js'
+import {
+	isAppPlus,
+	isFollowReadScoringSupported,
+	mustUsePlusIoForLocalFiles
+} from '@/utils/pinyin-follow-read-platform.js'
+// #ifdef APP-PLUS
+import { isMfccRuntimeAvailable } from '@/utils/pinyin-mfcc-extract.js'
+// #endif
 import {
 	isPcmRealtimeAvailable,
 	requestPcmRealtimePermission,
@@ -35,6 +33,7 @@ import {
 	logFollowReadCompareSkipped,
 	summarizeFollowReadScoreResult
 } from '@/utils/pinyin-follow-read-debug-log.js'
+// #ifdef APP-PLUS
 import { extractMfccFromFloat32, extractMfccFromInt16 } from '@/utils/pinyin-mfcc-extract.js'
 import { compareMfccFeatures, MFCC_PASS_SCORE } from '@/utils/pinyin-mfcc-compare.js'
 import {
@@ -43,8 +42,10 @@ import {
 } from '@/utils/pinyin-mfcc-score.js'
 import {
 	PINYIN_MFCC_MIN_EFFECTIVE_MS,
-	PINYIN_MFCC_MIN_VOICED_RATIO
+	PINYIN_MFCC_MIN_VOICED_RATIO,
+	PINYIN_MFCC_MIN_FRAMES_FOR_GATE
 } from '@/constants/pinyin-mfcc-config.js'
+// #endif
 import {
 	createFollowReadVadState,
 	estimateFollowReadMaxMs,
@@ -61,14 +62,18 @@ import {
 	followReadStatusBarHint,
 	followReadUserMessage
 } from '@/utils/pinyin-follow-read-ui-messages.js'
+// #ifdef APP-PLUS
+import { passesMfccSpeechGate } from '@/utils/pinyin-follow-read-speech-gate.js'
+// #endif
 import {
-	passesMfccSpeechGate,
-	passesLegacySpeechGate
-} from '@/utils/pinyin-follow-read-speech-gate.js'
-import { PINYIN_MFCC_MIN_FRAMES_FOR_GATE } from '@/constants/pinyin-mfcc-config.js'
-
-const FOLLOW_READ_MIN_VOICED_RATIO = 0.06
-const FOLLOW_READ_MIN_EFFECTIVE_MS = 180
+	PINYIN_RECORD_PCM_SAMPLE_RATE,
+	PINYIN_RECORD_WXZ_FRAME_BYTES,
+	PINYIN_RECORD_PCM_FRAME_SIZE_KB,
+	PINYIN_RECORD_MIN_PCM_BYTES,
+	PINYIN_RECORD_CAPTURE_MS,
+	PINYIN_RECORD_TARGET_PCM_BYTES,
+	PINYIN_PCM_BYTES_PER_SAMPLE
+} from '@/constants/pinyin-audio-sample-rate.js'
 
 function followReadFailResult(verdict, target, extra = {}) {
 	const v = String(verdict || 'analysis_error')
@@ -104,8 +109,15 @@ let vadState = null
 let effectiveAudioState = null
 /** 停止计时器后仍供进度条展示的最近一次有效发声进度 */
 let lastEffectiveProgressSnapshot = null
+/** @type {((progress: number, meta?: object) => void)|null} */
+let recordProgressListener = null
+let recordProgressUseEffective = false
+let recordProgressTargetBytes = PINYIN_RECORD_TARGET_PCM_BYTES
+let followReadOnFrameCount = 0
 let vadFallbackTimer = null
 let fixedDurationTimer = null
+/** @type {{ minWallMs: number, targetPcmBytes: number, maxWallMs: number }|null} */
+let recordCapturePlan = null
 let autoStopInProgress = false
 let effectiveWallTickTimer = null
 /** @type {string} */
@@ -143,11 +155,57 @@ function beginPcmFrameCapture() {
 }
 
 /** 16-bit 单声道 PCM 时长（毫秒） */
-function pcmS16leMonoDurationMs(byteLength, sampleRate = 16000) {
+function pcmS16leMonoDurationMs(byteLength, sampleRate = PINYIN_RECORD_PCM_SAMPLE_RATE) {
 	const bytes = Number(byteLength) || 0
-	const sr = Number(sampleRate) || 16000
+	const sr = Number(sampleRate) || PINYIN_RECORD_PCM_SAMPLE_RATE
 	if (bytes < 2 || sr <= 0) return 0
 	return Math.round((bytes / 2 / sr) * 1000)
+}
+
+function pcmS16leBytesForWallMs(ms) {
+	const wall = Math.max(0, Number(ms) || 0)
+	return Math.floor(
+		PINYIN_RECORD_PCM_SAMPLE_RATE * PINYIN_PCM_BYTES_PER_SAMPLE * (wall / 1000)
+	)
+}
+
+function totalActivePcmBytes() {
+	if (!activePcmFrameChunks?.length) return 0
+	let total = 0
+	for (const c of activePcmFrameChunks) total += c.byteLength
+	return total
+}
+
+/** 页面注册：onFrame 时更新录制进度条 */
+export function setFollowReadRecordProgressListener(listener) {
+	recordProgressListener = typeof listener === 'function' ? listener : null
+}
+
+function notifyRecordProgressFromPcm() {
+	if (!recording || !recordProgressListener) return
+	const pcmBytes = totalActivePcmBytes()
+	if (recordProgressUseEffective && effectiveAudioState) {
+		const snap = getEffectiveAudioProgress(effectiveAudioState)
+		lastEffectiveProgressSnapshot = snap
+		try {
+			recordProgressListener(Number(snap.progress) || 0, {
+				pcmBytes,
+				frameCount: followReadOnFrameCount,
+				effectiveMs: snap.effectiveMs,
+				speechStarted: !!snap.speechStarted
+			})
+		} catch (_) {}
+		return
+	}
+	const target = Math.max(PINYIN_RECORD_MIN_PCM_BYTES, recordProgressTargetBytes)
+	const progress = Math.min(100, (pcmBytes / target) * 100)
+	try {
+		recordProgressListener(progress, {
+			pcmBytes,
+			frameCount: followReadOnFrameCount,
+			speechStarted: true
+		})
+	} catch (_) {}
 }
 
 function appendPcmFrameChunk(frameBuffer) {
@@ -166,7 +224,7 @@ function endPcmFrameCapture() {
 	}
 	let total = 0
 	for (const c of activePcmFrameChunks) total += c.byteLength
-	if (total < 1600) {
+	if (total < PINYIN_RECORD_MIN_PCM_BYTES) {
 		activePcmFrameChunks = null
 		return null
 	}
@@ -183,18 +241,36 @@ function endPcmFrameCapture() {
 function attachPcmBufferToStopPayload(payload) {
 	const chunksBefore = activePcmFrameChunks?.length || 0
 	const buf = endPcmFrameCapture()
-	const sampleRate = Number(payload?.sampleRate) || 16000
+	const sampleRate = Number(payload?.sampleRate) || PINYIN_RECORD_PCM_SAMPLE_RATE
 	const pcmBytes = buf?.byteLength || 0
 	const pcmDurationMs = pcmS16leMonoDurationMs(pcmBytes, sampleRate)
+	const recorderDurationMs = Number(payload?.durationMs) || 0
 	logFollowReadScore('score.record.pcm_capture', {
 		chunks: chunksBefore,
 		bytes: pcmBytes,
 		pcmDurationMs,
 		pcmDurationSec: Number((pcmDurationMs / 1000).toFixed(3)),
 		sampleRate,
-		recorderDurationMs: Number(payload?.durationMs) || 0,
-		source: useAppPcmRealtime() ? 'wxz-record' : 'recorder'
+		recorderDurationMs,
+		source: useAppPcmRealtime() ? 'wxz-record' : 'recorder',
+		wxzFrameBytes: useAppPcmRealtime() ? PINYIN_RECORD_WXZ_FRAME_BYTES : null,
+		targetPcmBytes: PINYIN_RECORD_TARGET_PCM_BYTES
 	})
+	if (
+		useAppPcmRealtime() &&
+		pcmBytes > 0 &&
+		(pcmBytes < PINYIN_RECORD_TARGET_PCM_BYTES ||
+			pcmDurationMs < PINYIN_RECORD_CAPTURE_MS * 0.9)
+	) {
+		console.warn('[pinyin-follow] ⚠ 录音 PCM 偏短，MFCC 评分可能不足', {
+			chunks: chunksBefore,
+			pcmBytes,
+			pcmDurationMs,
+			recorderDurationMs,
+			needBytes: PINYIN_RECORD_TARGET_PCM_BYTES,
+			needMs: PINYIN_RECORD_CAPTURE_MS
+		})
+	}
 	if (buf?.byteLength) {
 		payload.recordPcmBuffer = buf
 		payload.frameCaptureBytes = buf.byteLength
@@ -211,7 +287,7 @@ function markFollowReadStopOk(payload) {
 		Number(payload?.frameCaptureBytes) ||
 		payload?.recordPcmBuffer?.byteLength ||
 		0
-	payload.ok = hasFile || pcmBytes >= 1600
+	payload.ok = hasFile || pcmBytes >= PINYIN_RECORD_MIN_PCM_BYTES
 	payload.message = payload.ok ? '' : payload.message || '未生成录音文件'
 	return payload
 }
@@ -269,15 +345,47 @@ function clearFixedDurationTimer() {
 		clearTimeout(fixedDurationTimer)
 		fixedDurationTimer = null
 	}
+	recordCapturePlan = null
+}
+
+function tryCompleteFixedCapture() {
+	if (!recording || !recordCapturePlan) return
+	const elapsed = Date.now() - recordStartedAt
+	const pcmBytes = totalActivePcmBytes()
+	const { minWallMs, targetPcmBytes, maxWallMs } = recordCapturePlan
+
+	if (elapsed < minWallMs) {
+		if (fixedDurationTimer != null) clearTimeout(fixedDurationTimer)
+		fixedDurationTimer = setTimeout(tryCompleteFixedCapture, minWallMs - elapsed)
+		return
+	}
+	if (pcmBytes < targetPcmBytes && elapsed < maxWallMs) {
+		if (fixedDurationTimer != null) clearTimeout(fixedDurationTimer)
+		fixedDurationTimer = setTimeout(tryCompleteFixedCapture, 50)
+		return
+	}
+
+	if (fixedDurationTimer != null) {
+		clearTimeout(fixedDurationTimer)
+		fixedDurationTimer = null
+	}
+	recordCapturePlan = null
+	triggerFollowReadAutoStop('fixed_duration')
 }
 
 function scheduleFixedDurationStop(ms) {
 	clearFixedDurationTimer()
-	const dur = Math.max(300, Number(ms) || PINYIN_FOLLOW_READ_FIXED_MS)
-	fixedDurationTimer = setTimeout(() => {
-		fixedDurationTimer = null
-		triggerFollowReadAutoStop('fixed_duration')
-	}, dur)
+	const minWallMs = Math.max(
+		PINYIN_RECORD_CAPTURE_MS,
+		Number(ms) || PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS || PINYIN_FOLLOW_READ_FIXED_MS
+	)
+	const grace = Math.max(500, Number(PINYIN_FOLLOW_READ_PCM_CAPTURE_GRACE_MS) || 2500)
+	recordCapturePlan = {
+		minWallMs,
+		targetPcmBytes: pcmS16leBytesForWallMs(minWallMs),
+		maxWallMs: minWallMs + grace
+	}
+	fixedDurationTimer = setTimeout(tryCompleteFixedCapture, minWallMs)
 }
 
 /** 本次录音计划使用的固定墙钟时长；0 表示走有效发声 / VAD */
@@ -290,7 +398,7 @@ export function getFollowReadFixedDurationMs(options = {}) {
 	}
 	const v = Number(options.fixedDurationMs)
 	if (Number.isFinite(v) && v > 0) {
-		return Math.min(15000, Math.max(300, Math.round(v)))
+		return Math.min(15000, Math.max(PINYIN_RECORD_CAPTURE_MS, Math.round(v)))
 	}
 	return PINYIN_FOLLOW_READ_FIXED_MS
 }
@@ -351,7 +459,8 @@ function initFollowReadEffectiveCapture(symbol, options = {}) {
 	effectiveAudioState = createEffectiveAudioState({
 		targetEffectiveMs,
 		maxWallMs: PINYIN_FOLLOW_READ_MAX_WALL_MS,
-		frameSizeKb: useAppPcmRealtime() ? 8 : 4
+		sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
+		frameSizeKb: useAppPcmRealtime() ? PINYIN_RECORD_PCM_FRAME_SIZE_KB : 4
 	})
 	lastEffectiveProgressSnapshot = null
 	scheduleWallRecordTimeout(PINYIN_FOLLOW_READ_MAX_WALL_MS)
@@ -362,30 +471,12 @@ function initFollowReadEffectiveCapture(symbol, options = {}) {
 	})
 }
 
-let followReadPcmFrameLogged = 0
-
 function onRecorderFrame(frameBuffer, frameMeta) {
-	if (autoStopInProgress || !frameBuffer) {
-		if (!frameBuffer && (recording || recordTestRecording)) {
-			console.warn('[follow-read:onRecorderFrame] 收到空 frameBuffer', {
-				recording,
-				recordTestRecording
-			})
-		}
-		return
-	}
+	if (autoStopInProgress || !frameBuffer) return
 	const inFollow = recording
 	const inTest = recordTestRecording
 	if (!inFollow && !inTest) return
-	followReadPcmFrameLogged++
-	if (followReadPcmFrameLogged <= 3 || followReadPcmFrameLogged % 30 === 0) {
-		console.log('[follow-read:onRecorderFrame] ✓ 已写入 PCM 缓存', {
-			seq: followReadPcmFrameLogged,
-			byteLength: frameBuffer.byteLength,
-			inFollow,
-			inTest
-		})
-	}
+	if (inFollow) followReadOnFrameCount++
 	appendPcmFrameChunk(frameBuffer)
 	if (!inFollow) return
 
@@ -401,6 +492,7 @@ function onRecorderFrame(frameBuffer, frameMeta) {
 			{ decibel: frameMeta?.decibel }
 		)
 		lastEffectiveProgressSnapshot = getEffectiveAudioProgress(effectiveAudioState)
+		notifyRecordProgressFromPcm()
 		if (verdict === 'target_reached') {
 			logFollowReadScore('score.record.effective_done', {
 				effectiveMs: effectiveAudioState.effectiveMs,
@@ -425,7 +517,14 @@ function onRecorderFrame(frameBuffer, frameMeta) {
 		const verdict = tickFollowReadVad(vadState, energy, elapsed)
 		if (verdict === 'silence' || verdict === 'max') {
 			triggerFollowReadAutoStop(verdict)
+			return
 		}
+	}
+
+	notifyRecordProgressFromPcm()
+
+	if (recordCapturePlan && !effectiveAudioState && !vadState) {
+		tryCompleteFixedCapture()
 	}
 }
 
@@ -445,7 +544,7 @@ function buildStopPayloadFromPcm(durationMs) {
 		ok: false,
 		tempFilePath: '',
 		durationMs,
-		sampleRate: 16000,
+		sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 		recordFormat: 'pcm',
 		message: ''
 	})
@@ -460,6 +559,14 @@ function deliverFollowReadStop(marked, { isTest = false } = {}) {
 		return
 	}
 	recording = false
+	if (followReadOnFrameCount > 0) {
+		const pcmB = Number(marked?.frameCaptureBytes) || 0
+		console.log(
+			`[follow-read:onFrame] 跟读结束，业务 onFrame ${followReadOnFrameCount} 次，PCM ${pcmB}B`
+		)
+	}
+	followReadOnFrameCount = 0
+	setFollowReadRecordProgressListener(null)
 	clearVadTimers()
 	if (marked.tempFilePath) {
 		appendHistory({
@@ -513,7 +620,7 @@ function getRecorderManagerSafe() {
 				ok: !!tempFilePath,
 				tempFilePath,
 				durationMs: Number(res?.duration || durationMs) || durationMs,
-				sampleRate: 16000,
+				sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 				recordFormat: recordTestFormat,
 				message: tempFilePath ? '' : '未生成录音文件'
 			}
@@ -528,7 +635,7 @@ function getRecorderManagerSafe() {
 				ok: !!tempFilePath,
 				tempFilePath,
 				durationMs: Number(res?.duration || durationMs) || durationMs,
-				sampleRate: 16000,
+				sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 				recordFormat: lastRecordFormat,
 				message: tempFilePath ? '' : '未生成录音文件'
 			})
@@ -762,7 +869,10 @@ export async function startFollowReadRecord(options = {}) {
 		PINYIN_FOLLOW_READ_USE_EFFECTIVE_DURATION &&
 		options.useEffectiveDuration !== false
 	const fixedMs = wxzFixedWall
-		? Math.max(300, Number(PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS) || 2000)
+		? Math.max(
+				PINYIN_RECORD_CAPTURE_MS,
+				Number(PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS) || PINYIN_RECORD_CAPTURE_MS
+			)
 		: useEffective
 			? 0
 			: getFollowReadFixedDurationMs(options)
@@ -779,11 +889,14 @@ export async function startFollowReadRecord(options = {}) {
 	}
 
 	recording = true
-	followReadPcmFrameLogged = 0
+	followReadOnFrameCount = 0
 	autoStopInProgress = false
 	recordStartedAt = Date.now()
 	beginPcmFrameCapture()
 	lastRecordFormat = resolveFollowReadRecordFormat()
+	recordProgressUseEffective = useEffective
+	recordProgressTargetBytes =
+		fixedMs > 0 ? pcmS16leBytesForWallMs(fixedMs) : PINYIN_RECORD_TARGET_PCM_BYTES
 
 	logFollowReadScore('score.record.start', {
 		symbol,
@@ -791,7 +904,10 @@ export async function startFollowReadRecord(options = {}) {
 		useEffective,
 		wxzFixedWall,
 		targetEffectiveMs: useEffective ? getFollowReadTargetEffectiveMs(options) : 0,
-		maxWallMs: useEffective ? PINYIN_FOLLOW_READ_MAX_WALL_MS : fixedMs || 0,
+		maxWallMs: useEffective
+			? PINYIN_FOLLOW_READ_MAX_WALL_MS
+			: recordCapturePlan?.maxWallMs || fixedMs || 0,
+		targetPcmBytes: recordCapturePlan?.targetPcmBytes || PINYIN_RECORD_TARGET_PCM_BYTES,
 		format: lastRecordFormat,
 		capture: useAppPcmRealtime() ? 'wxz-record' : 'recorder_manager'
 	})
@@ -799,8 +915,9 @@ export async function startFollowReadRecord(options = {}) {
 	if (useAppPcmRealtime()) {
 		try {
 			await startPcmRealtimeCapture({
-				sampleRate: 16000,
-				frameSize: 4096,
+				sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
+				frameSize: PINYIN_RECORD_WXZ_FRAME_BYTES,
+				logSource: 'follow-read',
 				onFrame: (buf, meta) => onRecorderFrame(buf, meta),
 				onError: (err) => {
 					logFollowReadScore('score.record.wxz_record_error', {
@@ -833,7 +950,10 @@ export async function startFollowReadRecord(options = {}) {
 			useEffectiveDuration: useEffective,
 			wxzFixedWall,
 			targetEffectiveMs: useEffective ? getFollowReadTargetEffectiveMs(options) : 0,
-			maxWallMs: useEffective ? PINYIN_FOLLOW_READ_MAX_WALL_MS : fixedMs || 0,
+			maxWallMs: useEffective
+				? PINYIN_FOLLOW_READ_MAX_WALL_MS
+				: recordCapturePlan?.maxWallMs || fixedMs || 0,
+			targetPcmBytes: recordCapturePlan?.targetPcmBytes || PINYIN_RECORD_TARGET_PCM_BYTES,
 			recordFormat: lastRecordFormat
 		}
 	}
@@ -844,12 +964,12 @@ export async function startFollowReadRecord(options = {}) {
 	const recorderMaxMs = useEffective
 		? PINYIN_FOLLOW_READ_MAX_WALL_MS + 3000
 		: fixedMs > 0
-			? fixedMs
+			? recordCapturePlan?.maxWallMs || fixedMs
 			: 12000
 
 	const startOpts = {
 		duration: recorderMaxMs,
-		sampleRate: 16000,
+		sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 		numberOfChannels: 1,
 		format: lastRecordFormat,
 		frameSize: 4
@@ -924,10 +1044,11 @@ export function stopFollowReadRecord() {
 	})
 }
 
+// #ifdef APP-PLUS
 async function requestFollowReadScoreMfcc(payload) {
 	const target = String(payload?.symbol || '').trim()
 	const durationMs = Number(payload?.durationMs) || 0
-	const sampleRate = Number(payload?.sampleRate) || 16000
+	const sampleRate = Number(payload?.sampleRate) || PINYIN_RECORD_PCM_SAMPLE_RATE
 	const tempFilePath = String(payload?.tempFilePath || '').trim()
 	const recordFormat = String(payload?.recordFormat || 'mp3')
 
@@ -1120,144 +1241,7 @@ async function requestFollowReadScoreMfcc(payload) {
 		})
 	}
 }
-
-async function requestFollowReadScoreLegacy(payload) {
-	const target = String(payload?.symbol || '').trim()
-	const durationMs = Number(payload?.durationMs) || 0
-	const sampleRate = Number(payload?.sampleRate) || 16000
-	const tempFilePath = String(payload?.tempFilePath || '').trim()
-	const recordFormat = String(payload?.recordFormat || 'mp3')
-
-	logFollowReadScore('score.legacy.start', {
-		target,
-		durationMs,
-		sampleRate,
-		recordFormat
-	})
-
-	let refFp
-	try {
-		refFp = await getReferenceFingerprint(target)
-		logFollowReadScore('score.legacy.ref_ok', {
-			target,
-			refDurationMs: refFp?.durationMs,
-			envBins: refFp?.env?.length || 0
-		})
-	} catch (e) {
-		console.warn('[pinyin-follow] ref fingerprint', e)
-		return followReadFailResult('ref_error', target, {
-			log: { err: String(e?.message || e) }
-		})
-	}
-
-	let userFp
-	try {
-		const decoded = await decodeUserRecordingForScore(tempFilePath, recordFormat, {
-			recordPcmBuffer: payload.recordPcmBuffer,
-			recordDurationMs: durationMs
-		})
-		const samples =
-			decoded.samples ||
-			(decoded.int16?.length
-				? (() => {
-						const f = new Float32Array(decoded.int16.length)
-						for (let i = 0; i < decoded.int16.length; i++) f[i] = decoded.int16[i] / 32768
-						return f
-					})()
-				: new Float32Array(0))
-		userFp = extractPcmFingerprint(samples, decoded.sampleRate)
-		logFollowReadScore('score.legacy.user_feat', {
-			target,
-			userSr,
-			pcmSamples: samples?.length || 0,
-			userDurationMs: userFp?.durationMs,
-			userVoicedRatio: userFp?.voicedRatio
-		})
-	} catch (e) {
-		console.warn('[pinyin-follow] decode recording', e)
-		logFollowReadCompareSkipped(target, 'legacy_user_decode_failed', {
-			verdict: 'decode_error',
-			err: String(e?.message || e),
-			failureStage: e?.failureStage || 'legacy_decode',
-			hadFrameCapture: !!(payload.recordPcmBuffer?.byteLength),
-			frameCaptureBytes: payload.frameCaptureBytes || 0
-		})
-		return followReadFailResult('decode_error', target, {
-			log: { err: String(e?.message || e) }
-		})
-	}
-
-	const legacyGate = passesLegacySpeechGate(
-		userFp,
-		decoded,
-		FOLLOW_READ_MIN_EFFECTIVE_MS,
-		FOLLOW_READ_MIN_VOICED_RATIO
-	)
-	if (!legacyGate.pass) {
-		logFollowReadCompareSkipped(target, 'legacy_no_speech_gate', {
-			verdict: 'no_speech',
-			gateReason: legacyGate.reason,
-			userDurationMs: userFp?.durationMs,
-			userVoicedRatio: userFp?.voicedRatio
-		})
-		return followReadFailResult('no_speech', target, {
-			log: {
-				stage: 'legacy_gate',
-				gateReason: legacyGate.reason,
-				userDurationMs: userFp?.durationMs,
-				userVoicedRatio: userFp?.voicedRatio
-			}
-		})
-	}
-
-	const cmp = comparePcmFingerprints(refFp, userFp)
-	const pass = cmp.matchScore >= FOLLOW_READ_PASS_SCORE
-	const score = buildFollowReadScoreFromAudio(cmp, durationMs, sampleRate)
-	let message = messageForAudioCompare(target, cmp, pass)
-	if (!message) {
-		message = pass ? `读对了，${score} 分` : `再试试「${target}」`
-	}
-	const verdict = pass ? 'match' : 'mismatch'
-	logFollowReadScore('score.legacy.compare', {
-		target,
-		pass,
-		passThreshold: FOLLOW_READ_PASS_SCORE,
-		matchScore: +Number(cmp.matchScore || 0).toFixed(4),
-		envSim: +Number(cmp.envSim || 0).toFixed(4),
-		bandSim: +Number(cmp.bandSim || 0).toFixed(4),
-		score
-	})
-	const res = {
-		ok: true,
-		score,
-		pass,
-		message,
-		statusHint: pass ? `跟读 ${score} 分` : followReadStatusBarHint('mismatch', target),
-		details: {
-			targetMatch: Math.round(cmp.matchScore * 100),
-			verdict,
-			durationFit: durationMs >= 500 && durationMs <= 7000 ? 'good' : 'retry',
-			envSim: Math.round((cmp.envSim || 0) * 100),
-			bandSim: Math.round((cmp.bandSim || 0) * 100),
-			scoring: 'legacy_v1'
-		},
-		debug: {
-			target,
-			durationMs,
-			sampleRate,
-			recordFormat,
-			userDurationMs: userFp.durationMs,
-			voicedRatio: userFp.voicedRatio,
-			matchScore: cmp.matchScore,
-			envSim: cmp.envSim,
-			bandSim: cmp.bandSim,
-			passThreshold: FOLLOW_READ_PASS_SCORE
-		}
-	}
-	logFollowReadScore('score.legacy.done', summarizeFollowReadScoreResult(res))
-	logFollowReadSimilarity(res, target, { path: 'legacy' })
-	return res
-}
+// #endif
 
 export async function requestFollowReadScore(payload) {
 	const target = String(payload?.symbol || '').trim()
@@ -1276,12 +1260,12 @@ export async function requestFollowReadScore(payload) {
 		if (!payload.recordPcmDurationMs) {
 			payload.recordPcmDurationMs = pcmS16leMonoDurationMs(
 				lastScoringPcmBuffer.byteLength,
-				Number(payload?.sampleRate) || 16000
+				Number(payload?.sampleRate) || PINYIN_RECORD_PCM_SAMPLE_RATE
 			)
 		}
 	}
 	const frameCaptureBytes = Number(payload?.frameCaptureBytes) || recordPcmBuffer?.byteLength || 0
-	const sampleRate = Number(payload?.sampleRate) || 16000
+	const sampleRate = Number(payload?.sampleRate) || PINYIN_RECORD_PCM_SAMPLE_RATE
 	const pcmDurationMs =
 		Number(payload?.recordPcmDurationMs) ||
 		pcmS16leMonoDurationMs(frameCaptureBytes, sampleRate)
@@ -1291,9 +1275,10 @@ export async function requestFollowReadScore(payload) {
 		durationMs,
 		sampleRate,
 		recordFormat: String(payload?.recordFormat || 'mp3'),
-		useMfcc: shouldUseMfccScoring(),
-		useMfccConfig: USE_MFCC_SCORING,
-		mfccRuntime: shouldUseMfccScoring(),
+		// #ifdef APP-PLUS
+		mfccRuntime: isMfccRuntimeAvailable(),
+		// #endif
+		scoringSupported: isFollowReadScoringSupported(),
 		isAppPlus: isAppPlus(),
 		noUniFs: mustUsePlusIoForLocalFiles(),
 		hasFile: !!tempFilePath,
@@ -1313,30 +1298,44 @@ export async function requestFollowReadScore(payload) {
 		})
 	}
 
-	if (shouldUseMfccScoring()) {
-		try {
-			return await requestFollowReadScoreMfcc(payload)
-		} catch (e) {
-			console.warn('[pinyin-follow] mfcc fallback legacy', e)
-			logFollowReadScore('score.mfcc.fallback_legacy', {
-				target,
-				err: String(e?.message || e),
-				note: '用户录音解码/MFCC 提取失败，尝试 v1 包络比对'
-			})
-		}
-	} else if (USE_MFCC_SCORING) {
-		logFollowReadScore('score.mfcc.skipped_runtime', {
-			target,
-			note: 'Meyda 在当前端不可用，直接使用 v1'
+	if (
+		frameCaptureBytes > 0 &&
+		pcmDurationMs > 0 &&
+		pcmDurationMs < PINYIN_RECORD_CAPTURE_MS * 0.85
+	) {
+		return followReadFailResult('too_short', target, {
+			log: {
+				pcmDurationMs,
+				frameCaptureBytes,
+				needMs: PINYIN_RECORD_CAPTURE_MS
+			}
 		})
 	}
 
-	return requestFollowReadScoreLegacy(payload)
+	if (!isFollowReadScoringSupported()) {
+		return followReadFailResult('unsupported_platform', target)
+	}
+
+	// #ifdef APP-PLUS
+	if (!isMfccRuntimeAvailable()) {
+		logFollowReadScore('score.mfcc.unavailable', { target })
+		return followReadFailResult('mfcc_unavailable', target)
+	}
+
+	try {
+		return await requestFollowReadScoreMfcc(payload)
+	} catch (e) {
+		console.warn('[pinyin-follow] mfcc score', e)
+		return followReadFailResult(classifyFollowReadThrowable(e), target, {
+			log: { err: String(e?.message || e) }
+		})
+	}
+	// #endif
 }
 
 const RECORD_TEST_MAX_MS = 60000
 const RECORD_TEST_STOP_TIMEOUT_MS = 8000
-const RECORD_TEST_MIN_HOLD_MS = 280
+const RECORD_TEST_MIN_HOLD_MS = PINYIN_RECORD_CAPTURE_MS
 
 export function getRecordTestState() {
 	return {
@@ -1363,7 +1362,6 @@ export async function startHoldRecordTest() {
 
 	recordTestFormat = resolveFollowReadRecordFormat()
 	recordTestRecording = true
-	followReadPcmFrameLogged = 0
 	recordTestStartedAt = Date.now()
 	beginPcmFrameCapture()
 
@@ -1375,8 +1373,9 @@ export async function startHoldRecordTest() {
 	try {
 		if (useAppPcmRealtime()) {
 			await startPcmRealtimeCapture({
-				sampleRate: 16000,
-				frameSize: 4096,
+				sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
+				frameSize: PINYIN_RECORD_WXZ_FRAME_BYTES,
+				logSource: 'record-test',
 				onFrame: (buf, meta) => onRecorderFrame(buf, meta),
 				onError: (err) => {
 					recordTestRecording = false
@@ -1395,7 +1394,7 @@ export async function startHoldRecordTest() {
 		if (!rm) return { ok: false, message: '当前环境不支持录音' }
 		const startOpts = {
 			duration: RECORD_TEST_MAX_MS,
-			sampleRate: 16000,
+			sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 			numberOfChannels: 1,
 			format: recordTestFormat,
 			frameSize: 4

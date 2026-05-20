@@ -17,6 +17,10 @@ export function followReadStatusBarHint(verdict, target = '') {
 			return '无法分析读音，请靠近麦克风'
 		case 'ref_error':
 			return '示范音加载失败，请重试'
+		case 'unsupported_platform':
+			return '请使用 App 跟读'
+		case 'mfcc_unavailable':
+			return '评分引擎不可用'
 		case 'mismatch':
 		case 'close':
 			return t ? `再试试「${t}」` : '再试一次'
@@ -39,6 +43,10 @@ export function followReadUserMessage(verdict, target = '') {
 			return '录音无法提取，请再试一次（靠近麦克风、安静环境）'
 		case 'ref_error':
 			return '示范音暂时无法加载，请稍后重试'
+		case 'unsupported_platform':
+			return '跟读评分仅支持 App，请安装手机版后使用'
+		case 'mfcc_unavailable':
+			return '语音分析模块不可用，请重启 App 或更新版本后重试'
 		case 'analysis_error':
 			return '无法分析读音，请靠近麦克风，并在安静环境再试'
 		case 'mismatch':

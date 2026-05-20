@@ -2,18 +2,20 @@
  * 读取并解码本地音频为单声道 PCM（Web Audio / 原始 PCM 文件）。
  */
 import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
+import { resampleMono } from '@/utils/pinyin-follow-read-audio-features.js'
 import {
-	extractPcmFingerprint,
-	FOLLOW_READ_TARGET_SR,
-	resampleMono
-} from '@/utils/pinyin-follow-read-audio-features.js'
+	PINYIN_PCM_SAMPLE_RATE,
+	PINYIN_RECORD_MIN_PCM_BYTES,
+	PINYIN_RECORD_MIN_PCM_SAMPLES
+} from '@/constants/pinyin-audio-sample-rate.js'
 import {
 	getLocalPinyinAudioPath,
 	getLocalPinyinTone1AudioPath
 } from '@/utils/play-pinyin-local-audio.js'
-import prebuiltFingerprints from '@/data/pinyin-audio-fingerprints.json'
+// #ifdef APP-PLUS
 import prebuiltMfccFingerprints from '@/data/pinyin-mfcc-fingerprints.json'
 import { deserializeMfccEntry, extractMfccFromFloat32 } from '@/utils/pinyin-mfcc-extract.js'
+// #endif
 import {
 	isAppPlus,
 	getUniFileSystemManager,
@@ -55,19 +57,7 @@ function withTimeout(promise, ms, label) {
 	})
 }
 
-const refFingerprintCache = new Map()
 const refMfccCache = new Map()
-
-function fingerprintFromPrebuilt(stem) {
-	const entry = prebuiltFingerprints?.[stem]
-	if (!entry?.e?.length) return null
-	return {
-		env: Float32Array.from(entry.e),
-		bands: Float32Array.from(entry.b || []),
-		durationMs: Number(entry.d) || 0,
-		voicedRatio: 1
-	}
-}
 
 function stemsForSymbol(symbol) {
 	const key = String(symbol || '').trim()
@@ -464,7 +454,7 @@ async function waitRecorderFileFlush(filePath, recordDurationMs = 0) {
 	const dur = Math.max(0, Number(recordDurationMs) || 0)
 	const targetBytes = Math.max(
 		4000,
-		Math.floor((dur / 1000) * 16000 * 2 * 0.35)
+		Math.floor((dur / 1000) * PINYIN_PCM_SAMPLE_RATE * 2 * 0.35)
 	)
 	let lastSize = 0
 	for (let i = 0; i < APP_RECORD_FILE_POLL_MAX; i++) {
@@ -599,7 +589,7 @@ export async function decodeArrayBufferToMono(arrayBuffer, hint = '') {
 
 	const h = inferRecordingAudioHint(hint)
 	if (h === 'pcm' || h === 'wav') {
-		return decodePcmOrWavToMono(arrayBuffer, FOLLOW_READ_TARGET_SR)
+		return decodePcmOrWavToMono(arrayBuffer, PINYIN_PCM_SAMPLE_RATE)
 	}
 
 	const ctx = getAudioContext()
@@ -629,11 +619,11 @@ export async function decodeArrayBufferToMono(arrayBuffer, hint = '') {
 			'decodeAudioData'
 		)
 		const ch0 = audioBuffer.getChannelData(0)
-		const samples = resampleMono(ch0, audioBuffer.sampleRate, FOLLOW_READ_TARGET_SR)
+		const samples = resampleMono(ch0, audioBuffer.sampleRate, PINYIN_PCM_SAMPLE_RATE)
 		try {
 			ctx.close()
 		} catch (_) {}
-		return { samples, sampleRate: FOLLOW_READ_TARGET_SR }
+		return { samples, sampleRate: PINYIN_PCM_SAMPLE_RATE }
 	} catch (e) {
 		try {
 			ctx.close()
@@ -650,8 +640,8 @@ export async function decodeArrayBufferToMono(arrayBuffer, hint = '') {
  * 跟读评分专用：pcm 直读 Int16 → MFCC，mp3 才走 AudioContext
  * @returns {Promise<{ samples?: Float32Array, int16?: Int16Array, sampleRate: number, decodePath: 'pcm'|'compressed' }>}
  */
-const MIN_PCM_SAMPLES_FOR_SCORE = 800
-const MIN_FRAME_BUFFER_BYTES = 1600
+const MIN_PCM_SAMPLES_FOR_SCORE = PINYIN_RECORD_MIN_PCM_SAMPLES
+const MIN_FRAME_BUFFER_BYTES = PINYIN_RECORD_MIN_PCM_BYTES
 
 /**
  * 将已读入的 ArrayBuffer（或录音帧合并）解析为评分用 PCM
@@ -671,7 +661,7 @@ export function decodePcmBufferForFeature(arrayBuffer, format = 'wav') {
 	if (sniff === 'wav' || sniff === 'pcm_raw' || isPcmLikeRecording(format, '')) {
 		try {
 			const pcmKind = sniff === 'pcm_raw' ? 'pcm_raw' : 'wav'
-			const { int16, samples, sampleRate } = decodePcmLikeToInt16(buf, pcmKind, FOLLOW_READ_TARGET_SR)
+			const { int16, samples, sampleRate } = decodePcmLikeToInt16(buf, pcmKind, PINYIN_PCM_SAMPLE_RATE)
 			if (int16.length >= MIN_PCM_SAMPLES_FOR_SCORE) {
 				return { int16, samples, sampleRate, decodePath: 'pcm', sniff: pcmKind }
 			}
@@ -907,7 +897,7 @@ export async function decodeRecordingToMono(filePath, format = 'mp3') {
 		hint
 	})
 	if (hint === 'pcm' || hint === 'wav') {
-		const out = decodePcmOrWavToMono(buf, FOLLOW_READ_TARGET_SR)
+		const out = decodePcmOrWavToMono(buf, PINYIN_PCM_SAMPLE_RATE)
 		logFollowReadScore('score.decode.pcm_ok', {
 			samples: out.samples?.length || 0,
 			sampleRate: out.sampleRate
@@ -923,66 +913,26 @@ export async function decodeRecordingToMono(filePath, format = 'mp3') {
 	return out
 }
 
-/**
- * 示范音指纹（带内存缓存）
- * @param {string} symbol
- */
-export async function getReferenceFingerprint(symbol) {
-	const key = String(symbol || '').trim()
-	if (!key) throw new Error('no symbol')
-	if (refFingerprintCache.has(key)) return refFingerprintCache.get(key)
-
-	for (const stem of stemsForSymbol(key)) {
-		const pre = fingerprintFromPrebuilt(stem)
-		if (pre) {
-			refFingerprintCache.set(key, pre)
-			return pre
-		}
-	}
-
-	const tryPaths = []
-	const neutral = getLocalPinyinAudioPath(key)
-	const tone1 = getLocalPinyinTone1AudioPath(key)
-	if (neutral) tryPaths.push(neutral)
-	if (tone1 && tone1 !== neutral) tryPaths.push(tone1)
-
-	let lastErr = null
-	for (const webPath of tryPaths) {
-		try {
-			const buf = await readAppStaticAsArrayBuffer(webPath)
-			const { samples, sampleRate } = await decodeArrayBufferToMono(buf, webPath)
-			const fp = extractPcmFingerprint(samples, sampleRate)
-			refFingerprintCache.set(key, fp)
-			return fp
-		} catch (e) {
-			lastErr = e
-			console.warn('[pinyin-follow] ref fingerprint decode', webPath, e)
-		}
-	}
-	throw lastErr || new Error('reference audio unavailable')
-}
-
-export function clearReferenceFingerprintCache() {
-	refFingerprintCache.clear()
+export function clearReferenceMfccCache() {
 	refMfccCache.clear()
 }
 
-function mfccFromPrebuilt(stem) {
-	const entry = prebuiltMfccFingerprints?.[stem]
-	return deserializeMfccEntry(entry)
-}
-
 /**
- * 示范音 MFCC 特征（预提取 JSON → 内存缓存 → 现场解码兜底）
+ * 示范音 MFCC 特征（预提取 JSON → 内存缓存 → 现场解码兜底，仅 App）
  * @param {string} symbol
  */
 export async function getReferenceMfccFeature(symbol) {
 	const key = String(symbol || '').trim()
 	if (!key) throw new Error('no symbol')
+	// #ifndef APP-PLUS
+	throw new Error('reference mfcc 仅支持 App')
+	// #endif
+	// #ifdef APP-PLUS
 	if (refMfccCache.has(key)) return refMfccCache.get(key)
 
 	for (const stem of stemsForSymbol(key)) {
-		const pre = mfccFromPrebuilt(stem)
+		const entry = prebuiltMfccFingerprints?.[stem]
+		const pre = deserializeMfccEntry(entry)
 		if (pre?.frames?.length) {
 			refMfccCache.set(key, pre)
 			return pre
@@ -1011,4 +961,5 @@ export async function getReferenceMfccFeature(symbol) {
 		}
 	}
 	throw lastErr || new Error('reference mfcc unavailable')
+	// #endif
 }

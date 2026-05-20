@@ -1,8 +1,9 @@
 /**
- * MFCC 跟读分数与文案（复用 v1 分数映射形态）
+ * MFCC 跟读分数与文案
  */
 import { MFCC_PASS_SCORE } from './pinyin-mfcc-compare.js'
 import { PINYIN_MFCC_MIN_FRAMES_FOR_GATE } from '../constants/pinyin-mfcc-config.js'
+import { PINYIN_PCM_SAMPLE_RATE } from '../constants/pinyin-audio-sample-rate.js'
 
 export { MFCC_PASS_SCORE }
 
@@ -14,9 +15,9 @@ export function buildFollowReadScoreFromMfcc(cmp, durationMs, sampleRate) {
 	} else {
 		score = Math.round(48 + m * 48)
 	}
-	const sr = Number(sampleRate) || 16000
+	const sr = Number(sampleRate) || PINYIN_PCM_SAMPLE_RATE
 	/** 得分与录音墙钟长短解耦；是否「同一音」由 MFCC DTW 决定 */
-	if (sr >= 16000) score = Math.min(99, score + 1)
+	if (sr >= PINYIN_PCM_SAMPLE_RATE) score = Math.min(99, score + 1)
 	return Math.max(0, Math.min(99, score))
 }
 

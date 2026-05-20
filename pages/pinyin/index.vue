@@ -354,6 +354,8 @@ import { getAudioNarrator } from '@/utils/audio-settings.js'
 import {
 	getFollowReadState,
 	getFollowReadHistory,
+	getFollowReadEffectiveProgress,
+	setFollowReadRecordProgressListener,
 	startFollowReadRecord,
 	stopFollowReadRecord,
 	cancelFollowReadAutoStop,
@@ -374,11 +376,7 @@ import {
 	playFollowReadDebugRecording,
 	stopFollowReadDebugPlayback
 } from '@/utils/pinyin-follow-read-debug-playback.js'
-import { getFollowReadEffectiveProgress } from '@/services/pinyin-follow-read-service.js'
-import {
-	startFollowReadEffectiveProgressTicker,
-	startFollowReadRecordProgressTicker
-} from '@/utils/pinyin-follow-read-record-progress.js'
+import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
 import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import {
 	describePinyinPracticeSource,
@@ -813,26 +811,20 @@ export default {
 			this.followReadRecordProgress = 0
 			const fixedMs = Number(startRes?.fixedDurationMs) || 0
 			const useFixedWall = fixedMs > 0 && (startRes?.wxzFixedWall || !startRes?.useEffectiveDuration)
+			setFollowReadRecordProgressListener((p, meta) => {
+				this.followReadRecordProgress = p
+				if (meta?.speechStarted != null) {
+					this.followReadSpeechStarted = !!meta.speechStarted
+				}
+			})
 			if (useFixedWall) {
 				this.followReadSpeechStarted = true
-				this._stopFollowReadRecordProgress = startFollowReadRecordProgressTicker(
-					fixedMs,
-					(p) => {
-						this.followReadRecordProgress = p
-					},
-					() => {
-						this.onFollowReadRecordDurationEnd()
-					}
-				)
 				return
 			}
 			this.followReadSpeechStarted = false
 			this._stopFollowReadRecordProgress = startFollowReadEffectiveProgressTicker(
 				() => getFollowReadEffectiveProgress(),
-				(p, _effMs, speechStarted) => {
-					this.followReadRecordProgress = p
-					this.followReadSpeechStarted = speechStarted
-				},
+				() => {},
 				() => {
 					this.onFollowReadRecordDurationEnd()
 				},
@@ -858,6 +850,7 @@ export default {
 			}
 		},
 		stopFollowReadRecordUi() {
+			setFollowReadRecordProgressListener(null)
 			if (this._stopFollowReadRecordProgress) {
 				this._stopFollowReadRecordProgress()
 				this._stopFollowReadRecordProgress = null

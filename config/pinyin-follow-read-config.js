@@ -1,13 +1,9 @@
-import { isMfccRuntimeAvailable } from '@/utils/pinyin-mfcc-extract.js'
-
 /**
- * 跟读评分 v2（Meyda + MFCC + DTW）
- * 设为 false 可回退 v1 包络方案。
+ * 跟读评分（Meyda + MFCC + DTW，仅 App）
  */
-export const USE_MFCC_SCORING = true
 
 /** 评分过程调试日志（console + 调试页）；发版前可改为 false */
-export const FOLLOW_READ_SCORE_DEBUG = true
+export const FOLLOW_READ_SCORE_DEBUG = false
 
 /** 跟读结束后自动播放用户录音（确认是否录到声）；发版前可改为 false */
 export const FOLLOW_READ_DEBUG_PLAY_RECORDING = FOLLOW_READ_SCORE_DEBUG
@@ -36,6 +32,9 @@ export const PINYIN_FOLLOW_READ_USE_FIXED_DURATION = false
  */
 export const PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS = PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS
 
+/** 墙钟已满 2s 但 PCM 仍不足时，最多再等多久以凑满数据 */
+export const PINYIN_FOLLOW_READ_PCM_CAPTURE_GRACE_MS = 2500
+
 export function getFollowReadTargetEffectiveMs(options = {}) {
 	const v = Number(options?.targetEffectiveMs)
 	if (Number.isFinite(v) && v > 0) {
@@ -46,12 +45,3 @@ export function getFollowReadTargetEffectiveMs(options = {}) {
 
 /** 手动 stop 等待 onStop 超时（毫秒） */
 export const PINYIN_FOLLOW_READ_STOP_TIMEOUT_MS = 5000
-
-/**
- * 是否走 MFCC 路径（配置开启且当前端 Meyda 可用）
- * App 若 Meyda 不可用会自动走 v1。
- */
-export function shouldUseMfccScoring() {
-	if (!USE_MFCC_SCORING) return false
-	return isMfccRuntimeAvailable()
-}

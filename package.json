@@ -8,7 +8,6 @@
     "db:build": "node scripts/build-db.mjs",
     "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
     "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
-    "pinyin:fingerprints": "node scripts/build-pinyin-audio-fingerprints.mjs",
     "pinyin:mfcc-fingerprints": "node scripts/build-pinyin-mfcc-fingerprints.mjs",
     "assets:resize-mengmeng": "python scripts/resize-mengmeng-assets.py",
     "assets:remove-watermark": "python scripts/remove-doubao-watermark.py",
@@ -36,7 +35,6 @@
     "cnchar-xhy": "^3.2.6"
   },
   "devDependencies": {
-    "meyda": "^5.6.3",
-    "ogg-opus-decoder": "^1.7.3"
+    "meyda": "^5.6.3"
   }
 }

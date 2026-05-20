@@ -1,12 +1,11 @@
 /**
  * 跟读录音 / 评分环境诊断（权限、Meyda、wxz-record）
  */
-import { isAppPlus, getUniFileSystemManager } from '@/utils/pinyin-follow-read-platform.js'
+import { isAppPlus, getUniFileSystemManager, isFollowReadScoringSupported } from '@/utils/pinyin-follow-read-platform.js'
+import { formatPinyinAudioSpec } from '@/constants/pinyin-audio-sample-rate.js'
+// #ifdef APP-PLUS
 import { isMfccRuntimeAvailable } from '@/utils/pinyin-mfcc-extract.js'
-import {
-	shouldUseMfccScoring,
-	USE_MFCC_SCORING
-} from '@/config/pinyin-follow-read-config.js'
+// #endif
 import { isPcmRealtimeAvailable } from '@/utils/pinyin-pcm-realtime.js'
 
 function getMicAuthorizeState() {
@@ -35,13 +34,19 @@ export async function probeMicPermission() {
 export function getFollowReadScoringDiagnostics() {
 	return {
 		isAppPlus: isAppPlus(),
+		scoringSupported: isFollowReadScoringSupported(),
 		wxzRecord: isPcmRealtimeAvailable(),
-		useMfccConfig: USE_MFCC_SCORING,
+		// #ifdef APP-PLUS
 		mfccRuntimeAvailable: isMfccRuntimeAvailable(),
-		shouldUseMfccScoring: shouldUseMfccScoring(),
+		// #endif
+		// #ifndef APP-PLUS
+		mfccRuntimeAvailable: false,
+		// #endif
 		micAuthorize: getMicAuthorizeState(),
-		featureExtractionNote:
-			'App：wxz-record 实时 PCM → Meyda MFCC → DTW；小程序：RecorderManager 录音文件解码'
+		audioSpec: formatPinyinAudioSpec(),
+		featureExtractionNote: isFollowReadScoringSupported()
+			? 'App：wxz-record 48k PCM → Meyda MFCC → DTW'
+			: '小程序/H5 暂不支持跟读评分'
 	}
 }
 
@@ -54,10 +59,10 @@ export function formatDiagnosticsLines(diag) {
 		`RecorderManager：${diag.hasRecorderManager ? '有（小程序）' : '无'}`
 	]
 	const s = getFollowReadScoringDiagnostics()
+	lines.push(`音频规范：${s.audioSpec || '—'}`)
+	lines.push(`本端评分：${s.scoringSupported ? '支持（MFCC）' : '不支持'}`)
 	lines.push('—— 特征提取 ——')
-	lines.push(`MFCC 配置开启：${s.useMfccConfig ? '是' : '否'}`)
-	lines.push(`Meyda 运行时可用：${s.mfccRuntimeAvailable ? '是' : '否（将走 v1 包络）'}`)
-	lines.push(`实际走 MFCC 评分：${s.shouldUseMfccScoring ? '是' : '否'}`)
+	lines.push(`Meyda 运行时可用：${s.mfccRuntimeAvailable ? '是' : '否'}`)
 	lines.push(s.featureExtractionNote)
 	return lines
 }
