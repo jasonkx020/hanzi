@@ -68,6 +68,11 @@ export function getWxzRecordTestLiveStats() {
 	}
 }
 
+/** 录音进行中读取已缓存的 PCM（不结束会话） */
+export function peekWxzRecordTestPcmBuffer() {
+	return mergeChunks()
+}
+
 function resetStats() {
 	chunks = []
 	frameCount = 0
@@ -182,9 +187,11 @@ export async function startWxzRecordTest(onLiveStats) {
 				onLiveStats?.(getWxzRecordTestLiveStats())
 			},
 			success: () => {
+				console.log('success  录音开始成功')
 				resolve({ ok: true, recordFormat: 'pcm', capture: 'wxz-record' })
 			},
 			fail: (err) => {
+				console.log('fail  录音开始失败', err)
 				recording = false
 				resolve(mapFail(err))
 			}

@@ -4,36 +4,9 @@
 
 		<text class="title">麦克风录音测试</text>
 
-		<text class="desc">按住说话，松开后回放录音，并提取 MFCC 与示范音预提取指纹做 DTW 相似度比对（与跟读评分同链路）。</text>
+		<text class="desc">按住下方按钮说话，松开后自动播放，用于确认是否能录到声音。</text>
 
-		<text class="format-hint">当前格式：{{ recordFormatLabel }} · {{ audioSpec }}</text>
-
-		<view class="field">
-			<text class="field-label">比对目标（对应 /static/pinyin/{{ symbol }}.opus）</text>
-			<view class="symbol-row">
-				<input
-					class="field-input field-input--flex"
-					v-model="symbolInput"
-					placeholder="音节 stem，默认 m"
-					@blur="syncSymbol"
-				/>
-				<picker
-					mode="selector"
-					:range="pickerLabels"
-					:value="pickerIndex"
-					:disabled="!pickerLabels.length"
-					@change="onPickerChange"
-				>
-					<view class="picker-btn"><text>列表</text></view>
-				</picker>
-			</view>
-		</view>
-
-		<view v-if="refPreview" class="info-card info-card--ref">
-			<text class="info-title">预提取「{{ symbol }}」（由 {{ symbol }}.opus 离线构建）</text>
-			<text class="info-line">帧数 {{ refPreview.frameCount }} · 时长 {{ refPreview.durationMs }} ms</text>
-			<text class="info-line">有效发声占比 {{ formatVoiced(refPreview.voicedRatio) }}</text>
-		</view>
+		<text class="format-hint">当前格式：{{ recordFormatLabel }} · {{ audioSpecLabel }}</text>
 
 
 
@@ -46,6 +19,41 @@
 		</view>
 
 
+
+		<view v-if="showPcmSection" class="info-card info-card--charts">
+			<text class="info-title">PCM 图谱</text>
+			<text v-if="chartCanvasTip" class="chart-platform-tip">{{ chartCanvasTip }}</text>
+			<template v-if="chartCanvasSupported">
+				<pcm-audio-chart
+					:key="'wave-' + chartLayoutKey"
+					canvas-id="record-test-pcm-wave"
+					title="时域波形"
+					mode="wave"
+					:values="chartPeaks"
+					:active="phase === 'recording'"
+					:width-px="chartWidthPx"
+					:height-px="chartWaveHeightPx"
+					:hint="chartWaveHint"
+				/>
+				<pcm-audio-chart
+					:key="'spec-' + chartLayoutKey"
+					canvas-id="record-test-pcm-spectrum"
+					title="频谱（中段 FFT）"
+					mode="spectrum"
+					:values="chartSpectrum"
+					:active="phase === 'recording'"
+					:width-px="chartWidthPx"
+					:height-px="chartSpectrumHeightPx"
+					:hint="chartSpectrumHint"
+				/>
+			</template>
+			<view v-else class="chart-fallback">
+				<text class="chart-fallback-line">{{ chartPcmSummary }}</text>
+				<text v-if="chartPeaks.length" class="chart-fallback-line chart-fallback-line--mono">
+					波形采样点 {{ chartPeaks.length }} · 频谱柱 {{ chartSpectrum.length }}
+				</text>
+			</view>
+		</view>
 
 		<view class="status-box" :class="'status--' + phase">
 
@@ -87,24 +95,12 @@
 
 
 
-		<view v-if="mfccSummary" class="summary" :class="mfccSummary.pass ? 'summary--ok' : 'summary--fail'">
-			<text class="summary-text">{{ mfccSummary.text }}</text>
-		</view>
-
 		<view v-if="lastInfo.lines.length" class="info-card">
 
 			<text class="info-title">上次录音</text>
 
 			<text v-for="(line, i) in lastInfo.lines" :key="i" class="info-line">{{ line }}</text>
 
-		</view>
-
-		<view v-if="mfccLines.length" class="info-card">
-			<view class="info-head">
-				<text class="info-title">MFCC 特征比对</text>
-				<text class="copy-link" @click="onCopyMfcc">复制</text>
-			</view>
-			<text v-for="(line, i) in mfccLines" :key="'m-' + i" class="info-line">{{ line }}</text>
 		</view>
 
 
@@ -123,15 +119,6 @@
 
 			再次播放
 
-		</button>
-
-		<button
-			class="replay-btn"
-			type="default"
-			:disabled="!canMfccScore || (!lastPcmBuffer && !lastFile) || phase === 'recording' || mfccBusy"
-			@click="onMfccCompare"
-		>
-			与「{{ symbol }}」预提取特征重新比对
 		</button>
 
 		<button
@@ -176,9 +163,23 @@ import {
 
 	isWxzRecordTestAvailable,
 
-	formatDecibel
+	formatDecibel,
+
+	peekWxzRecordTestPcmBuffer
 
 } from '@/utils/wxz-record-test.js'
+import {
+	peaksFromPcm,
+	spectrumBarsFromPcm,
+	isPcmPeaksMostlySilent
+} from '@/utils/pcm-visualization.js'
+import PcmAudioChart from '@/components/pcm-audio-chart.vue'
+import { formatPinyinAudioSpec, PINYIN_RECORD_PCM_SAMPLE_RATE } from '@/constants/pinyin-audio-sample-rate.js'
+import {
+	isLegacyCanvasApiAvailable,
+	computeLegacyCanvasWidthPx,
+	getUniRuntimeLabel
+} from '@/utils/uni-legacy-canvas.js'
 
 import {
 
@@ -203,17 +204,11 @@ import {
 	getFollowReadScoringDiagnostics
 
 } from '@/utils/pinyin-follow-read-diagnostics.js'
-import { formatPinyinAudioSpec, PINYIN_RECORD_MIN_PCM_BYTES } from '@/constants/pinyin-audio-sample-rate.js'
-import { isFollowReadScoringSupported } from '@/utils/pinyin-follow-read-platform.js'
-import {
-	listMfccFingerprintSymbols,
-	hasMfccFingerprint,
-	getMfccFingerprintPreview,
-	runMfccCompareUserRecording,
-	DEFAULT_OPUS_WEB_PATH
-} from '@/utils/pinyin-mfcc-algorithm-test.js'
+import { PINYIN_RECORD_MIN_PCM_BYTES } from '@/constants/pinyin-audio-sample-rate.js'
 
 export default {
+
+	components: { PcmAudioChart },
 
 	data() {
 
@@ -231,8 +226,6 @@ export default {
 
 			lastFrameBytes: 0,
 
-			lastDurationMs: 0,
-
 			lastInfo: { lines: [] },
 
 			diagLines: [],
@@ -245,21 +238,23 @@ export default {
 
 			liveFrameLabel: '',
 
-			symbol: 'm',
+			chartPeaks: [],
 
-			symbolInput: 'm',
+			chartSpectrum: [],
 
-			symbolList: [],
+			chartWidthPx: 320,
 
-			pickerIndex: 0,
+			chartWaveHeightPx: 100,
 
-			refPreview: null,
+			chartSpectrumHeightPx: 72,
 
-			mfccSummary: null,
+			chartSilent: true,
 
-			mfccLines: [],
+			chartCanvasSupported: false,
 
-			mfccBusy: false
+			chartLayoutKey: 0,
+
+			_lastChartRefreshAt: 0
 
 		}
 
@@ -267,29 +262,23 @@ export default {
 
 	computed: {
 
-		audioSpec() {
-			return formatPinyinAudioSpec()
-		},
-
 		canRecord() {
 
 			return isWxzRecordTestAvailable()
 
 		},
 
-		canMfccScore() {
-			return isWxzRecordTestAvailable() && isFollowReadScoringSupported()
-		},
+		audioSpecLabel() {
 
-		pickerLabels() {
-			return (this.symbolList.length ? this.symbolList : ['m']).slice(0, 400)
+			return formatPinyinAudioSpec()
+
 		},
 
 		recordFormatLabel() {
 
 			if (isWxzRecordTestAvailable()) {
 
-				return 'pcm（wxz-record）'
+				return `pcm（wxz-record · ${PINYIN_RECORD_PCM_SAMPLE_RATE / 1000}kHz 单声道）`
 
 			}
 
@@ -307,8 +296,7 @@ export default {
 
 			}
 
-			const ref = DEFAULT_OPUS_WEB_PATH || '/static/pinyin/m.opus'
-			return `松开后自动与「${this.symbol}」预提取指纹比对（源自 ${ref}）。若无结果请确认 App 自定义基座与 data/pinyin-mfcc-fingerprints.json。`
+			return '若听不到回放：检查麦克风权限、系统静音、蓝牙耳机。评分可点「测试读取」验证内存 PCM 解码。'
 
 		},
 
@@ -348,64 +336,105 @@ export default {
 
 			return '按住说话'
 
+		},
+
+		/** 图谱区：App 可录音时展示；非 App 不展示（本页录音仅 App） */
+		showPcmSection() {
+
+			if (!this.canRecord) return false
+
+			return (
+				this.phase === 'recording' ||
+				this.chartPeaks.length > 0 ||
+				this.lastFrameBytes > 0
+			)
+
+		},
+
+		chartCanvasTip() {
+
+			if (!this.showPcmSection) return ''
+
+			if (!this.chartCanvasSupported) {
+
+				return `${getUniRuntimeLabel()} 不支持旧版 canvas，已改为数值摘要（请用 App 真机查看波形）。`
+
+			}
+
+			return ''
+
+		},
+
+		chartPcmSummary() {
+
+			if (!this.chartPeaks.length) {
+
+				return this.phase === 'recording' ? '等待 PCM 帧…' : '尚无 PCM 数据'
+
+			}
+
+			const max = Math.max(...this.chartPeaks)
+
+			const pct = (max * 100).toFixed(1)
+
+			if (this.chartSilent) {
+
+				return `振幅极低（峰值约 ${pct}%），可能静音或未采到声`
+
+			}
+
+			return `振幅正常（峰值约 ${pct}%），${this.phase === 'recording' ? '录音中' : '已录完'}`
+
+		},
+
+		chartWaveHint() {
+
+			if (this.phase === 'recording') {
+
+				return '录音中实时刷新；正常说话应看到明显起伏，平直可能未采到声。'
+
+			}
+
+			if (this.chartSilent) {
+
+				return '波形几乎平直：可能静音、权限未开或麦克风异常。'
+
+			}
+
+			return '松开后为整段录音波形；可对照回放确认是否有声。'
+
+		},
+
+		chartSpectrumHint() {
+
+			if (!this.chartSpectrum.length) return ''
+
+			if (this.chartSilent) {
+
+				return '频谱能量偏低，与静音或极弱输入一致。'
+
+			}
+
+			return '语音通常在低频柱较高；仅高频尖峰可能是噪声。'
+
 		}
-
-	},
-
-	async onLoad() {
-
-		this.symbolList = listMfccFingerprintSymbols()
-		const i = this.symbolList.indexOf('m')
-		this.pickerIndex = i >= 0 ? i : 0
-		if (i < 0 && this.symbolList.length) {
-			this.symbol = this.symbolList[0]
-			this.symbolInput = this.symbol
-		}
-		this.refreshRefPreview()
-		await this.loadDiagnostics()
-
-	},
-
-	onHide() {
-
-		this.teardown()
-
-	},
-
-	onUnload() {
-
-		this.teardown()
 
 	},
 
 	methods: {
 
-		formatVoiced(v) {
-			const n = Number(v)
-			if (!Number.isFinite(n)) return '—'
-			return `${Math.round(n * 1000) / 10}%`
+		initChartLayout() {
+
+			this.chartCanvasSupported = isLegacyCanvasApiAvailable()
+
+			this.chartWidthPx = computeLegacyCanvasWidthPx(56, 260)
+
 		},
 
-		syncSymbol() {
-			const s = String(this.symbolInput || '').trim()
-			if (!s) return
-			this.symbol = s
-			this.refreshRefPreview()
-		},
+		bumpChartLayout() {
 
-		onPickerChange(e) {
-			const i = Number(e.detail?.value) || 0
-			this.pickerIndex = i
-			const s = this.pickerLabels[i]
-			if (s) {
-				this.symbol = s
-				this.symbolInput = s
-				this.refreshRefPreview()
-			}
-		},
+			this.chartLayoutKey += 1
 
-		refreshRefPreview() {
-			this.refPreview = getMfccFingerprintPreview(this.symbol)
 		},
 
 		async loadDiagnostics() {
@@ -424,16 +453,6 @@ export default {
 
 				this.diagLines.push('录音采集：wxz-record 未就绪')
 
-			}
-
-			if (this.canMfccScore) {
-				this.diagLines.push(
-					hasMfccFingerprint(this.symbol)
-						? `MFCC 比对：已加载「${this.symbol}」预提取（${this.symbol}.opus）`
-						: `MFCC 比对：无「${this.symbol}」预提取，请 npm run pinyin:mfcc-fingerprints`
-				)
-			} else {
-				this.diagLines.push('MFCC 比对：仅 App 自定义基座可用')
 			}
 
 			console.log('[record-test] diagnostics', perm, scoring)
@@ -456,11 +475,49 @@ export default {
 
 		},
 
+		refreshPcmCharts(pcmBuffer, { force } = {}) {
+
+			if (!pcmBuffer?.byteLength) {
+
+				if (force) {
+
+					this.chartPeaks = []
+
+					this.chartSpectrum = []
+
+					this.chartSilent = true
+
+				}
+
+				return
+
+			}
+
+			const now = Date.now()
+
+			if (!force && now - this._lastChartRefreshAt < 80) return
+
+			this._lastChartRefreshAt = now
+
+			const peaks = peaksFromPcm(pcmBuffer)
+
+			const spectrum = spectrumBarsFromPcm(pcmBuffer)
+
+			this.chartPeaks = peaks
+
+			this.chartSpectrum = spectrum
+
+			this.chartSilent = isPcmPeaksMostlySilent(peaks)
+
+		},
+
 		onLiveStats(stats) {
 
 			this.liveDecibelLabel = `实时音量：${formatDecibel(stats.currentDecibel)}（峰值 ${formatDecibel(stats.maxDecibel)}）`
 
 			this.liveFrameLabel = `帧 ${stats.frameCount} · ${stats.totalBytes} 字节 · 最近帧 ${stats.lastFrameSize} B`
+
+			this.refreshPcmCharts(peekWxzRecordTestPcmBuffer())
 
 		},
 
@@ -492,11 +549,7 @@ export default {
 
 			this.liveFrameLabel = ''
 
-			this.mfccSummary = null
-
-			this.mfccLines = []
-
-			this.syncSymbol()
+			this.refreshPcmCharts(null, { force: true })
 
 			stopFollowReadDebugPlayback()
 
@@ -554,11 +607,9 @@ export default {
 
 			this.lastFrameBytes = Number(stopRes.frameCaptureBytes) || 0
 
-			this.lastDurationMs = Number(stopRes.durationMs) || 0
+			this.refreshPcmCharts(this.lastPcmBuffer, { force: true })
 
 			await this.refreshLastInfo(stopRes)
-
-			await this.runMfccCompare(stopRes)
 
 			if (this.lastFile) {
 
@@ -644,65 +695,6 @@ export default {
 
 		},
 
-		async onMfccCompare() {
-			if (!this.lastPcmBuffer && !this.lastFile) return
-			await this.runMfccCompare({
-				recordPcmBuffer: this.lastPcmBuffer,
-				tempFilePath: this.lastFile,
-				durationMs: this.lastDurationMs,
-				recordFormat: this.lastFormat
-			})
-		},
-
-		async runMfccCompare(stopRes) {
-			if (!this.canMfccScore) return
-			this.syncSymbol()
-			if (!hasMfccFingerprint(this.symbol)) {
-				this.mfccLines = [
-					`无「${this.symbol}」预提取指纹，请执行 npm run pinyin:mfcc-fingerprints 后重新打包`
-				]
-				this.mfccSummary = { pass: false, text: '缺少预提取指纹' }
-				return
-			}
-			const pcm = stopRes?.recordPcmBuffer || this.lastPcmBuffer
-			if (!pcm?.byteLength && !stopRes?.tempFilePath && !this.lastFile) return
-
-			this.mfccBusy = true
-			this.mfccSummary = null
-			this.mfccLines = []
-			try {
-				const res = await runMfccCompareUserRecording(this.symbol, pcm, {
-					durationMs: Number(stopRes?.durationMs) || 0,
-					tempFilePath: stopRes?.tempFilePath || this.lastFile || '',
-					recordFormat: stopRes?.recordFormat || this.lastFormat || 'pcm'
-				})
-				this.mfccLines = res.lines || []
-				this.mfccSummary = {
-					pass: res.mainPass,
-					text: res.summaryText || ''
-				}
-				uni.showToast({
-					title: res.mainPass ? '相似度达标' : '相似度偏低',
-					icon: res.mainPass ? 'success' : 'none',
-					duration: 2200
-				})
-				console.log('[record-test] mfcc', res)
-			} catch (e) {
-				const msg = e?.message || String(e)
-				this.mfccLines = [`MFCC 比对失败：${msg}`]
-				this.mfccSummary = { pass: false, text: msg }
-			}
-			this.mfccBusy = false
-		},
-
-		onCopyMfcc() {
-			if (!this.mfccLines.length) return
-			uni.setClipboardData({
-				data: this.mfccLines.join('\n'),
-				success: () => uni.showToast({ title: '已复制', icon: 'success' })
-			})
-		},
-
 		onReplay() {
 
 			if (!this.lastFile) {
@@ -763,7 +755,7 @@ export default {
 
 			} else {
 
-				lines.push(`✗ PCM 过少（${this.lastFrameBytes} 字节），请按住至少 2 秒`)
+				lines.push(`✗ PCM 过少（${this.lastFrameBytes} 字节），请按住多说 0.5 秒`)
 
 			}
 
@@ -804,6 +796,32 @@ export default {
 			this.readTestBusy = false
 
 		}
+
+	},
+
+	onLoad() {
+
+		this.loadDiagnostics()
+
+	},
+
+	onReady() {
+
+		this.initChartLayout()
+
+		this.$nextTick(() => this.bumpChartLayout())
+
+	},
+
+	onHide() {
+
+		this.teardown()
+
+	},
+
+	onUnload() {
+
+		this.teardown()
 
 	}
 
@@ -1059,6 +1077,64 @@ export default {
 
 
 
+.info-card--charts {
+
+	margin-bottom: 20rpx;
+
+}
+
+
+
+.chart-platform-tip {
+
+	display: block;
+
+	font-size: 22rpx;
+
+	color: #9a948c;
+
+	line-height: 1.45;
+
+	margin-bottom: 12rpx;
+
+}
+
+
+
+.chart-fallback {
+
+	padding: 16rpx 8rpx;
+
+}
+
+
+
+.chart-fallback-line {
+
+	display: block;
+
+	font-size: 24rpx;
+
+	color: #5c554c;
+
+	line-height: 1.5;
+
+	margin-bottom: 8rpx;
+
+}
+
+
+
+.chart-fallback-line--mono {
+
+	font-size: 22rpx;
+
+	color: #9a948c;
+
+}
+
+
+
 .info-title {
 
 	font-size: 26rpx;
@@ -1109,85 +1185,6 @@ export default {
 
 	text-align: center;
 
-}
-
-.field {
-	margin-bottom: 16rpx;
-}
-
-.field-label {
-	font-size: 26rpx;
-	color: #8b4518;
-	display: block;
-	margin-bottom: 8rpx;
-}
-
-.symbol-row {
-	display: flex;
-	gap: 12rpx;
-	margin-bottom: 8rpx;
-}
-
-.field-input {
-	background: #fff;
-	border: 1rpx solid #e3d9c8;
-	border-radius: 12rpx;
-	padding: 14rpx 18rpx;
-	font-size: 28rpx;
-}
-
-.field-input--flex {
-	flex: 1;
-}
-
-.picker-btn {
-	padding: 14rpx 22rpx;
-	background: #fff;
-	border: 1rpx solid #e3d9c8;
-	border-radius: 12rpx;
-	font-size: 26rpx;
-	color: #8b4518;
-}
-
-.info-card--ref {
-	background: #faf8f4;
-}
-
-.info-head {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 8rpx;
-}
-
-.copy-link {
-	font-size: 24rpx;
-	color: #5a8fd4;
-}
-
-.summary {
-	padding: 20rpx 22rpx;
-	border-radius: 16rpx;
-	margin-bottom: 20rpx;
-	border: 2rpx solid #e3d9c8;
-}
-
-.summary--ok {
-	background: #f0faf4;
-	border-color: #6ab07a;
-}
-
-.summary--fail {
-	background: #fff5f5;
-	border-color: #c45c5c;
-}
-
-.summary-text {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #2c2419;
-	display: block;
-	text-align: center;
 }
 
 </style>
