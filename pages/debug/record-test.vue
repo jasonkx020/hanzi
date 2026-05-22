@@ -4,9 +4,32 @@
 
 		<text class="title">麦克风录音测试</text>
 
-		<text class="desc">按住下方按钮说话，松开后自动播放，用于确认是否能录到声音。</text>
+		<text class="desc">选择目标拼音字母，按住说话，松开后自动播放并与标准读音做 MFCC 相似度评分。</text>
 
 		<text class="format-hint">当前格式：{{ recordFormatLabel }} · {{ audioSpecLabel }}</text>
+
+		<view v-if="letterList.length" class="score-field">
+			<text class="score-label">目标字母（{{ letterList.length }} 个可选）</text>
+			<picker
+				mode="selector"
+				:range="letterList"
+				:value="scorePickerIndex"
+				:disabled="!letterList.length"
+				@change="onScorePickerChange"
+			>
+				<view class="score-picker">
+					<text class="score-picker-main">{{ scoreSymbol }}</text>
+					<text class="score-picker-hint">点击选择字母 ▼</text>
+				</view>
+			</picker>
+			<text v-if="refPreview" class="score-ref">
+				标准音：{{ refPreview.frameCount }} 帧 · {{ refPreview.durationMs }} ms
+			</text>
+			<text v-else-if="scoreSymbol" class="score-ref score-ref--warn">暂无「{{ scoreSymbol }}」预提取指纹</text>
+		</view>
+		<view v-else-if="scoringSupported" class="score-field">
+			<text class="score-ref score-ref--warn">未找到可用字母指纹，请检查 static/pinyin 预提取</text>
+		</view>
 
 
 
@@ -53,6 +76,18 @@
 					波形采样点 {{ chartPeaks.length }} · 频谱柱 {{ chartSpectrum.length }}
 				</text>
 			</view>
+		</view>
+
+		<view v-if="scoreSummary" class="score-summary" :class="scoreSummary.pass ? 'score-summary--ok' : 'score-summary--fail'">
+			<text class="score-summary-text">{{ scoreSummary.text }}</text>
+		</view>
+
+		<view v-if="scoreLines.length" class="info-card info-card--score">
+			<view class="info-card-head">
+				<text class="info-title">相似度明细</text>
+				<text class="copy-link" @click="onCopyScoreLines">复制</text>
+			</view>
+			<text v-for="(line, i) in scoreLines" :key="'sc-' + i" class="info-line">{{ line }}</text>
 		</view>
 
 		<view class="status-box" :class="'status--' + phase">
@@ -122,6 +157,15 @@
 		</button>
 
 		<button
+			class="replay-btn"
+			type="default"
+			:disabled="!canRescore || scoreBusy || phase === 'recording'"
+			@click="onRescore"
+		>
+			重新评分
+		</button>
+
+		<button
 
 			class="replay-btn"
 
@@ -133,7 +177,7 @@
 
 		>
 
-			测试读取（跟读评分同路径）
+			测试读取（解码路径）
 
 		</button>
 
@@ -151,23 +195,22 @@
 
 import { getRecordTestState } from '@/services/pinyin-follow-read-service.js'
 
-import { isAppPlus } from '@/utils/pinyin-follow-read-platform.js'
+import { isAppPlus, isFollowReadScoringSupported } from '@/utils/pinyin-follow-read-platform.js'
+import {
+	listMfccLetterSymbols,
+	hasMfccFingerprint,
+	getMfccFingerprintPreview,
+	runMfccScoreDebugCompare
+} from '@/utils/pinyin-mfcc-algorithm-test.js'
 
 import {
-
-	startWxzRecordTest,
-
-	stopWxzRecordTest,
-
-	cancelWxzRecordTest,
-
-	isWxzRecordTestAvailable,
-
+	createRecordTestController,
+	isRecorderRecordTestAvailable,
 	formatDecibel,
-
-	peekWxzRecordTestPcmBuffer
-
-} from '@/utils/wxz-record-test.js'
+	RECORD_PCM_CONFIG,
+	formatRecorderPluginDiagnosticLines,
+	notifyRecorderPageShow
+} from '@/utils/recorder-record-test.js'
 import {
 	peaksFromPcm,
 	spectrumBarsFromPcm,
@@ -254,7 +297,21 @@ export default {
 
 			chartLayoutKey: 0,
 
-			_lastChartRefreshAt: 0
+			_lastChartRefreshAt: 0,
+
+			/** Recorder-UniCore 测试控制器 */
+			recTest: null,
+
+			recorderReady: false,
+
+			scoreSymbol: 'm',
+			letterList: [],
+			scorePickerIndex: 0,
+			refPreview: null,
+			scoreSummary: null,
+			scoreLines: [],
+			scoreBusy: false,
+			lastDurationMs: 0
 
 		}
 
@@ -262,10 +319,22 @@ export default {
 
 	computed: {
 
+		scoringSupported() {
+			return isFollowReadScoringSupported()
+		},
+
 		canRecord() {
 
-			return isWxzRecordTestAvailable()
+			return isRecorderRecordTestAvailable() && this.recorderReady
 
+		},
+
+		canRescore() {
+			return (
+				this.scoringSupported &&
+				hasMfccFingerprint(this.scoreSymbol) &&
+				(!!this.lastPcmBuffer?.byteLength || !!this.lastFile)
+			)
 		},
 
 		audioSpecLabel() {
@@ -276,49 +345,66 @@ export default {
 
 		recordFormatLabel() {
 
-			if (isWxzRecordTestAvailable()) {
+			if (isRecorderRecordTestAvailable()) {
 
-				return `pcm（wxz-record · ${PINYIN_RECORD_PCM_SAMPLE_RATE / 1000}kHz 单声道）`
+				return `pcm（Recorder-UniCore · ${PINYIN_RECORD_PCM_SAMPLE_RATE / 1000}kHz 单声道）`
 
 			}
 
-			if (!isAppPlus()) return '仅 App 支持本页 wxz-record 测试'
+			if (!isAppPlus()) return '仅 App 支持本页 Recorder-UniCore 测试'
 
-			return '未集成 wxz-record（请安装插件并自定义基座）'
+			return '未集成 Recorder-UniCore（请 npm install recorder-core）'
 
 		},
 
 		footHint() {
 
-			if (!isWxzRecordTestAvailable()) {
+			if (!isRecorderRecordTestAvailable()) {
 
-				return '本页在 App 真机通过 wxz-record 采集 PCM；请安装 uni_modules/wxz-record 后重新打包自定义基座。'
+				return '本页在 App 真机通过 Recorder-UniCore 采集 PCM；需 npm install recorder-core 且页面含 renderjs 模块。'
 
 			}
 
-			return '若听不到回放：检查麦克风权限、系统静音、蓝牙耳机。评分可点「测试读取」验证内存 PCM 解码。'
+			if (!this.recorderReady) {
+
+				return '正在申请麦克风权限并连接 renderjs，请稍候…'
+
+			}
+
+			if (!this.scoringSupported) {
+				return 'PCM 来自 RecordApp onProcess；MFCC 评分仅 App 可用。'
+			}
+			return '松开后自动 MFCC 评分；控制台 [recorder-pcm]、[record-test.score]。'
 
 		},
 
 		statusText() {
 
-			if (!this.canRecord) {
+			if (!isRecorderRecordTestAvailable()) {
 
-				return '当前环境无法使用 wxz-record'
+				return '当前环境无法使用 Recorder-UniCore'
+
+			}
+
+			if (!this.recorderReady) {
+
+				return '录音初始化中…'
 
 			}
 
 			const map = {
 
-				idle: '按住下方按钮开始录音',
+				idle: `按住录音，将与「${this.scoreSymbol}」标准音比对`,
 
-				recording: '正在录音… 松开结束',
+				recording: '正在录音… 松开结束并评分',
 
 				stopping: '正在保存录音…',
 
+				comparing: `正在与「${this.scoreSymbol}」比对…`,
+
 				playing: '正在播放录音…',
 
-				done: '完成。可再次按住录音，或点「再次播放」',
+				done: '完成。可重录、重新评分或再次播放',
 
 				error: '录音失败，请重试'
 
@@ -437,6 +523,93 @@ export default {
 
 		},
 
+		initLetterPicker() {
+			this.letterList = listMfccLetterSymbols()
+			let idx = this.letterList.indexOf(this.scoreSymbol)
+			if (idx < 0 && this.letterList.length) {
+				this.scoreSymbol = this.letterList[0]
+				idx = 0
+			}
+			this.scorePickerIndex = idx >= 0 ? idx : 0
+			this.refreshRefPreview()
+		},
+
+		onScorePickerChange(e) {
+			const i = Number(e.detail?.value) || 0
+			this.scorePickerIndex = i
+			const s = this.letterList[i]
+			if (s) {
+				this.scoreSymbol = s
+				this.refreshRefPreview()
+				this.scoreSummary = null
+				this.scoreLines = []
+			}
+		},
+
+		refreshRefPreview() {
+			this.refPreview = getMfccFingerprintPreview(this.scoreSymbol)
+		},
+
+		async runLetterScoreCompare() {
+			if (!this.scoringSupported) {
+				this.scoreSummary = { pass: false, text: 'MFCC 评分仅支持 App 真机' }
+				return
+			}
+			if (!hasMfccFingerprint(this.scoreSymbol)) {
+				this.scoreSummary = { pass: false, text: `「${this.scoreSymbol}」无预提取指纹` }
+				return
+			}
+			if (!this.lastPcmBuffer?.byteLength && !this.lastFile) {
+				this.scoreSummary = { pass: false, text: '无录音数据，请先按住说话' }
+				return
+			}
+			this.scoreBusy = true
+			this.scoreSummary = null
+			this.scoreLines = []
+			const prevPhase = this.phase
+			if (prevPhase !== 'playing') this.phase = 'comparing'
+			try {
+				const res = await runMfccScoreDebugCompare(this.scoreSymbol, this.lastPcmBuffer, {
+					durationMs: this.lastDurationMs,
+					tempFilePath: this.lastFile,
+					recordFormat: this.lastFormat
+				})
+				this.scoreLines = res.lines || []
+				this.scoreSummary = {
+					pass: !!res.mainPass,
+					text: res.summaryText || ''
+				}
+				uni.showToast({
+					title: res.mainPass ? '读音接近' : '差异较大',
+					icon: res.mainPass ? 'success' : 'none',
+					duration: 2200
+				})
+				console.log('[record-test.score]', res)
+			} catch (e) {
+				const msg = e?.message || String(e)
+				this.scoreLines = [`错误：${msg}`]
+				this.scoreSummary = { pass: false, text: msg }
+				console.warn('[record-test.score]', e)
+			}
+			this.scoreBusy = false
+			if (this.phase === 'comparing') {
+				this.phase = prevPhase === 'playing' ? 'playing' : 'done'
+			}
+		},
+
+		async onRescore() {
+			if (!this.canRescore || this.scoreBusy) return
+			await this.runLetterScoreCompare()
+		},
+
+		onCopyScoreLines() {
+			if (!this.scoreLines.length) return
+			uni.setClipboardData({
+				data: this.scoreLines.join('\n'),
+				success: () => uni.showToast({ title: '已复制', icon: 'success' })
+			})
+		},
+
 		async loadDiagnostics() {
 
 			const perm = await probeMicPermission()
@@ -445,13 +618,19 @@ export default {
 
 			const scoring = getFollowReadScoringDiagnostics()
 
-			if (isWxzRecordTestAvailable()) {
+			if (isRecorderRecordTestAvailable()) {
 
-				this.diagLines.push('录音采集：wxz-record（本页直连插件）')
+				this.diagLines.push('录音采集：Recorder-UniCore + recorder-core（npm）')
+
+				this.diagLines.push(
+
+					`插件配置：${RECORD_PCM_CONFIG.sampleRate}Hz · mono · ${RECORD_PCM_CONFIG.bitsPerSample}bit · frameSize=${RECORD_PCM_CONFIG.frameSize}B`
+
+				)
 
 			} else if (isAppPlus()) {
 
-				this.diagLines.push('录音采集：wxz-record 未就绪')
+				this.diagLines.push('录音采集：Recorder-UniCore 不可用（检查 npm 与页面 renderjs）')
 
 			}
 
@@ -463,7 +642,7 @@ export default {
 
 			stopFollowReadDebugPlayback()
 
-			cancelWxzRecordTest()
+			this.recTest?.cancel()
 
 			this.phase = 'idle'
 
@@ -515,17 +694,27 @@ export default {
 
 			this.liveDecibelLabel = `实时音量：${formatDecibel(stats.currentDecibel)}（峰值 ${formatDecibel(stats.maxDecibel)}）`
 
-			this.liveFrameLabel = `帧 ${stats.frameCount} · ${stats.totalBytes} 字节 · 最近帧 ${stats.lastFrameSize} B`
+			let frameLine = `JS 帧 ${stats.frameCount} · ${stats.totalBytes} B · 最近 ${stats.lastFrameSize} B`
 
-			this.refreshPcmCharts(peekWxzRecordTestPcmBuffer())
+			const nd = stats.pluginDiagnostics
+
+			if (nd?.frameCount != null && nd.frameCount !== stats.frameCount) {
+
+				frameLine += ` · 原生回调 ${nd.frameCount}`
+
+			}
+
+			this.liveFrameLabel = frameLine
+
+			this.refreshPcmCharts(this.recTest?.peekPcmBuffer() || null)
 
 		},
 
 		async onHoldStart() {
 
-			if (!this.canRecord) {
+			if (!this.recTest || !this.canRecord) {
 
-				uni.showToast({ title: '请使用 App 并集成 wxz-record', icon: 'none' })
+				uni.showToast({ title: '请使用 App 并集成 Recorder-UniCore', icon: 'none' })
 
 				return
 
@@ -553,7 +742,7 @@ export default {
 
 			stopFollowReadDebugPlayback()
 
-			const res = await startWxzRecordTest((s) => this.onLiveStats(s))
+			const res = await this.recTest.startHold((s) => this.onLiveStats(s))
 
 			if (!res.ok) {
 
@@ -585,13 +774,39 @@ export default {
 
 			this.liveFrameLabel = ''
 
-			const stopRes = await stopWxzRecordTest()
+			const stopRes = await this.recTest.stopHold()
 
 			if (!stopRes.ok) {
 
 				this.phase = 'error'
 
-				uni.showToast({ title: stopRes.message || '录音失败', icon: 'none', duration: 2800 })
+				const diagMsg = stopRes.pluginDiagnostics?.message
+
+				uni.showToast({
+
+					title: diagMsg || stopRes.message || '录音失败',
+
+					icon: 'none',
+
+					duration: 3200
+
+				})
+
+				if (stopRes.frameCaptureBytes > 0 || stopRes.pluginDiagnostics) {
+
+					await this.refreshLastInfo({
+
+						...stopRes,
+
+						ok: false,
+
+						capture: 'Recorder-UniCore',
+
+						durationMs: stopRes.durationMs || 0
+
+					})
+
+				}
 
 				this.busy = false
 
@@ -606,6 +821,8 @@ export default {
 			this.lastPcmBuffer = stopRes.recordPcmBuffer || null
 
 			this.lastFrameBytes = Number(stopRes.frameCaptureBytes) || 0
+
+			this.lastDurationMs = Number(stopRes.durationMs) || 0
 
 			this.refreshPcmCharts(this.lastPcmBuffer, { force: true })
 
@@ -645,6 +862,8 @@ export default {
 
 			}
 
+			await this.runLetterScoreCompare()
+
 			this.busy = false
 
 		},
@@ -659,17 +878,35 @@ export default {
 
 			const lines = [
 
-				`采集：${stopRes.capture || 'wxz-record'}`,
+				`采集：${stopRes.capture || 'recorder-unicore'}（onProcess → JS 合并）`,
 
 				`时长：${Math.round(Number(stopRes.durationMs) || 0)} ms`,
 
-				`格式：${stopRes.recordFormat || 'pcm'}`,
+				`格式：${stopRes.recordFormat || 'pcm'} · ${stopRes.sampleRate || PINYIN_RECORD_PCM_SAMPLE_RATE}Hz`,
 
-				`PCM 缓存：${this.lastFrameBytes || 0} 字节 · ${stopRes.frameCount || 0} 帧`,
+				`PCM 缓存：${this.lastFrameBytes || 0} 字节 · JS 帧 ${stopRes.frameCount || 0}`,
 
 				`音量：当前 ${formatDecibel(stopRes.currentDecibel)} · 峰 ${formatDecibel(stopRes.maxDecibel)} · 谷 ${formatDecibel(stopRes.minDecibel)}`
 
 			]
+
+			const pluginLines = formatRecorderPluginDiagnosticLines(stopRes.pluginDiagnostics)
+
+			if (pluginLines.length) {
+
+				lines.push('—— 插件诊断 ——', ...pluginLines)
+
+			}
+
+			if (stopRes.startResult?.sampleRate) {
+
+				lines.push(
+
+					`startRecord 回报：${stopRes.startResult.sampleRate}Hz · ${stopRes.startResult.channels}ch · ${stopRes.startResult.bitsPerSample}bit`
+
+				)
+
+			}
 
 			if (path) {
 
@@ -799,18 +1036,31 @@ export default {
 
 	},
 
+	async mounted() {
+		this.recTest = createRecordTestController(this)
+		const warm = await this.recTest.warmUp()
+		this.recorderReady = !!warm.ok
+		if (!warm.ok) {
+			this.phase = 'error'
+			uni.showToast({ title: warm.message || '录音未就绪', icon: 'none', duration: 2800 })
+		}
+	},
+
+	onShow() {
+		notifyRecorderPageShow(this)
+		this.recTest?.warmUp().then((r) => {
+			this.recorderReady = !!r.ok
+		})
+	},
+
 	onLoad() {
-
 		this.loadDiagnostics()
-
+		this.initLetterPicker()
 	},
 
 	onReady() {
-
 		this.initChartLayout()
-
 		this.$nextTick(() => this.bumpChartLayout())
-
 	},
 
 	onHide() {
@@ -934,6 +1184,152 @@ export default {
 	border-color: #c45c5c;
 
 	background: #fff5f5;
+
+}
+
+.status--comparing {
+
+	border-color: #8b6fd4;
+
+	background: #f5f0ff;
+
+}
+
+.score-field {
+
+	margin-bottom: 20rpx;
+
+	padding: 18rpx 20rpx;
+
+	background: #fff;
+
+	border-radius: 14rpx;
+
+	border: 1rpx solid #e3d9c8;
+
+}
+
+.score-label {
+
+	font-size: 26rpx;
+
+	color: #8b4518;
+
+	display: block;
+
+	margin-bottom: 10rpx;
+
+}
+
+.score-picker {
+
+	display: flex;
+
+	align-items: center;
+
+	justify-content: space-between;
+
+	padding: 16rpx 20rpx;
+
+	background: #faf8f4;
+
+	border-radius: 12rpx;
+
+	border: 1rpx solid #e3d9c8;
+
+}
+
+.score-picker-main {
+
+	font-size: 40rpx;
+
+	font-weight: 700;
+
+	color: #2c2419;
+
+}
+
+.score-picker-hint {
+
+	font-size: 24rpx;
+
+	color: #8b4518;
+
+}
+
+.score-ref {
+
+	font-size: 24rpx;
+
+	color: #6b6560;
+
+	margin-top: 10rpx;
+
+	display: block;
+
+}
+
+.score-ref--warn {
+
+	color: #c45c5c;
+
+}
+
+.score-summary {
+
+	margin: 16rpx 0;
+
+	padding: 20rpx;
+
+	border-radius: 14rpx;
+
+	text-align: center;
+
+}
+
+.score-summary--ok {
+
+	background: #e8f5e9;
+
+	border: 1rpx solid #81c784;
+
+}
+
+.score-summary--fail {
+
+	background: #fff3e0;
+
+	border: 1rpx solid #ffb74d;
+
+}
+
+.score-summary-text {
+
+	font-size: 28rpx;
+
+	font-weight: 600;
+
+	color: #2c2419;
+
+}
+
+.info-card--score .info-card-head {
+
+	display: flex;
+
+	justify-content: space-between;
+
+	align-items: center;
+
+	margin-bottom: 8rpx;
+
+}
+
+.copy-link {
+
+	font-size: 24rpx;
+
+	color: #e87830;
 
 }
 
@@ -1188,4 +1584,19 @@ export default {
 }
 
 </style>
+
+<!-- #ifdef APP-PLUS -->
+<script module="recorderModule" lang="renderjs">
+import 'recorder-core'
+import RecordApp from 'recorder-core/src/app-support/app'
+import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
+import 'recorder-core/src/engine/pcm'
+
+export default {
+	mounted() {
+		RecordApp.UniRenderjsRegister(this)
+	}
+}
+</script>
+<!-- #endif -->
 

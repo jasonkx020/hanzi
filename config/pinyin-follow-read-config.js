@@ -27,7 +27,7 @@ export const PINYIN_FOLLOW_READ_FIXED_MS = 2000
 export const PINYIN_FOLLOW_READ_USE_FIXED_DURATION = false
 
 /**
- * App wxz-record：固定墙钟录音时长（含首尾静音，不按有效发声截断）
+ * App Recorder-UniCore：固定墙钟录音时长（含首尾静音，不按有效发声截断）
  * 与 TARGET_EFFECTIVE_MS 对齐，便于评分拿到连续 2s PCM。
  */
 export const PINYIN_FOLLOW_READ_WXZ_FIXED_WALL_MS = PINYIN_FOLLOW_READ_TARGET_EFFECTIVE_MS

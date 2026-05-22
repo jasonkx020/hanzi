@@ -136,6 +136,7 @@
 </template>
 
 <script>
+import { notifyRecorderPageShow } from '@/utils/recorder-pcm-client.js'
 import { COL_PROGRESS, TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
@@ -285,6 +286,9 @@ export default {
 			)
 		}
 	},
+	mounted() {
+		notifyRecorderPageShow(this)
+	},
 	onUnload() {
 		this.teardownFollowAll()
 	},
@@ -298,6 +302,7 @@ export default {
 		this._lessonLoadQuery(query)
 	},
 	async onShow() {
+		notifyRecorderPageShow(this)
 		this.refreshStatusBarPx()
 		await this.reloadLesson()
 		this.refreshProgress()
@@ -1485,3 +1490,18 @@ export default {
 	color: #e8e0d8;
 }
 </style>
+
+<!-- #ifdef APP-PLUS -->
+<script module="recorderModule" lang="renderjs">
+import 'recorder-core'
+import RecordApp from 'recorder-core/src/app-support/app'
+import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
+import 'recorder-core/src/engine/pcm'
+
+export default {
+	mounted() {
+		RecordApp.UniRenderjsRegister(this)
+	}
+}
+</script>
+<!-- #endif -->

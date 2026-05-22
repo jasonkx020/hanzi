@@ -718,7 +718,7 @@ export async function decodeUserRecordingForScore(filePath, format = 'pcm', opti
 		logFollowReadScore('score.decode.use_frames_only', {
 			frameSamples,
 			bytes: frameBuf?.byteLength || 0,
-			note: 'wxz-record 等无临时文件'
+			note: 'Recorder-UniCore PCM 流无临时文件'
 		})
 		return frameDecoded
 	}

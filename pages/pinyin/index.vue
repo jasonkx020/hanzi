@@ -351,6 +351,7 @@
 
 <script>
 import { getAudioNarrator } from '@/utils/audio-settings.js'
+import { notifyRecorderPageShow } from '@/utils/recorder-pcm-client.js'
 import {
 	getFollowReadState,
 	getFollowReadHistory,
@@ -700,6 +701,9 @@ export default {
 			return ''
 		}
 	},
+	mounted() {
+		notifyRecorderPageShow(this)
+	},
 	onReady() {
 		if (!this.isLetterPinyinTab) {
 			this.scheduleMeasureScrollHeight()
@@ -714,6 +718,7 @@ export default {
 		this.handlePinyinScrollMotion()
 	},
 	onShow() {
+		notifyRecorderPageShow(this)
 		this.setTabBarIndex(1)
 		playMengmengVoiceOnce(MENG_VOICE.PINYIN_FOLLOW_START, 'meng_voice_pinyin_tab').catch(() => {})
 		this.narrator = getAudioNarrator()
@@ -2297,3 +2302,18 @@ export default {
 }
 
 </style>
+
+<!-- #ifdef APP-PLUS -->
+<script module="recorderModule" lang="renderjs">
+import 'recorder-core'
+import RecordApp from 'recorder-core/src/app-support/app'
+import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
+import 'recorder-core/src/engine/pcm'
+
+export default {
+	mounted() {
+		RecordApp.UniRenderjsRegister(this)
+	}
+}
+</script>
+<!-- #endif -->

@@ -101,12 +101,11 @@ import {
 	runMfccScoreDebugCompare
 } from '@/utils/pinyin-mfcc-algorithm-test.js'
 import {
-	startWxzRecordTest,
-	stopWxzRecordTest,
-	cancelWxzRecordTest,
-	isWxzRecordTestAvailable,
-	formatDecibel
-} from '@/utils/wxz-record-test.js'
+	createRecordTestController,
+	isRecorderRecordTestAvailable,
+	formatDecibel,
+	notifyRecorderPageShow
+} from '@/utils/recorder-record-test.js'
 
 export default {
 	data() {
@@ -125,7 +124,9 @@ export default {
 			lastTempPath: '',
 			lastFormat: 'pcm',
 			summary: null,
-			resultLines: []
+			resultLines: [],
+			recTest: null,
+			recorderReady: false
 		}
 	},
 	computed: {
@@ -133,7 +134,7 @@ export default {
 			return formatPinyinAudioSpec()
 		},
 		canRecord() {
-			return isWxzRecordTestAvailable() && isFollowReadScoringSupported()
+			return isRecorderRecordTestAvailable() && this.recorderReady && isFollowReadScoringSupported()
 		},
 		filteredSymbols() {
 			const kw = String(this.filterKw || '').trim().toLowerCase()
@@ -145,7 +146,7 @@ export default {
 			return list.slice(0, 400)
 		},
 		statusText() {
-			if (!this.canRecord) return '请使用 App（wxz-record + 48k PCM）'
+			if (!this.canRecord) return '请使用 App（Recorder-UniCore + 48k PCM）'
 			const m = {
 				idle: `按住说话，比对「${this.symbol}」`,
 				recording: '录音中… 松开即比对',
@@ -164,6 +165,17 @@ export default {
 			return '与跟读 requestFollowReadScore 使用相同 decodeUserRecordingForScore + MFCC + DTW。'
 		}
 	},
+	async mounted() {
+		this.recTest = createRecordTestController(this)
+		const warm = await this.recTest.warmUp()
+		this.recorderReady = !!warm.ok
+	},
+	onShow() {
+		notifyRecorderPageShow(this)
+		this.recTest?.warmUp().then((r) => {
+			this.recorderReady = !!r.ok
+		})
+	},
 	onLoad() {
 		this.symbolList = listMfccFingerprintSymbols()
 		const i = this.symbolList.indexOf('m')
@@ -175,10 +187,10 @@ export default {
 		this.refreshRefPreview()
 	},
 	onHide() {
-		cancelWxzRecordTest()
+		this.recTest?.cancel()
 	},
 	onUnload() {
-		cancelWxzRecordTest()
+		this.recTest?.cancel()
 	},
 	methods: {
 		formatVoiced(v) {
@@ -223,7 +235,7 @@ export default {
 			this.liveDb = ''
 			this.summary = null
 			this.resultLines = []
-			const res = await startWxzRecordTest((st) => {
+			const res = await this.recTest.startHold((st) => {
 				this.liveDb = `音量 ${formatDecibel(st.currentDecibel)}`
 			})
 			if (!res.ok) {
@@ -235,7 +247,7 @@ export default {
 			if (this.phase !== 'recording') return
 			this.phase = 'stopping'
 			this.liveDb = ''
-			const stopRes = await stopWxzRecordTest()
+			const stopRes = await this.recTest.stopHold()
 			if (!stopRes.ok) {
 				this.phase = 'error'
 				uni.showToast({ title: stopRes.message || '录音失败', icon: 'none' })
@@ -504,3 +516,18 @@ export default {
 	font-size: 22rpx;
 }
 </style>
+
+<!-- #ifdef APP-PLUS -->
+<script module="recorderModule" lang="renderjs">
+import 'recorder-core'
+import RecordApp from 'recorder-core/src/app-support/app'
+import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
+import 'recorder-core/src/engine/pcm'
+
+export default {
+	mounted() {
+		RecordApp.UniRenderjsRegister(this)
+	}
+}
+</script>
+<!-- #endif -->

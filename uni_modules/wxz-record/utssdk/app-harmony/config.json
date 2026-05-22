@@ -1,7 +1,0 @@
-{  
-   "dependencies": {  
-   },
-   "permissions": [
-     "ohos.permission.MICROPHONE"
-   ]
-}

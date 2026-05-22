@@ -16,7 +16,7 @@ const DEFAULTS = {
 	maxWallMs: PINYIN_FOLLOW_READ_MAX_WALL_MS,
 	/** Int16 PCM RMS 阈值（约 0.012，儿童轻声） */
 	speechEnergy: 0.012,
-	/** wxz-record 分贝高于此视为有效发声（见插件 readme） */
+	/** RecordApp onProcess powerLevel 高于此视为有效发声 */
 	speechDecibel: -42,
 	sampleRate: PINYIN_RECORD_PCM_SAMPLE_RATE,
 	/** frameSize 单位 KB；wxz 约 12KB≈128ms@48k，RecorderManager 仍用 4KB */

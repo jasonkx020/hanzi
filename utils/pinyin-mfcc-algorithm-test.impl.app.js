@@ -2,6 +2,7 @@
  * MFCC 算法自检：示范 opus → PCM → MFCC，与预提取指纹 DTW 比对（与跟读评分同链路）
  */
 import prebuiltMfccFingerprints from '@/data/pinyin-mfcc-fingerprints.json'
+import { PINYIN_LETTER_SYMBOLS } from '@/data/pinyin-letter-symbols.js'
 import { PINYIN_MFCC_PASS_SCORE } from '@/constants/pinyin-mfcc-config.js'
 import { deserializeMfccEntry } from '@/utils/pinyin-mfcc-serialize.js'
 import { extractMfccFromFloat32, extractMfccFromInt16 } from '@/utils/pinyin-mfcc-extract.js'
@@ -263,6 +264,12 @@ function fmtRatio(v) {
 	const n = Number(v)
 	if (!Number.isFinite(n)) return '—'
 	return `${Math.round(n * 1000) / 10}%`
+}
+
+/** 声母 + 韵母字母，且已有预提取 MFCC（用于录音测试下拉） */
+export function listMfccLetterSymbols() {
+	const have = new Set(listMfccFingerprintSymbols())
+	return PINYIN_LETTER_SYMBOLS.filter((s) => have.has(s))
 }
 
 /** 已有预提取 MFCC 的音节名（与 static/pinyin/*.opus stem 一致） */

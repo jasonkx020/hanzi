@@ -1,9 +1,0 @@
-{
-  "deploymentTarget": "12",
-  "frameworks": [
-    "AVFoundation.framework"
-  ],
-  "privacyDescription": {
-    "NSMicrophoneUsageDescription": "需要访问麦克风以进行录音"
-  }
-}

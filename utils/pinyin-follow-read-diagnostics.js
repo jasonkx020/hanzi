@@ -1,5 +1,5 @@
 /**
- * 跟读录音 / 评分环境诊断（权限、Meyda、wxz-record）
+ * 跟读录音 / 评分环境诊断（权限、Meyda、Recorder-UniCore）
  */
 import { isAppPlus, getUniFileSystemManager, isFollowReadScoringSupported } from '@/utils/pinyin-follow-read-platform.js'
 import { formatPinyinAudioSpec } from '@/constants/pinyin-audio-sample-rate.js'
@@ -25,7 +25,7 @@ export async function probeMicPermission() {
 		micAuthorize: getMicAuthorizeState(),
 		hasRecorderManager: typeof uni?.getRecorderManager === 'function',
 		hasFileSystemManager: !!getUniFileSystemManager(),
-		wxzRecord: isPcmRealtimeAvailable()
+		recorderPcm: isPcmRealtimeAvailable()
 	}
 	return out
 }
@@ -35,7 +35,7 @@ export function getFollowReadScoringDiagnostics() {
 	return {
 		isAppPlus: isAppPlus(),
 		scoringSupported: isFollowReadScoringSupported(),
-		wxzRecord: isPcmRealtimeAvailable(),
+		recorderPcm: isPcmRealtimeAvailable(),
 		// #ifdef APP-PLUS
 		mfccRuntimeAvailable: isMfccRuntimeAvailable(),
 		// #endif
@@ -45,7 +45,7 @@ export function getFollowReadScoringDiagnostics() {
 		micAuthorize: getMicAuthorizeState(),
 		audioSpec: formatPinyinAudioSpec(),
 		featureExtractionNote: isFollowReadScoringSupported()
-			? 'App：wxz-record 48k PCM → Meyda MFCC → DTW'
+			? 'App：Recorder-UniCore 48k PCM → Meyda MFCC → DTW'
 			: '小程序/H5 暂不支持跟读评分'
 	}
 }
@@ -55,7 +55,7 @@ export function formatDiagnosticsLines(diag) {
 	const lines = [
 		`平台：${diag.platform || '—'}`,
 		`麦克风授权：${diag.micAuthorize || '—'}`,
-		`wxz-record：${diag.wxzRecord ? '已集成' : '未集成'}`,
+		`Recorder-UniCore：${(diag.recorderPcm ?? diag.wxzRecord) ? '已集成' : '未集成'}`,
 		`RecorderManager：${diag.hasRecorderManager ? '有（小程序）' : '无'}`
 	]
 	const s = getFollowReadScoringDiagnostics()

@@ -2,6 +2,10 @@ export function listMfccFingerprintSymbols() {
 	return []
 }
 
+export function listMfccLetterSymbols() {
+	return []
+}
+
 export function hasMfccFingerprint() {
 	return false
 }

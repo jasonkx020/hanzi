@@ -252,7 +252,7 @@ function attachPcmBufferToStopPayload(payload) {
 		pcmDurationSec: Number((pcmDurationMs / 1000).toFixed(3)),
 		sampleRate,
 		recorderDurationMs,
-		source: useAppPcmRealtime() ? 'wxz-record' : 'recorder',
+		source: useAppPcmRealtime() ? 'recorder-unicore' : 'recorder',
 		wxzFrameBytes: useAppPcmRealtime() ? PINYIN_RECORD_WXZ_FRAME_BYTES : null,
 		targetPcmBytes: PINYIN_RECORD_TARGET_PCM_BYTES
 	})
@@ -853,7 +853,7 @@ export async function startFollowReadRecord(options = {}) {
 	if (isAppPlus() && !isPcmRealtimeAvailable()) {
 		return {
 			ok: false,
-			message: '请安装 uni_modules/wxz-record 插件后使用跟读录音'
+			message: '请安装 recorder-core 与 Recorder-UniCore 后使用跟读录音'
 		}
 	}
 
@@ -909,7 +909,7 @@ export async function startFollowReadRecord(options = {}) {
 			: recordCapturePlan?.maxWallMs || fixedMs || 0,
 		targetPcmBytes: recordCapturePlan?.targetPcmBytes || PINYIN_RECORD_TARGET_PCM_BYTES,
 		format: lastRecordFormat,
-		capture: useAppPcmRealtime() ? 'wxz-record' : 'recorder_manager'
+		capture: useAppPcmRealtime() ? 'recorder-unicore' : 'recorder_manager'
 	})
 
 	if (useAppPcmRealtime()) {
@@ -1357,7 +1357,7 @@ export async function startHoldRecordTest() {
 	const perm = await requestMicPermission()
 	if (!perm.ok) return perm
 	if (isAppPlus() && !isPcmRealtimeAvailable()) {
-		return { ok: false, message: '请安装 uni_modules/wxz-record 插件' }
+		return { ok: false, message: '请安装 recorder-core 与 Recorder-UniCore' }
 	}
 
 	recordTestFormat = resolveFollowReadRecordFormat()
@@ -1367,7 +1367,7 @@ export async function startHoldRecordTest() {
 
 	logFollowReadScore('record_test.start', {
 		format: recordTestFormat,
-		capture: useAppPcmRealtime() ? 'wxz-record' : 'recorder_manager'
+		capture: useAppPcmRealtime() ? 'recorder-unicore' : 'recorder_manager'
 	})
 
 	try {

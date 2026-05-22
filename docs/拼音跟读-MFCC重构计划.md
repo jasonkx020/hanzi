@@ -12,7 +12,7 @@
 
 | 环节 | 实现 |
 |------|------|
-| 录音 | App：`wxz-record` 实时 PCM；小程序：`RecorderManager` |
+| 录音 | App：`Recorder-UniCore` 实时 PCM；小程序：`RecorderManager` |
 | 参考特征 | `data/pinyin-audio-fingerprints.json`（`e` 包络 32 点 + `b` 8 频带） |
 | 用户特征 | `extractPcmFingerprint`（与构建脚本同逻辑） |
 | 比对 | 包络 DTW + 频带余弦（`pinyin-follow-read-audio-compare.js`） |
