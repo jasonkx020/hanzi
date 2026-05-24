@@ -1,0 +1,276 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 6,
+    "semester": "下",
+    "catalog_note": "统编人教版六年级下册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "北京的春节",
+                    "page": 2
+                },
+                {
+                    "sort": 2,
+                    "title": "腊八粥",
+                    "page": 8
+                },
+                {
+                    "sort": 3,
+                    "title": "古诗三首",
+                    "page": 11,
+                    "sub_title": ["寒食", "迢迢牵牛星", "十五夜望月"]
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "藏戏",
+                    "page": 13
+                },
+                {
+                    "type": "口语交际",
+                    "title": "即兴发言",
+                    "page": 15
+                },
+                {
+                    "type": "习作",
+                    "title": "家乡的风俗",
+                    "page": 16
+                },
+                {
+                    "type": "语文园地",
+                    "page": 17
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 19,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "鲁滨逊漂流记（节选）",
+                    "page": 20
+                },
+                {
+                    "sort": 6,
+                    "mark": "*略读",
+                    "title": "骑鹅旅行记（节选）",
+                    "page": 27
+                },
+                {
+                    "sort": 7,
+                    "mark": "*略读",
+                    "title": "汤姆·索亚历险记（节选）",
+                    "page": 33
+                },
+                {
+                    "type": "口语交际",
+                    "title": "同读一本书",
+                    "page": 37
+                },
+                {
+                    "type": "习作",
+                    "title": "写作品梗概",
+                    "page": 38
+                },
+                {
+                    "type": "语文园地",
+                    "page": 39
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "漫步世界名著花园",
+                    "page": 41
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 43,
+            "article_list": [
+                {
+                    "sort": 8,
+                    "title": "匆匆",
+                    "page": 44
+                },
+                {
+                    "sort": 9,
+                    "title": "那个星期天",
+                    "page": 46
+                },
+                {
+                    "type": "习作例文",
+                    "sub_title": ["别了，语文课", "阳光的两种用法"],
+                    "page": 51
+                },
+                {
+                    "type": "习作",
+                    "title": "让真情自然流露",
+                    "page": 56
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 57,
+            "article_list": [
+                {
+                    "sort": 10,
+                    "title": "古诗三首",
+                    "page": 58,
+                    "sub_title": ["马诗", "石灰吟", "竹石"]
+                },
+                {
+                    "sort": 11,
+                    "title": "十六年前的回忆",
+                    "page": 60
+                },
+                {
+                    "sort": 12,
+                    "title": "为人民服务",
+                    "page": 64
+                },
+                {
+                    "sort": 13,
+                    "mark": "*略读",
+                    "title": "董存瑞舍身炸暗堡",
+                    "page": 66
+                },
+                {
+                    "type": "综合性学习",
+                    "title": "奋斗的历程",
+                    "page": 68
+                },
+                {
+                    "type": "语文园地",
+                    "page": 77
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 79,
+            "article_list": [
+                {
+                    "sort": 14,
+                    "title": "文言文二则",
+                    "page": 80,
+                    "sub_title": ["学弈", "两小儿辩日"]
+                },
+                {
+                    "sort": 15,
+                    "title": "真理诞生于一百个问号之后",
+                    "page": 82
+                },
+                {
+                    "sort": 16,
+                    "title": "表里的生物",
+                    "page": 87
+                },
+                {
+                    "sort": 17,
+                    "mark": "*略读",
+                    "title": "他们那时候多有趣啊",
+                    "page": 90
+                },
+                {
+                    "type": "口语交际",
+                    "title": "辩论",
+                    "page": 93
+                },
+                {
+                    "type": "习作",
+                    "title": "插上科学的翅膀飞",
+                    "page": 94
+                },
+                {
+                    "type": "语文园地",
+                    "page": 95
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 97,
+            "article_list": [
+                {
+                    "type": "综合性学习",
+                    "title": "难忘小学生活",
+                    "page": 98,
+                    "sub_sections": [
+                        {
+                            "title": "回忆往事",
+                            "page": 98
+                        },
+                        {
+                            "title": "依依惜别",
+                            "page": 105
+                        }
+                    ]
+                }
+            ]
+        },
+        "古诗词诵读": {
+            "start_page": 111,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "采薇（节选）",
+                    "page": 111
+                },
+                {
+                    "sort": 2,
+                    "title": "送元二使安西",
+                    "page": 112
+                },
+                {
+                    "sort": 3,
+                    "title": "春夜喜雨",
+                    "page": 113
+                },
+                {
+                    "sort": 4,
+                    "title": "早春呈水部张十八员外",
+                    "page": 114
+                },
+                {
+                    "sort": 5,
+                    "title": "江上渔者",
+                    "page": 115
+                },
+                {
+                    "sort": 6,
+                    "title": "泊船瓜洲",
+                    "page": 116
+                },
+                {
+                    "sort": 7,
+                    "title": "游园不值",
+                    "page": 117
+                },
+                {
+                    "sort": 8,
+                    "title": "卜算子·送鲍浩然之浙东",
+                    "page": 118
+                },
+                {
+                    "sort": 9,
+                    "title": "浣溪沙",
+                    "page": 119
+                },
+                {
+                    "sort": 10,
+                    "title": "清平乐",
+                    "page": 120
+                }
+            ]
+        },
+        "附录": {
+            "写字表": {
+                "page": 121
+            },
+            "词语表": {
+                "page": 122
+            }
+        },
+        "note": "标*的是略读课文"
+    }
+}

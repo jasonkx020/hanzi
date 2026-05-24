@@ -3,12 +3,14 @@
  */
 import { chunkHomeworkSymbols } from '@/utils/pinyin-homework-chunk.js'
 import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
+import { buildPinyinReadingDisplay } from '@/utils/pinyin-reading-split.js'
 
-/** 拼音页四线格：尽量铺满屏宽，不补空格子占位 */
+/** 拼音页四线格：尽量铺满屏宽，不补空格子占位；每音节左右各约 1 字宽（见 index 页 .pflr-glyphs-row padding） */
 const PINYIN_HOMEWORK_CHUNK_OPTS = {
 	maxPerRow: 4,
 	maxUnitsPerRow: 14,
-	padToMaxPerRow: false
+	padToMaxPerRow: false,
+	sidePadUnits: 2
 }
 
 function sheetForChunk(chunk, categoryTab) {
@@ -54,12 +56,38 @@ export function buildHomeworkDrillRows(symbols) {
 	const kind = 'drill'
 	const si = 0
 	const categoryTab = '拼读练习'
-	/** 拼读练习：每行仅 1 个拼音，不补空格子 */
-	const chunks = chunkHomeworkSymbols(symbols, { maxPerRow: 1, padToMaxPerRow: false, maxUnitsPerRow: 14 })
-	return chunks.map((chunk, ri) => {
-		const sheet = sheetForChunk(chunk, categoryTab)
+	const list = Array.isArray(symbols) ? symbols : []
+	return list.map((sym, ri) => {
+		const raw = sym != null ? String(sym).trim() : ''
+		if (!raw) {
+			return {
+				chunk: ['—'],
+				drillDisplayLine: '—',
+				drillSegments: [],
+				drillWhole: '',
+				drillLookup: [],
+				ri,
+				si,
+				kind,
+				sheetBg: '',
+				sheetBd: '',
+				scrollPadId: `pyar-pad-${kind}-${si}-${ri}`,
+				scrollId: `pyar-${kind}-${si}-${ri}`
+			}
+		}
+		const display = buildPinyinReadingDisplay(raw)
+		const line = display.displayLine || display.whole || raw
+		const sheet = sheetForChunk([raw], categoryTab)
 		return {
-			chunk,
+			chunk: [line],
+			drillDisplayLine: line,
+			drillSegments: display.segments || [],
+			drillWhole: display.whole || raw,
+			drillLookup:
+				display.lookupSequence.length > 0
+					? display.lookupSequence
+					: [display.whole || raw],
+			drillBlendType: display.blendType,
 			ri,
 			si,
 			kind,
@@ -106,19 +134,24 @@ export function autoReadSlotsFromSectionViews(sectionViews) {
 export function autoReadSlotsFromDrillRows(drillRows) {
 	const slots = []
 	;(drillRows || []).forEach((row) => {
-		;(row.chunk || []).forEach((sym, ci) => {
+		const lookup = row.drillLookup || row.chunk || []
+		lookup.forEach((sym, ci) => {
 			if (!sym) return
+			const isLast = ci === lookup.length - 1 && lookup.length > 1
 			slots.push({
 				kind: 'drill',
 				symbol: sym,
 				asNeutral: false,
+				/** part=只播该段；whole=连读最后一步只播整音节 */
+				drillPlay: isLast ? 'whole' : 'part',
 				slotKey: `drill|0|${row.ri}|${ci}`,
 				scrollId: row.scrollId,
 				scrollPadId: row.scrollPadId,
 				sectionTitle: '拼读练习',
 				si: 0,
 				ri: row.ri,
-				ci
+				ci,
+				drillWhole: row.drillWhole || sym
 			})
 		})
 	})

@@ -1,4 +1,4 @@
-/** switchTab 进入查字页时携带的待查汉字（Tab 路由不支持 query） */
+/** navigateTo 进入查字页时携带的待查汉字（用 storage 传参） */
 const STORAGE_KEY = 'meng_dict_pending_hanzi'
 
 /**
@@ -14,7 +14,7 @@ export function openDictionaryTab(hanzi) {
 			uni.removeStorageSync(STORAGE_KEY)
 		}
 	} catch (_) {}
-	uni.switchTab({ url: '/pages/dictionary/index' })
+	uni.navigateTo({ url: '/pages/dictionary/index' })
 }
 
 /**

@@ -29,6 +29,34 @@
         "modules" : {},
         /* 应用发布信息 */
         "distribute" : {
+            "splashscreen" : {
+                "androidStyle" : "default",
+                "android" : {
+                    "hdpi" : "static/splash/android/hdpi.png",
+                    "xhdpi" : "static/splash/android/xhdpi.png",
+                    "xxhdpi" : "static/splash/android/xxhdpi.png"
+                },
+                "androidNavigationBarColor" : "#F6F3EC",
+                "iosStyle" : "storyboard",
+                "ios" : {
+                    "storyboard" : "static/splash/ios/CustomStoryboard.zip"
+                }
+            },
+            "icons" : {
+                "android" : {
+                    "hdpi" : "static/mengmeng/app-icon.png",
+                    "xhdpi" : "static/mengmeng/app-icon.png",
+                    "xxhdpi" : "static/mengmeng/app-icon.png",
+                    "xxxhdpi" : "static/mengmeng/app-icon.png"
+                },
+                "ios" : {
+                    "appstore" : "static/mengmeng/app-icon.png",
+                    "iphone" : {
+                        "app@2x" : "static/mengmeng/app-icon.png",
+                        "app@3x" : "static/mengmeng/app-icon.png"
+                    }
+                }
+            },
             /* android打包配置 */
             "android" : {
                 "minSdkVersion" : 21,
@@ -56,7 +84,7 @@
             "ios" : {
                 "dSYMs" : false,
                 "privacyDescription" : {
-                    "NSMicrophoneUsageDescription" : "用于拼音跟读练习，录制你的读音并给出鼓励反馈"
+                    "NSMicrophoneUsageDescription" : "用于听写等需要麦克风的功能"
                 }
             },
             "sdkConfigs" : {}

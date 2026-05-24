@@ -1,0 +1,304 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 4,
+    "semester": "上",
+    "catalog_note": "统编人教版四年级上册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "观潮",
+                    "page": 2
+                },
+                {
+                    "sort": 2,
+                    "title": "走月亮",
+                    "page": 5
+                },
+                {
+                    "sort": 3,
+                    "mark": "*略读",
+                    "title": "现代诗二首",
+                    "page": 8,
+                    "sub_title": ["秋晚的江上", "花牛歌"]
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "繁星",
+                    "page": 10
+                },
+                {
+                    "type": "口语交际",
+                    "title": "我们与环境",
+                    "page": 11
+                },
+                {
+                    "type": "习作",
+                    "title": "推荐一个好地方",
+                    "page": 12
+                },
+                {
+                    "type": "语文园地",
+                    "page": 13
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 15,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "一个豆荚里的五粒豆",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "夜间飞行的秘密",
+                    "page": 21
+                },
+                {
+                    "sort": 7,
+                    "title": "呼风唤雨的世纪",
+                    "page": 25
+                },
+                {
+                    "sort": 8,
+                    "mark": "*略读",
+                    "title": "蝴蝶的家",
+                    "page": 28
+                },
+                {
+                    "type": "习作",
+                    "title": "我的家人",
+                    "page": 30
+                },
+                {
+                    "type": "语文园地",
+                    "page": 31
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 33,
+            "article_list": [
+                {
+                    "sort": 9,
+                    "title": "古诗三首",
+                    "page": 34,
+                    "sub_title": ["暮江吟", "题西林壁", "雪梅"]
+                },
+                {
+                    "sort": 10,
+                    "title": "爬山虎的脚",
+                    "page": 36
+                },
+                {
+                    "sort": 11,
+                    "title": "蟋蟀的住宅",
+                    "page": 39
+                },
+                {
+                    "type": "口语交际",
+                    "title": "爱护眼睛，保护视力",
+                    "page": 43
+                },
+                {
+                    "type": "习作",
+                    "title": "写观察日记",
+                    "page": 44
+                },
+                {
+                    "type": "语文园地",
+                    "page": 45
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 47,
+            "article_list": [
+                {
+                    "sort": 12,
+                    "title": "盘古开天地",
+                    "page": 48
+                },
+                {
+                    "sort": 13,
+                    "title": "精卫填海",
+                    "page": 50
+                },
+                {
+                    "sort": 14,
+                    "title": "普罗米修斯",
+                    "page": 51
+                },
+                {
+                    "sort": 15,
+                    "mark": "*略读",
+                    "title": "女娲补天",
+                    "page": 54
+                },
+                {
+                    "type": "习作",
+                    "title": "我和____过一天",
+                    "page": 56
+                },
+                {
+                    "type": "语文园地",
+                    "page": 57
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "很久很久以前",
+                    "page": 59
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 61,
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "麻雀",
+                    "page": 62
+                },
+                {
+                    "sort": 17,
+                    "title": "爬天都峰",
+                    "page": 65
+                },
+                {
+                    "type": "习作例文",
+                    "sub_title": ["我家的杏熟了", "小木船"],
+                    "page": 68
+                },
+                {
+                    "type": "习作",
+                    "title": "生活万花筒",
+                    "page": 72
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 73,
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "牛和鹅",
+                    "page": 74
+                },
+                {
+                    "sort": 19,
+                    "title": "一只窝囊的大老虎",
+                    "page": 79
+                },
+                {
+                    "sort": 20,
+                    "title": "陀螺",
+                    "page": 84
+                },
+                {
+                    "type": "口语交际",
+                    "title": "安慰",
+                    "page": 89
+                },
+                {
+                    "type": "习作",
+                    "title": "记一次游戏",
+                    "page": 90
+                },
+                {
+                    "type": "语文园地",
+                    "page": 91
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 93,
+            "article_list": [
+                {
+                    "sort": 21,
+                    "title": "古诗三首",
+                    "page": 94,
+                    "sub_title": ["出塞", "凉州词", "夏日绝句"]
+                },
+                {
+                    "sort": 22,
+                    "title": "为中华之崛起而读书",
+                    "page": 96
+                },
+                {
+                    "sort": 23,
+                    "mark": "*略读",
+                    "title": "梅兰芳蓄须",
+                    "page": 99
+                },
+                {
+                    "sort": 24,
+                    "mark": "*略读",
+                    "title": "延安，我把你追寻",
+                    "page": 104
+                },
+                {
+                    "type": "习作",
+                    "title": "写信",
+                    "page": 106
+                },
+                {
+                    "type": "语文园地",
+                    "page": 107
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 109,
+            "article_list": [
+                {
+                    "sort": 25,
+                    "title": "王戎不取道旁李",
+                    "page": 110
+                },
+                {
+                    "sort": 26,
+                    "title": "西门豹治邺",
+                    "page": 111
+                },
+                {
+                    "sort": 27,
+                    "mark": "*略读",
+                    "title": "故事二则",
+                    "page": 115,
+                    "sub_title": ["扁鹊治病", "纪昌学射"]
+                },
+                {
+                    "type": "口语交际",
+                    "title": "讲历史人物故事",
+                    "page": 118
+                },
+                {
+                    "type": "习作",
+                    "title": "我的心儿怦怦跳",
+                    "page": 119
+                },
+                {
+                    "type": "语文园地",
+                    "page": 120
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 123
+            },
+            "写字表": {
+                "page": 126
+            },
+            "词语表": {
+                "page": 128
+            }
+        },
+        "note": "标*的是略读课文"
+    }
+}

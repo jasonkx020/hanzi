@@ -63,7 +63,6 @@
 			<text v-if="saved" class="ok-tip">已保存，首页与课本同步将按此设置加载字表</text>
 
 			<button class="debug-btn" type="default" @click="goDebugConsole">调试：查看 JS 日志</button>
-			<button class="debug-btn debug-btn--second" type="default" @click="goRecordTest">调试：麦克风录音测试</button>
 		</view>
 	</meng-sub-page>
 </template>
@@ -225,9 +224,6 @@ export default {
 		},
 		goDebugConsole() {
 			uni.navigateTo({ url: '/pages/debug/console' })
-		},
-		goRecordTest() {
-			uni.navigateTo({ url: '/pages/debug/record-test' })
 		}
 	}
 }

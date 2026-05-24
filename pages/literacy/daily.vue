@@ -263,6 +263,7 @@ import WritePracticePanel from '@/pages/literacy/write-practice.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { buildDailyReviewPinyinChoices } from '@/utils/daily-pinyin-quiz.js'
 import MengAvatar from '@/components/meng-avatar.vue'
+import { reLaunchHome } from '@/utils/root-nav.js'
 import {
 	MENG_VOICE,
 	getMengmengVoiceCopy,
@@ -535,7 +536,7 @@ export default {
 			if (ok) await this.reload()
 		},
 		goBackHome() {
-			uni.switchTab({ url: '/pages/home/home' })
+			reLaunchHome()
 		},
 		async reload() {
 			if (!isVipActive()) {
@@ -739,10 +740,12 @@ export default {
 		},
 		async onTapPlayPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
+			if (this.strokeAnimating) stopStrokeOrderAudio()
 			await this.replayPinyinWithVoice()
 		},
 		async speakCurrentPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
+			if (this.strokeAnimating) stopStrokeOrderAudio()
 			this.dictPinyinPlaying = true
 			try {
 				await speakDictionaryEntryPinyin({

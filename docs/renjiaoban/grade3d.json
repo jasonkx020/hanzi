@@ -1,0 +1,309 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 3,
+    "semester": "下",
+    "catalog_note": "统编人教版三年级下册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "古诗三首",
+                    "page": 2,
+                    "sub_title": ["绝句", "惠崇春江晚景", "三衢道中"]
+                },
+                {
+                    "sort": 2,
+                    "title": "燕子",
+                    "page": 4
+                },
+                {
+                    "sort": 3,
+                    "title": "荷花",
+                    "page": 6
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "昆虫备忘录",
+                    "page": 8
+                },
+                {
+                    "type": "口语交际",
+                    "title": "春游去哪里",
+                    "page": 11
+                },
+                {
+                    "type": "习作",
+                    "title": "我的植物朋友",
+                    "page": 12
+                },
+                {
+                    "type": "语文园地",
+                    "page": 13
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 15,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "守株待兔",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "会摇尾巴的狼",
+                    "page": 18
+                },
+                {
+                    "sort": 7,
+                    "title": "鹿角和鹿腿",
+                    "page": 21
+                },
+                {
+                    "sort": 8,
+                    "mark": "*略读",
+                    "title": "池子与河流",
+                    "page": 23
+                },
+                {
+                    "type": "口语交际",
+                    "title": "劝告",
+                    "page": 27
+                },
+                {
+                    "type": "习作",
+                    "title": "看图画，写一写",
+                    "page": 28
+                },
+                {
+                    "type": "语文园地",
+                    "page": 29
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "小故事大道理",
+                    "page": 31
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 33,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 9,
+                    "title": "海底世界",
+                    "page": 34
+                },
+                {
+                    "sort": 10,
+                    "title": "石蜂",
+                    "page": 36
+                },
+                {
+                    "sort": 11,
+                    "mark": "*略读",
+                    "title": "小虾",
+                    "page": 38
+                },
+                {
+                    "type": "习作",
+                    "title": "我做了一项小实验",
+                    "page": 40
+                },
+                {
+                    "type": "语文园地",
+                    "page": 41
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 43,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 12,
+                    "title": "古诗三首",
+                    "page": 44,
+                    "sub_title": ["元日", "清明", "九月九日忆山东兄弟"]
+                },
+                {
+                    "sort": 13,
+                    "title": "纸的发明",
+                    "page": 47
+                },
+                {
+                    "sort": 14,
+                    "title": "赵州桥",
+                    "page": 50
+                },
+                {
+                    "sort": 15,
+                    "mark": "*略读",
+                    "title": "一幅名扬中外的画",
+                    "page": 52
+                },
+                {
+                    "type": "专题学习活动",
+                    "title": "中华传统节日",
+                    "page": 54
+                },
+                {
+                    "type": "语文园地",
+                    "page": 55
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 57,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "胡萝卜先生的长胡子",
+                    "page": 58
+                },
+                {
+                    "sort": 17,
+                    "title": "我变成了一棵树",
+                    "page": 61
+                },
+                {
+                    "type": "习作",
+                    "title": "奇妙的想象",
+                    "page": 65
+                },
+                {
+                    "type": "例文",
+                    "sub_title": ["一支铅笔的梦想", "尾巴它有一只猫"],
+                    "page": 66
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 69,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "童年的水墨画",
+                    "page": 70
+                },
+                {
+                    "sort": 19,
+                    "title": "肥皂泡",
+                    "page": 72
+                },
+                {
+                    "sort": 20,
+                    "title": "灰雀",
+                    "page": 75
+                },
+                {
+                    "sort": 21,
+                    "mark": "*略读",
+                    "title": "我不能失信",
+                    "page": 77
+                },
+                {
+                    "type": "口语交际",
+                    "title": "应该怎样安排座位",
+                    "page": 79
+                },
+                {
+                    "type": "习作",
+                    "title": "身边那些有特点的人",
+                    "page": 80
+                },
+                {
+                    "type": "语文园地",
+                    "page": 81
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 83,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 22,
+                    "title": "火烧云",
+                    "page": 84
+                },
+                {
+                    "sort": 23,
+                    "title": "暴风雨来临之前",
+                    "page": 87
+                },
+                {
+                    "sort": 24,
+                    "title": "我们奇妙的世界",
+                    "page": 89
+                },
+                {
+                    "type": "习作",
+                    "title": "国宝大熊猫",
+                    "page": 92
+                },
+                {
+                    "type": "语文园地",
+                    "page": 93
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 95,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 25,
+                    "title": "慢性子裁缝和急性子顾客",
+                    "page": 96
+                },
+                {
+                    "sort": 26,
+                    "title": "漏",
+                    "page": 100
+                },
+                {
+                    "sort": 27,
+                    "mark": "*略读",
+                    "title": "枣核",
+                    "page": 104
+                },
+                {
+                    "type": "口语交际",
+                    "title": "趣味故事会",
+                    "page": 107
+                },
+                {
+                    "type": "习作",
+                    "title": "这样想象真有趣",
+                    "page": 108
+                },
+                {
+                    "type": "语文园地",
+                    "page": 109
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 111
+            },
+            "写字表": {
+                "page": 114
+            },
+            "词语表": {
+                "page": 116
+            }
+        },
+        "note": "标*的是略读课文。第五单元是习作单元。"
+    }
+}

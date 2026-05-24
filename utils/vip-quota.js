@@ -6,7 +6,6 @@
 export const QUOTA_KEYS = {
 	DICT_LOOKUP: 'dict_lookup',
 	WRITE_CHARS: 'write_chars',
-	PINYIN_FOLLOW: 'pinyin_follow',
 	DRILL_SHUFFLE: 'drill_shuffle',
 	DAILY_SESSION: 'daily_session',
 	GAME_SESSION: 'game_session',

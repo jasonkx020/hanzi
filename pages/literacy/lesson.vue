@@ -25,37 +25,7 @@
 		</view>
 
 		<view class="lesson-sheet">
-		<view v-if="followPhase === 'active'" class="follow-reading-bar">
-			<image class="follow-reading-bar-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
-			<view class="follow-reading-bar-main">
-				<view class="follow-reading-bar-text">
-					<text class="follow-reading-label">跟读 · 第 {{ followIdx + 1 }}/{{ lessonChars.length }} 字</text>
-					<text class="follow-reading-sub">点跳动 logo 停止 · 点「点重听」可重听</text>
-				</view>
-				<pinyin-follow-read-record-hint
-					v-if="followRecording || followRecordScoring || followDebugPlayVisible"
-					:visible="true"
-					:progress="followRecordProgress"
-					:target="followRecordSymbol"
-					:scoring="followRecordScoring"
-					:speech-started="followRecordSpeechStarted"
-					:show-debug-playback="followDebugPlayVisible"
-					@debug-play="onFollowDebugPlay"
-				/>
-			</view>
-			<text class="follow-exit" @click="exitFollow">退出</text>
-		</view>
-
-		<view class="mode-row" :class="followPhase === 'active' ? 'mode-row--dim' : ''">
-			<view
-				class="mode-tile mode-tile--follow"
-				:class="showFollowGuide ? 'mode-tile--guide' : ''"
-				@click="goFollowRead"
-			>
-				<text class="mode-emoji">🎤</text>
-				<text class="mode-label">{{ followPhase === 'active' ? '跟读中' : '跟读' }}</text>
-				<text v-if="showFollowGuide" class="mode-guide">点我开始</text>
-			</view>
+		<view class="mode-row">
 			<view class="mode-tile mode-tile--dictation" @click="onDictation">
 				<text class="mode-emoji">✏️</text>
 				<text class="mode-label">听写</text>
@@ -66,46 +36,28 @@
 			</view>
 		</view>
 
-		<view v-if="lessonChars.length" class="card-grid-wrap" :class="followPhase === 'active' ? 'card-grid-wrap--follow' : ''">
-			<view
-				v-if="followPhase === 'active' && mascotReady"
-				class="follow-mascot-wrap"
-				:style="mascotStyle"
-			>
-				<image
-					class="follow-mascot"
-					:class="mascotJumping ? 'follow-mascot--jump' : ''"
-					src="/static/mengmeng/logo-icon.png"
-					mode="aspectFit"
-				/>
-				<text class="follow-mascot-stop" @tap.stop="onMascotTapStop">点我停止</text>
-			</view>
+		<view v-if="lessonChars.length" class="card-grid-wrap">
 			<view
 				v-for="(row, i) in lessonChars"
 				:key="row.id != null ? row.id : i"
-				:id="'follow-cell-' + i"
 				class="cell"
-				:class="cellClassList(row, i)"
+				:class="{
+					'cell-learned': isLearned(row.hanzi),
+					'cell-speaking': isCellSpeaking(row, i)
+				}"
 			>
-				<view
-					v-if="followPhase === 'active' && canFollowJumpTo(i)"
-					class="cell-jump-hit"
-					@tap.stop="onFollowCellJump(i, row)"
-				/>
-				<view class="cell-char-hit" @tap.stop="onCellCharTap(row, i)">
+				<view v-if="isLearned(row.hanzi)" class="cell-learned-mark" aria-label="已学">
+					<text class="cell-learned-mark-icon">✓</text>
+				</view>
+				<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
 					<text class="cell-char">{{ row.hanzi }}</text>
 				</view>
-				<text
-					v-if="followCellStatusLabel(i)"
-					class="cell-status-line"
-					:class="followCellStatusClass(i)"
-				>{{ followCellStatusLabel(i) }}</text>
-				<text
-					v-else-if="isLearned(row.hanzi) && followPhase !== 'active'"
-					class="cell-status-line cell-status-line--learned"
-				>已学</text>
-				<view class="cell-py-row" @tap.stop="onCellPyTap(row, i)">
-					<text class="cell-py-hint">拼音 · 点读</text>
+				<view
+					class="cell-py-row"
+					:class="{ 'cell-py-row--locked': pinyinPlaybackBusy && !isCellSpeaking(row, i) }"
+					@tap.stop="onCellPyTap(row, i)"
+				>
+					<text class="cell-py-hint">{{ pyRowHint(row, i) }}</text>
 					<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
 				</view>
 			</view>
@@ -117,31 +69,20 @@
 
 		<view class="meng-tip">
 			<meng-avatar pose="happy" size="xs" />
-			<text class="meng-tip-msg">{{ followTipText }}</text>
+			<text class="meng-tip-msg">{{ lessonTipText }}</text>
 		</view>
-		</view>
-
-		<view v-if="followPhase === 'done'" class="follow-done-mask">
-			<view class="follow-done-card">
-				<image class="follow-done-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
-				<text class="follow-done-title">跟读完成</text>
-				<text class="follow-done-sub">{{ followDoneSummary }}</text>
-				<view class="follow-done-actions">
-					<button class="follow-done-btn" type="default" @click="restartFollowFromHead">再来一遍</button>
-					<button class="follow-done-btn follow-done-btn--primary" type="primary" @click="dismissFollowDone">继续看字卡</button>
-				</view>
-			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-import { notifyRecorderPageShow } from '@/utils/recorder-pcm-client.js'
-import { COL_PROGRESS, TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
+import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
+	getRenjiaoTextbookLoaderParams,
+	isRenjiaoTextbookSyncPrefs,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
@@ -155,26 +96,6 @@ import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-p
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 import { playOpusForDisplayPinyin, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { speakChinese } from '@/utils/speak-hanzi.js'
-import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
-import {
-	getFollowReadState,
-	getFollowReadEffectiveProgress,
-	setFollowReadRecordProgressListener,
-	startFollowReadRecord,
-	stopFollowReadRecord,
-	cancelFollowReadAutoStop,
-	clearFollowReadAutoStopCallback,
-	requestFollowReadScore
-} from '@/services/pinyin-follow-read-service.js'
-import { followReadToastTitle } from '@/utils/pinyin-follow-read-ui-messages.js'
-import { logFollowReadSimilarity } from '@/utils/pinyin-follow-read-debug-log.js'
-import {
-	FOLLOW_READ_DEBUG_PLAY_RECORDING,
-	PINYIN_FOLLOW_READ_MAX_WALL_MS
-} from '@/config/pinyin-follow-read-config.js'
-import { playFollowReadDebugRecording } from '@/utils/pinyin-follow-read-debug-playback.js'
-import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
-import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
@@ -189,17 +110,12 @@ function firstHanzi(text) {
 	return m ? m[0] : ''
 }
 
-function delay(ms) {
-	return new Promise((r) => setTimeout(r, ms))
-}
-
 export default {
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
 		MengPageNav,
-		MengStatusBarSpacer,
-		PinyinFollowReadRecordHint
+		MengStatusBarSpacer
 	},
 	data() {
 		return {
@@ -214,31 +130,8 @@ export default {
 			rjContent: '',
 			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
 			quizPassedForLesson: false,
-			/** null | active | done */
-			followPhase: null,
-			followIdx: 0,
-			/** @type {Array<'pending'|'reading'|'pass'|'miss'>} */
-			followStatuses: [],
-			followRecording: false,
-			followRecordProgress: 0,
-			followRecordSpeechStarted: false,
-			followRecordScoring: false,
-			followRecordSymbol: '',
-			lastFollowRecordFile: '',
-			followDebugPlayEnabled: FOLLOW_READ_DEBUG_PLAY_RECORDING,
-			_stopFollowRecordProgress: null,
-			_followReadScoreBusy: false,
-			followRecordWatchdog: null,
-			/** 防止录音结束回调重复触发导致卡住 */
-			followEndHandledKey: '',
-			followSessionToken: 0,
-			mascotReady: false,
-			mascotJumping: false,
-			mascotStyle: {
-				left: '50%',
-				top: '0px',
-				transform: 'translate(-50%, 0)'
-			}
+			/** 正在播放拼音点读的字卡 key（与 cellKey 一致） */
+			speakingCellKey: null
 		}
 	},
 	computed: {
@@ -254,47 +147,13 @@ export default {
 			if (!t) return 0
 			return Math.min(5, Math.round((this.learnedCount / t) * 5))
 		},
-		showFollowGuide() {
-			return !!this.lessonChars.length && !this.followPhase
+		lessonTipText() {
+			return this.pinyinPlaybackBusy
+				? '正在读拼音，听完再点下一个字哦'
+				: '点汉字看详解；点拼音格听读音'
 		},
-		currentFollowHanzi() {
-			const row = this.lessonChars[this.followIdx]
-			return row ? firstHanzi(row.hanzi) : ''
-		},
-		followTipText() {
-			if (this.followPhase === 'active') {
-				return `看字卡上粉色边框的字跟读；已读的字下方有「点重听」`
-			}
-			if (this.followPhase === 'done') {
-				return '跟读结束，可点生字看详解'
-			}
-			if (this.showFollowGuide) {
-				return '点上方粉色「跟读」开始练习；也可点汉字、拼音格学习'
-			}
-			return '点汉字看详解；点拼音格听读音'
-		},
-		followDoneSummary() {
-			const miss = this.followStatuses.filter((s) => s === 'miss').length
-			if (!miss) return '太棒了，本课生字都跟读通过啦'
-			return `有 ${miss} 个字标了「再读」，可以多练几遍`
-		},
-		followDebugPlayVisible() {
-			return !!(
-				this.followDebugPlayEnabled &&
-				this.lastFollowRecordFile &&
-				this.followPhase === 'active'
-			)
-		}
-	},
-	mounted() {
-		notifyRecorderPageShow(this)
-	},
-	onUnload() {
-		this.teardownFollowAll()
-	},
-	onHide() {
-		if (this.followPhase === 'active') {
-			this.teardownFollowRecording()
+		pinyinPlaybackBusy() {
+			return this.speakingCellKey != null
 		}
 	},
 	onLoad(query) {
@@ -302,7 +161,6 @@ export default {
 		this._lessonLoadQuery(query)
 	},
 	async onShow() {
-		notifyRecorderPageShow(this)
 		this.refreshStatusBarPx()
 		await this.reloadLesson()
 		this.refreshProgress()
@@ -311,6 +169,14 @@ export default {
 		playMengmengVoiceOnce(MENG_VOICE.LESSON_START, `meng_voice_lesson_${lessonKey}`).catch(
 			() => {}
 		)
+	},
+	onHide() {
+		stopLocalPinyinAudio()
+		this.clearSpeakingCell()
+	},
+	onUnload() {
+		stopLocalPinyinAudio()
+		this.clearSpeakingCell()
 	},
 	methods: {
 		refreshStatusBarPx() {
@@ -331,397 +197,29 @@ export default {
 			this.refreshProgress()
 			this.refreshLessonQuizBadge()
 		},
-		followStatusAt(i) {
-			return this.followStatuses[i] || 'pending'
-		},
-		/** 跟读时汉字下方唯一状态文案 */
-		followCellStatusLabel(i) {
-			if (this.followPhase !== 'active') return ''
-			const idx = Number(i)
-			const st = this.followStatusAt(idx)
-			if (idx === this.followIdx && st === 'reading') return '跟读中'
-			if (this.canFollowJumpTo(idx)) return '点重听'
-			if (st === 'pass') return '读过'
-			if (st === 'miss') return '再读'
-			return ''
-		},
-		followCellStatusClass(i) {
-			const st = this.followStatusAt(i)
-			if (Number(i) === this.followIdx && st === 'reading') return 'cell-status-line--reading'
-			if (this.canFollowJumpTo(i)) return 'cell-status-line--tap'
-			if (st === 'pass') return 'cell-status-line--pass'
-			if (st === 'miss') return 'cell-status-line--miss'
-			return ''
-		},
-		/** 跟读中可点击回跳的字（仅当前字之前的读过/再读，不含正在读的这一格） */
-		canFollowJumpTo(i) {
-			const idx = Number(i)
-			if (this.followPhase !== 'active' || !Number.isFinite(idx) || idx < 0) return false
-			if (idx >= this.lessonChars.length) return false
-			if (idx === this.followIdx) return false
-			const st = this.followStatusAt(idx)
-			if (st === 'pass' || st === 'miss') return true
-			return idx < this.followIdx
-		},
-		cellClassList(row, i) {
-			const list = []
-			if (this.isLearned(row.hanzi)) list.push('cell-learned')
-			const st = this.followStatusAt(i)
-			if (this.followPhase === 'active') {
-				if (i === this.followIdx) list.push('cell--follow-current')
-				if (st === 'miss') list.push('cell--follow-miss')
-				if (st === 'pass') list.push('cell--follow-pass')
-				if (this.canFollowJumpTo(i)) list.push('cell--follow-jumpable')
-			}
-			return list
-		},
-		followScoreSymbol(row) {
-			const tokens = this.pyTokens(row)
-			if (tokens.length) return String(tokens[0] || '').trim()
-			const s = String(this.pyShow(row) || '').trim()
-			return s && s !== '-' ? s : ''
-		},
-		beginFollowActive() {
-			if (!this.lessonChars.length) return
-			this.teardownFollowRecording()
-			this.followPhase = 'active'
-			this.followIdx = 0
-			this.followStatuses = this.lessonChars.map(() => 'pending')
-			this.mascotReady = false
-			this.followSessionToken += 1
-			const token = this.followSessionToken
-			uni.setNavigationBarTitle({ title: '跟读中…' })
-			this.$nextTick(() => {
-				this.mascotReady = true
-				this.runFollowCharAt(0, token)
-			})
-		},
-		clearFollowRecordWatchdog() {
-			if (this.followRecordWatchdog != null) {
-				clearTimeout(this.followRecordWatchdog)
-				this.followRecordWatchdog = null
-			}
-		},
-		scheduleFollowRecordWatchdog(idx, token) {
-			this.clearFollowRecordWatchdog()
-			this.followRecordWatchdog = setTimeout(() => {
-				this.followRecordWatchdog = null
-				if (token !== this.followSessionToken || this.followPhase !== 'active') return
-				if (this.followIdx !== idx || !this.followRecording) return
-				cancelFollowReadAutoStop()
-				stopFollowReadRecord()
-					.then((stopRes) => this.onFollowRecordEnded(idx, token, stopRes))
-					.catch(() => {
-						this.followRecording = false
-						this.$set(this.followStatuses, idx, 'miss')
-						this.advanceFollow(idx, token)
-					})
-			}, PINYIN_FOLLOW_READ_MAX_WALL_MS + 8000)
-		},
-		syncFollowUi(idx) {
-			this.$nextTick(() => {
-				this.$nextTick(() => {
-					this.scrollCellIntoView(idx)
-					this.updateMascotPosition()
-				})
-			})
-		},
-		async runFollowCharAt(idx, token) {
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			if (idx >= this.lessonChars.length) {
-				this.finishFollowSession()
-				return
-			}
-			this.clearFollowRecordWatchdog()
-			this.followEndHandledKey = ''
-			this.followIdx = idx
-			this.$set(this.followStatuses, idx, 'reading')
-			this.syncFollowUi(idx)
-			const row = this.lessonChars[idx]
-			const hanzi = firstHanzi(row.hanzi)
-			const py = this.pyShow(row)
-			const symbol = this.followScoreSymbol(row)
-			stopLocalPinyinAudio()
-			await playLessonTargetReading(hanzi, py)
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			await delay(420)
-			if (!symbol) {
-				this.$set(this.followStatuses, idx, 'pass')
-				await delay(700)
-				return this.advanceFollow(idx, token)
-			}
-			this.followRecording = true
-			this.followRecordSymbol = symbol
-			this.scheduleFollowRecordWatchdog(idx, token)
-			const res = await startFollowReadRecord({
-				symbol,
-				autoStop: true,
-				onAutoStop: (stopRes) => this.onFollowRecordEnded(idx, token, stopRes)
-			})
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			if (!res.ok) {
-				this.followRecording = false
-				this.stopFollowRecordUi()
-				this.clearFollowRecordWatchdog()
-				this.$set(this.followStatuses, idx, 'miss')
-				uni.showToast({ title: res.message || '无法开始录音', icon: 'none' })
-				await delay(1100)
-				return this.advanceFollow(idx, token)
-			}
-			this.beginFollowRecordUi(res, idx, token)
-		},
-		beginFollowRecordUi(startRes, idx, token) {
-			this.stopFollowRecordUi()
-			this.followRecordScoring = false
-			this.followRecordProgress = 0
-			const fixedMs = Number(startRes?.fixedDurationMs) || 0
-			const useFixedWall = fixedMs > 0 && (startRes?.wxzFixedWall || !startRes?.useEffectiveDuration)
-			setFollowReadRecordProgressListener((p, meta) => {
-				this.followRecordProgress = p
-				if (meta?.speechStarted != null) {
-					this.followRecordSpeechStarted = !!meta.speechStarted
-				}
-			})
-			if (useFixedWall) {
-				this.followRecordSpeechStarted = true
-				return
-			}
-			this.followRecordSpeechStarted = false
-			this._stopFollowRecordProgress = startFollowReadEffectiveProgressTicker(
-				() => getFollowReadEffectiveProgress(),
-				() => {},
-				() => {
-					this.onFollowRecordDurationEnd(idx, token)
-				},
-				() => getFollowReadState().recording
-			)
-		},
-		async onFollowRecordDurationEnd(idx, token) {
-			if (this._followReadScoreBusy) return
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			if (this.followIdx !== idx) return
-			if (getFollowReadState().recording) {
-				const stopRes = await stopFollowReadRecord()
-				await this.onFollowRecordEnded(idx, token, stopRes)
-				return
-			}
-			if (this.followRecording && !this.followRecordScoring) {
-				await new Promise((r) => setTimeout(r, 60))
-				if (token !== this.followSessionToken || !this.followRecording || this.followRecordScoring) {
-					return
-				}
-				const stopRes = await stopFollowReadRecord()
-				if (stopRes?.ok) await this.onFollowRecordEnded(idx, token, stopRes)
-				else this.stopFollowRecordUi()
-			}
-		},
-		stopFollowRecordUi() {
-			setFollowReadRecordProgressListener(null)
-			if (this._stopFollowRecordProgress) {
-				this._stopFollowRecordProgress()
-				this._stopFollowRecordProgress = null
-			}
-			this.followRecordProgress = 0
-			this.followRecordSpeechStarted = false
-			this.followRecordScoring = false
-			this.followRecordSymbol = ''
-		},
-		async onFollowRecordEnded(idx, token, stopRes) {
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			if (this.followIdx !== idx) return
-			if (this._followReadScoreBusy) return
-			this._followReadScoreBusy = true
-			this.followRecording = false
-			if (this._stopFollowRecordProgress) {
-				this._stopFollowRecordProgress()
-				this._stopFollowRecordProgress = null
-			}
-			this.followRecordProgress = 100
-			this.followRecordScoring = true
-			const endKey = `${token}-${idx}`
-			if (this.followEndHandledKey === endKey) {
-				this.followRecordScoring = false
-				this._followReadScoreBusy = false
-				return
-			}
-			this.followEndHandledKey = endKey
-			this.clearFollowRecordWatchdog()
-			try {
-				if (!stopRes?.ok) {
-					this.$set(this.followStatuses, idx, 'miss')
-					await delay(900)
-					return this.advanceFollow(idx, token)
-				}
-				this.lastFollowRecordFile = stopRes?.tempFilePath || ''
-				const row = this.lessonChars[idx]
-				const symbol = this.followScoreSymbol(row)
-				const scoreRes = await requestFollowReadScore({
-					symbol,
-					durationMs: stopRes?.durationMs,
-					sampleRate: stopRes?.sampleRate,
-					tempFilePath: stopRes?.tempFilePath,
-					recordFormat: stopRes?.recordFormat,
-					recordPcmBuffer: stopRes?.recordPcmBuffer,
-					frameCaptureBytes: stopRes?.frameCaptureBytes
-				})
-				if (token !== this.followSessionToken || this.followPhase !== 'active') return
-				const pass = !!(scoreRes.ok && scoreRes.pass)
-				this.$set(this.followStatuses, idx, pass ? 'pass' : 'miss')
-				logFollowReadSimilarity(scoreRes, symbol, { source: 'lesson-follow' })
-				const toastTitle = followReadToastTitle(scoreRes, symbol)
-				uni.showToast({
-					title: toastTitle,
-					icon: 'none',
-					duration: pass ? 1800 : 2600
-				})
-				if (!pass) {
-					await delay(1300)
-				} else {
-					await delay(480)
-				}
-				this.advanceFollow(idx, token)
-			} finally {
-				this.followRecordScoring = false
-				this.followRecordProgress = 0
-				this._followReadScoreBusy = false
-				if (this.followDebugPlayEnabled && this.lastFollowRecordFile) {
-					playFollowReadDebugRecording(this.lastFollowRecordFile, { delayMs: 200 })
-				}
-			}
-		},
-		onFollowDebugPlay() {
-			if (!this.lastFollowRecordFile) {
-				uni.showToast({ title: '暂无录音文件', icon: 'none' })
-				return
-			}
-			playFollowReadDebugRecording(this.lastFollowRecordFile, { force: true })
-		},
-		advanceFollow(idx, token) {
-			if (token !== this.followSessionToken || this.followPhase !== 'active') return
-			this.runFollowCharAt(idx + 1, token)
-		},
-		finishFollowSession() {
-			this.teardownFollowRecording()
-			this.followPhase = 'done'
-			this.mascotReady = false
-			this.setLessonNavTitle()
-		},
-		dismissFollowDone() {
-			this.followPhase = null
-			this.followStatuses = []
-			this.setLessonNavTitle()
-		},
-		restartFollowFromHead() {
-			this.followPhase = null
-			this.followStatuses = []
-			this.beginFollowActive()
-		},
-		exitFollow() {
-			this.teardownFollowAll()
-			this.followPhase = null
-			this.followStatuses = []
-			this.mascotReady = false
-			this.setLessonNavTitle()
-		},
-		onMascotTapStop() {
-			if (this.followPhase !== 'active') return
-			this.exitFollow()
-			uni.showToast({ title: '已停止跟读', icon: 'none', duration: 1600 })
-		},
-		teardownFollowRecording() {
-			this.clearFollowRecordWatchdog()
-			cancelFollowReadAutoStop()
-			this.stopFollowRecordUi()
-			if (this.followRecording) {
-				this.followRecording = false
-				stopFollowReadRecord().catch(() => {})
-			}
-			stopLocalPinyinAudio()
-		},
-		teardownFollowAll() {
-			this.followSessionToken += 1
-			this.teardownFollowRecording()
-		},
-		scrollCellIntoView(idx) {
-			const query = uni.createSelectorQuery().in(this)
-			query.selectViewport().scrollOffset()
-			query.select(`#follow-cell-${idx}`).boundingClientRect()
-			query.exec((res) => {
-				const scroll = res && res[0]
-				const rect = res && res[1]
-				if (!scroll || !rect) return
-				const top = (scroll.scrollTop || 0) + rect.top - 180
-				uni.pageScrollTo({
-					scrollTop: Math.max(0, top),
-					duration: 260,
-					fail: () => {}
-				})
-			})
-		},
-		updateMascotPosition() {
-			const query = uni.createSelectorQuery().in(this)
-			query.select('.card-grid-wrap').boundingClientRect()
-			query.select(`#follow-cell-${this.followIdx}`).boundingClientRect()
-			query.exec((res) => {
-				const wrap = res && res[0]
-				const cell = res && res[1]
-				if (!wrap || !cell) return
-				const centerX = cell.left - wrap.left + cell.width / 2
-				const topY = cell.top - wrap.top - 6
-				this.mascotStyle = {
-					left: `${centerX}px`,
-					top: `${Math.max(0, topY)}px`,
-					transform: 'translate(-50%, -100%)'
-				}
-				this.mascotJumping = false
-				this.$nextTick(() => {
-					this.mascotJumping = true
-					setTimeout(() => {
-						this.mascotJumping = false
-					}, 520)
-				})
-			})
-		},
-		onCellCharTap(row, index) {
-			if (this.followPhase === 'active') {
-				if (this.canFollowJumpTo(index)) {
-					this.onFollowCellJump(index, row)
-				}
-				return
-			}
+		onCellCharTap(row) {
 			this.openChar(row)
 		},
 		onCellPyTap(row, index) {
-			if (this.followPhase === 'active') {
-				if (this.canFollowJumpTo(index)) {
-					this.onFollowCellJump(index, row)
-				}
-				return
-			}
-			this.onTapSpeakPinyin(row)
+			if (this.pinyinPlaybackBusy) return
+			this.onTapSpeakPinyin(row, index)
 		},
-		/** 跟读中点「读过」等字格：从该字起重新往下读 */
-		onFollowCellJump(index, row) {
-			const idx = Number(index)
-			if (!this.canFollowJumpTo(idx)) return
-			this.teardownFollowRecording()
-			for (let j = idx; j < this.lessonChars.length; j++) {
-				const st = this.followStatuses[j]
-				if (st === 'pass' || st === 'miss' || st === 'reading') {
-					this.$set(this.followStatuses, j, 'pending')
-				}
-			}
-			this.followSessionToken += 1
-			const token = this.followSessionToken
-			const ch = firstHanzi(row && row.hanzi)
-			uni.showToast({
-				title: ch ? `从「${ch}」再听读` : '从此字继续',
-				icon: 'none',
-				duration: 1400
-			})
-			this.$nextTick(() => {
-				this.runFollowCharAt(idx, token)
-			})
+		pyRowHint(row, index) {
+			if (this.isCellSpeaking(row, index)) return '正在读…'
+			if (this.pinyinPlaybackBusy) return '请听完再点'
+			return '拼音 · 点读'
+		},
+		cellKey(row, index) {
+			if (row && row.id != null) return `id:${row.id}`
+			const h = String((row && row.hanzi) || '').trim()
+			return `i:${index}:${h}`
+		},
+		isCellSpeaking(row, index) {
+			const key = this.cellKey(row, index)
+			return key && this.speakingCellKey === key
+		},
+		clearSpeakingCell() {
+			this.speakingCellKey = null
 		},
 		pyTokens(row) {
 			const s = String(this.pyShow(row) || '').trim()
@@ -730,13 +228,10 @@ export default {
 			return s ? [s] : []
 		},
 		async reloadLesson() {
-			if (this.followPhase === 'active') return
 			const prefs = getCurriculumPrefs()
-			if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && this.rjLessonIdx != null) {
-				const rows = await loadRenjiaoTextbookTexts({
-					grade: prefs.grade,
-					semester: prefs.semester
-				})
+			if (isRenjiaoTextbookSyncPrefs(prefs) && this.rjLessonIdx != null) {
+				const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
+				const rows = await loadRenjiaoTextbookTexts(loaderParams)
 				const syncLessons = filterRenjiaoTextbookSyncLessons(rows)
 				const item = syncLessons[this.rjLessonIdx]
 				if (!item) {
@@ -831,32 +326,30 @@ export default {
 			if (!this.rjContent) return
 			speakChinese(this.rjContent)
 		},
-		async onTapSpeakPinyin(row) {
+		async onTapSpeakPinyin(row, index) {
+			if (this.pinyinPlaybackBusy) {
+				logHanziSpeak('lesson.py_row.busy_skip', { hanzi: row && row.hanzi })
+				return
+			}
 			const py = String(this.pyShow(row) || '').trim()
 			logHanziSpeak('lesson.py_row.tap', { py, hanzi: row && row.hanzi })
 			if (!py || py === '-') {
 				uni.showToast({ title: '暂无拼音', icon: 'none' })
 				return
 			}
-			// uni.showToast({ title: py, icon: 'none' })
-			const ok = await playOpusForDisplayPinyin(py)
-			logHanziSpeak('lesson.py_row.play_done', { py, ok })
-			// uni.showToast({ title: '未找到该拼音的本地音频', icon: 'none' })
-		},
-		goFollowRead() {
-			if (!this.lessonChars.length) return
-			if (this.followPhase === 'active') return
-			if (this.followPhase === 'done') {
-				this.dismissFollowDone()
+			const cellKey = this.cellKey(row, index)
+			this.speakingCellKey = cellKey
+			try {
+				const ok = await playOpusForDisplayPinyin(py)
+				logHanziSpeak('lesson.py_row.play_done', { py, ok, cellKey })
+			} finally {
+				if (this.speakingCellKey === cellKey) {
+					this.clearSpeakingCell()
+				}
 			}
-			this.beginFollowActive()
 		},
 		onDictation() {
 			if (!this.lessonChars.length) return
-			if (this.followPhase === 'active') {
-				uni.showToast({ title: '请先停止跟读', icon: 'none' })
-				return
-			}
 			const rows = this.lessonChars.map((r) => ({
 				hanzi: String(r.hanzi || '').trim(),
 				pinyin: this.pyShow(r)
@@ -1059,35 +552,6 @@ export default {
 	transform: scale(0.98);
 }
 
-.mode-tile--follow {
-	background: #ff6b9d;
-}
-
-.mode-tile--guide {
-	animation: follow-tile-pulse 1.6s ease-in-out infinite;
-	box-shadow:
-		0 0 0 4rpx rgba(255, 255, 255, 0.65),
-		0 10rpx 28rpx rgba(255, 107, 157, 0.45);
-}
-
-.mode-guide {
-	margin-top: 4rpx;
-	font-size: 20rpx;
-	font-weight: 800;
-	color: rgba(255, 255, 255, 0.95);
-	line-height: 1.2;
-}
-
-@keyframes follow-tile-pulse {
-	0%,
-	100% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.04);
-	}
-}
-
 .mode-tile--dictation {
 	background: #7eb8ff;
 }
@@ -1116,235 +580,16 @@ export default {
 	margin: -6rpx;
 }
 
-.card-grid-wrap--follow {
-	padding-top: 56rpx;
-}
-
-.follow-mascot-wrap {
-	position: absolute;
-	z-index: 30;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	pointer-events: none;
-	transition:
-		left 0.48s cubic-bezier(0.34, 1.15, 0.64, 1),
-		top 0.48s cubic-bezier(0.34, 1.15, 0.64, 1);
-}
-
-.follow-mascot {
-	width: 96rpx;
-	height: 96rpx;
-	filter: drop-shadow(0 8rpx 16rpx rgba(196, 77, 106, 0.28));
-}
-
-.follow-mascot-stop {
-	margin-top: 4rpx;
-	padding: 6rpx 14rpx;
-	font-size: 18rpx;
-	font-weight: 700;
-	color: #fff;
-	background: rgba(196, 77, 106, 0.88);
-	border-radius: 999rpx;
-	line-height: 1.3;
-	white-space: nowrap;
-	pointer-events: auto;
-}
-
-.follow-mascot-stop:active {
-	opacity: 0.88;
-}
-
-.follow-mascot--jump {
-	animation: follow-mascot-bounce 0.52s ease;
-}
-
-@keyframes follow-mascot-bounce {
-	0% {
-		transform: translateY(0) scale(1);
-	}
-	38% {
-		transform: translateY(-22rpx) scale(1.1);
-	}
-	68% {
-		transform: translateY(8rpx) scale(0.95);
-	}
-	100% {
-		transform: translateY(0) scale(1);
-	}
-}
-
-.cell--follow-current {
-	z-index: 12;
-	border-color: #ff6b9d !important;
-	background: #fff !important;
-	box-shadow:
-		0 0 0 4rpx rgba(255, 107, 157, 0.35),
-		0 10rpx 28rpx rgba(196, 77, 106, 0.18) !important;
-	transform: scale(1.04);
-}
-
-.cell--follow-miss {
-	border-color: #ff8a65 !important;
-	background: #fff !important;
-	box-shadow: 0 6rpx 18rpx rgba(255, 138, 101, 0.2) !important;
-}
-
-.cell--follow-pass {
-	border-color: rgba(127, 212, 154, 0.65);
-}
-
-.cell--follow-jumpable {
-	z-index: 35;
-	box-shadow: 0 0 0 2rpx rgba(127, 212, 154, 0.45);
-}
-
-.cell-jump-hit {
-	position: absolute;
-	left: 0;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 40;
-	border-radius: 22rpx;
-}
-
-.cell--follow-jumpable:active {
-	opacity: 0.92;
-}
-
-.follow-reading-bar {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	margin-bottom: 18rpx;
-	padding: 16rpx 18rpx;
-	border-radius: 22rpx;
-	background: var(--meng-card);
-	border: 2rpx solid rgba(255, 120, 160, 0.35);
-}
-
-.follow-reading-bar-logo {
-	width: 72rpx;
-	height: 72rpx;
-	flex-shrink: 0;
-	margin-right: 14rpx;
-}
-
-.follow-reading-bar-main {
-	flex: 1;
-	min-width: 0;
-}
-
-.follow-reading-bar-text {
-	width: 100%;
-}
-
-.follow-reading-bar-main :deep(.fr-record-hint) {
-	margin: 10rpx 0 0;
-	padding: 12rpx 14rpx;
-}
-
-.follow-reading-label {
-	display: block;
-	font-size: 22rpx;
-	color: #c44d6a;
-	font-weight: 600;
-}
-
-.follow-reading-sub {
-	display: block;
-	font-size: 22rpx;
-	color: #8a8076;
-	line-height: 1.35;
-	margin-top: 4rpx;
-}
-
-.follow-exit {
-	font-size: 24rpx;
-	color: #8a8076;
-	padding: 8rpx 12rpx;
-}
-
-.mode-row--dim {
-	opacity: 0.45;
-	pointer-events: none;
-}
-
-.follow-done-mask {
-	position: fixed;
-	left: 0;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	z-index: 500;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: rgba(44, 36, 25, 0.42);
-	padding: 40rpx;
-	box-sizing: border-box;
-}
-
-.follow-done-card {
-	width: 100%;
-	max-width: 560rpx;
-	padding: 48rpx 36rpx 40rpx;
-	border-radius: 36rpx;
-	background: rgba(255, 255, 255, 0.96);
-	box-shadow: 0 24rpx 60rpx rgba(196, 77, 106, 0.2);
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
-
-.follow-done-logo {
-	width: 120rpx;
-	height: 120rpx;
-	margin-bottom: 20rpx;
-}
-
-.follow-done-title {
-	font-size: 40rpx;
-	font-weight: 800;
-	color: var(--meng-text, #2c2419);
-	margin-bottom: 16rpx;
-}
-
-.follow-done-sub {
-	font-size: 26rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	text-align: center;
-	line-height: 1.5;
-	margin-bottom: 32rpx;
-}
-
-.follow-done-actions {
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-	gap: 16rpx;
-}
-
-.follow-done-btn {
-	width: 100%;
-	border-radius: 20rpx;
-	font-size: 28rpx;
-}
-
-.follow-done-btn--primary {
-	background: #ff6b9d;
-}
-
 .cell {
 	position: relative;
 	z-index: 1;
+	overflow: visible;
 	flex: 0 0 31%;
 	width: 31%;
 	max-width: 31%;
 	box-sizing: border-box;
 	margin: 6rpx 3.5% 6rpx 0;
-	padding: 18rpx 10rpx 14rpx;
+	padding: 16rpx 10rpx 12rpx;
 	text-align: center;
 	background: #fff;
 	border-radius: 22rpx;
@@ -1357,15 +602,74 @@ export default {
 }
 
 .cell-learned {
-	border-color: rgba(127, 212, 154, 0.75);
-	background: #fff;
-	box-shadow: 0 6rpx 16rpx rgba(90, 160, 110, 0.12);
+	border-color: rgba(127, 212, 154, 0.82);
+	background: #f9fdfb;
+	box-shadow: 0 6rpx 16rpx rgba(90, 160, 110, 0.1);
+}
+
+.cell-learned-mark {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 4;
+	width: 34rpx;
+	height: 34rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transform: translate(28%, -28%);
+	border-radius: 50%;
+	background: #43a047;
+	border: 2rpx solid #fff;
+	box-shadow: 0 2rpx 10rpx rgba(67, 160, 71, 0.35);
+	pointer-events: none;
+}
+
+.cell-learned-mark-icon {
+	font-size: 20rpx;
+	font-weight: 800;
+	line-height: 1;
+	color: #fff;
+}
+
+.cell-speaking {
+	z-index: 3;
+	border-color: rgba(255, 171, 64, 0.95);
+	background: #fff8e8;
+	box-shadow:
+		0 0 0 4rpx rgba(255, 171, 64, 0.28),
+		0 10rpx 28rpx rgba(255, 152, 0, 0.22);
+}
+
+.cell-speaking.cell-learned {
+	border-color: rgba(255, 171, 64, 0.95);
+	background: #fff8e8;
+}
+
+.cell-speaking .cell-char {
+	color: #e65100;
+}
+
+.cell-speaking .cell-py-row {
+	background: #ffe8c2;
+	border-color: rgba(255, 171, 64, 0.55);
+}
+
+.cell-speaking .cell-py-hint {
+	color: #e65100;
+	font-weight: 700;
 }
 
 .cell-char-hit {
 	position: relative;
-	padding: 4rpx 0 0;
-	min-height: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 92rpx;
+	min-height: 92rpx;
+	max-height: 92rpx;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 .cell-char {
@@ -1373,7 +677,7 @@ export default {
 	font-size: 88rpx;
 	font-weight: 400;
 	color: var(--meng-chocolate, #5c3d2e);
-	line-height: 1.05;
+	line-height: 1;
 	-webkit-font-smoothing: antialiased;
 }
 
@@ -1403,10 +707,6 @@ export default {
 	color: #e65100;
 }
 
-.cell-status-line--learned {
-	color: #2e7d32;
-}
-
 .cell-py-row {
 	width: 100%;
 	min-width: 0;
@@ -1422,6 +722,11 @@ export default {
 .cell-py-row:active {
 	opacity: 0.9;
 	background: #fff0f5;
+}
+
+.cell-py-row--locked {
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .cell-py-hint {
@@ -1490,18 +795,3 @@ export default {
 	color: #e8e0d8;
 }
 </style>
-
-<!-- #ifdef APP-PLUS -->
-<script module="recorderModule" lang="renderjs">
-import 'recorder-core'
-import RecordApp from 'recorder-core/src/app-support/app'
-import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
-import 'recorder-core/src/engine/pcm'
-
-export default {
-	mounted() {
-		RecordApp.UniRenderjsRegister(this)
-	}
-}
-</script>
-<!-- #endif -->

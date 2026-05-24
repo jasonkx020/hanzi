@@ -75,7 +75,7 @@ export function findVipProduct(productId) {
 export const VIP_COMPARE = [
 	{ label: '字库范围', free: '当前年级册别', vip: '1～6 年级上下册任意切换' },
 	{ label: '笔顺/写字', free: '每日少量次数', vip: '动画、描红、写字不限' },
-	{ label: '拼音跟读', free: '每日 5 次评分', vip: '跟读评分与自动连读不限' },
+	{ label: '拼音自动连读', free: '需会员', vip: '整页自动连读不限' },
 	{ label: '每日一练', free: '每日 1 轮', vip: '多轮练习与弱项计划' },
 	{ label: '趣味营/拼读', free: '每日有限次', vip: '气球营、换一批不限' },
 	{ label: '查字', free: '每日约 18 次', vip: '不限次' },

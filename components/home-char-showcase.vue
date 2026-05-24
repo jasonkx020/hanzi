@@ -57,7 +57,7 @@
 
 					<view class="home-char-showcase__tags">
 						<text class="home-char-showcase__tag">笔顺动画</text>
-						<text class="home-char-showcase__tag">拼音跟读</text>
+						<text class="home-char-showcase__tag">拼音学习</text>
 						<text class="home-char-showcase__tag">查字详解</text>
 						<text class="home-char-showcase__tag">课本同步</text>
 					</view>
@@ -191,6 +191,7 @@ export default {
 <style scoped>
 .home-char-showcase {
 	margin-bottom: 20rpx;
+	box-sizing: border-box;
 }
 
 .home-char-showcase__card {

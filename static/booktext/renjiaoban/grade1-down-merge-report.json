@@ -1,0 +1,17 @@
+{
+    "grade": 1,
+    "semester": "下",
+    "missing_files": [
+        "grade1-down-words.json"
+    ],
+    "unmatched_catalog": [
+        {
+            "unit": "第一单元·识字",
+            "title": "读读童谣和儿歌",
+            "type": "快乐读书吧"
+        }
+    ],
+    "unmatched_appendix": [],
+    "orphan_text": [],
+    "composite_mismatch": []
+}

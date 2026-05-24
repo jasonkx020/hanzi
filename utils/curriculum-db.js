@@ -1,10 +1,11 @@
 /**
  * 教材生字：统编等版本来自打包内嵌 constants/hanzi_curriculum_seed.json（npm run db:build 生成）；
- * 「幼小衔接·课标300基本字」来自 static/booktext/renjiaoban/preschool-bridge.json，不在 seed 中重复。
+ * 「幼小衔接·课标300基本字」来自 static/booktext/renjiaoban/preschool-bridge.json（课本同步学另走 loader；此处供字库/游戏等扁平行）。
  */
 
 import CURRICULUM_ROWS from '@/constants/hanzi_curriculum_seed.json'
-import YOU_XIAO_XIANJIE_LESSONS from '../static/booktext/renjiaoban/preschool-bridge.json'
+import YOU_XIAO_XIANJIE_BOOK from '../static/booktext/renjiaoban/preschool-bridge.json'
+import { flattenLessonsFromMergedBook } from '@/utils/renjiao-textbook-loader.js'
 import {
 	COL,
 	LIST_TYPE,
@@ -18,19 +19,28 @@ const rows = Array.isArray(CURRICULUM_ROWS) ? CURRICULUM_ROWS : []
 const MOE_SOURCE_URL =
 	'http://www.moe.gov.cn/srcsite/A26/s8001/202204/t20220420_619921.html'
 
+function getYouxiaoxianjieLessons() {
+	if (Array.isArray(YOU_XIAO_XIANJIE_BOOK)) return YOU_XIAO_XIANJIE_BOOK
+	if (YOU_XIAO_XIANJIE_BOOK && YOU_XIAO_XIANJIE_BOOK.book_catalog) {
+		return flattenLessonsFromMergedBook(YOU_XIAO_XIANJIE_BOOK)
+	}
+	return []
+}
+
 /**
  * 将幼小衔接课文 JSON 展平为与 hanzi_curriculum_seed 同结构的生字行（仅 MOE 版本 grade=0 使用）
  */
 function buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook() {
 	const tv = TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300
 	const listType = LIST_TYPE.JIBENZIBIAO
-	const lessons = Array.isArray(YOU_XIAO_XIANJIE_LESSONS) ? YOU_XIAO_XIANJIE_LESSONS : []
+	const lessons = getYouxiaoxianjieLessons()
 	const out = []
 	let sortOrder = 0
 	for (const L of lessons) {
 		const lit = Array.isArray(L.literacy_chars) ? L.literacy_chars : []
 		const hint =
-			(typeof L.title === 'string' && L.title.trim()) || `课次 ${L.catalogLessonNo ?? ''}`
+			(typeof L.title === 'string' && L.title.trim()) ||
+			`课次 ${L.catalogLessonNo ?? L.sort ?? ''}`
 		for (const cell of lit) {
 			const hanzi = typeof cell?.hanzi === 'string' ? cell.hanzi.trim() : ''
 			if (!hanzi) continue

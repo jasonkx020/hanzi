@@ -3,43 +3,82 @@
 		class="pflr"
 		:class="[
 			'pflr--' + size,
-			{ 'pflr--metric-shift': metricShift, 'pflr--reading-glow': highlightColumnIndex >= 0 }
+			{
+				'pflr--metric-shift': metricShift,
+				'pflr--reading-flow': partSeparators,
+				'pflr--reading-line': readingLineActive
+			}
 		]"
+		:style="rootLayoutStyle"
 	>
-		<view class="pflr-sheet" :style="sheetColorStyle">
+		<view class="pflr-sheet" :style="[sheetColorStyle, sheetLayoutStyle]">
 			<view class="pflr-lines" aria-hidden="true">
 				<view class="pflr-line-top"></view>
 				<view class="pflr-line-dash"></view>
 				<view class="pflr-line-base"></view>
 				<view class="pflr-line-bottom"></view>
 			</view>
-			<view class="pflr-cols">
-				<view
+			<view class="pflr-cols" :class="{ 'pflr-cols--separated': partSeparators }">
+				<template
 					v-for="(col, ci) in columns"
-					:key="col.empty ? 'pflr-e-' + ci : ci + '-' + col.syl"
-					class="pflr-cell"
-					:class="{
-						'pflr-cell--interactive': interactive && !col.empty,
-						'pflr-cell--empty': col.empty,
-						'pflr-cell--reading': highlightColumnIndex === ci && !col.empty
-					}"
-					@click="onCellClick($event, ci, col)"
+					:key="col.empty ? 'pflr-e-' + ci : 'pflr-c-' + ci + '-' + col.syl"
 				>
-					<view v-if="col.empty" class="pflr-cell-spacer" />
-					<view v-else class="pflr-write-area">
-						<view class="pflr-glyphs-row">
-							<text
-								v-for="(g, gi) in col.glyphs"
-								:key="gi + '-' + g.ch"
-								class="pflr-glyph font-pinyin"
-								:class="[
-									'pflr-glyph--' + g.kind,
-									{ 'pflr-glyph--alph-metric': g.alphMetricFix }
-								]"
-							>{{ g.ch }}</text>
+					<view
+						v-if="partSeparators && ci > 0"
+						class="pflr-part-sep"
+						aria-hidden="true"
+					>
+						<text class="pflr-part-sep-text">-</text>
+					</view>
+					<view
+						class="pflr-cell"
+						:class="{
+							'pflr-cell--interactive': interactive && !col.empty,
+							'pflr-cell--empty': col.empty,
+							'pflr-cell--reading':
+								highlightColumnIndex === ci && !col.empty && !col.readingLine,
+							'pflr-cell--part': partSeparators && !col.empty
+						}"
+						:style="cellPartLayoutStyle(col)"
+						@click="onCellClick($event, ci, col)"
+					>
+						<view v-if="col.empty" class="pflr-cell-spacer" />
+						<view v-else-if="col.readingLine" class="pflr-write-area">
+							<view class="pflr-glyphs-row pflr-glyphs-row--reading-line">
+								<template
+									v-for="(seg, si) in col.segments"
+									:key="'rs-' + si + '-' + (seg.lookupIndex != null ? seg.lookupIndex : seg.text)"
+								>
+									<text v-if="seg.type === 'sep'" class="pflr-reading-sep">{{ seg.text }}</text>
+									<text
+										v-else
+										class="pflr-reading-part font-pinyin"
+										:class="{
+											'pflr-reading-part--on':
+												highlightReadingPartIndex === seg.lookupIndex
+										}"
+										:style="readingPartColorStyle(seg)"
+										@click.stop="onReadingPartClick($event, seg)"
+									>{{ seg.text }}</text>
+								</template>
+							</view>
+						</view>
+						<view v-else class="pflr-write-area">
+							<view class="pflr-glyphs-row">
+								<text
+									v-for="(g, gi) in col.glyphs"
+									:key="gi + '-' + g.ch"
+									class="pflr-glyph font-pinyin"
+									:class="[
+										'pflr-glyph--' + g.kind,
+										{ 'pflr-glyph--alph-metric': g.alphMetricFix }
+									]"
+									:style="glyphColorStyle(ci, col)"
+								>{{ g.ch }}</text>
+							</view>
 						</view>
 					</view>
-				</view>
+				</template>
 			</view>
 		</view>
 	</view>
@@ -48,6 +87,7 @@
 <script>
 import { splitPinyinSyllableGlyphs } from '@/utils/pinyin-writing-standard.js'
 import { ensurePinyinFontLoaded } from '@/utils/pinyin-font-loader.js'
+import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
 
 /** 手机 / App 端 text 行盒下沉，需相对桌面 H5 略上移才能贴第三线（基线） */
 function detectPinyinMetricShift() {
@@ -82,6 +122,11 @@ export default {
 			type: String,
 			default: 'md'
 		},
+		/** >0 时四线三格整体宽度固定（rpx），多音节均分列宽 */
+		sheetWidthRpx: {
+			type: Number,
+			default: 0
+		},
 		/** 保留兼容（纯 CSS 布局无需测宽，可忽略） */
 		minWidthPx: {
 			type: Number,
@@ -106,12 +151,63 @@ export default {
 		sheetBd: {
 			type: String,
 			default: ''
+		},
+		/** 传入时按列取各音节分类色（声母/韵母等 Tab） */
+		categoryTab: {
+			type: String,
+			default: ''
+		},
+		/** 拼读练习：音节列之间显示「-」并加宽列距，避免挤叠 */
+		partSeparators: {
+			type: Boolean,
+			default: false
+		},
+		/** 拼读完整展示串分段（先拼串再显示，单格内按段排版） */
+		readingSegments: {
+			type: Array,
+			default: () => []
+		},
+		/** 拼读连读时高亮段下标（对应 lookup），-1 无 */
+		highlightReadingPartIndex: {
+			type: Number,
+			default: -1
 		}
 	},
 	created() {
 		ensurePinyinFontLoaded()
 	},
 	computed: {
+		readingLineActive() {
+			return Array.isArray(this.readingSegments) && this.readingSegments.length > 0
+		},
+		fixedSheetWidthRpx() {
+			const w = Number(this.sheetWidthRpx)
+			return Number.isFinite(w) && w > 0 ? w : 0
+		},
+		rootLayoutStyle() {
+			if (this.partSeparators || this.readingLineActive) {
+				return { width: '100%' }
+			}
+			const w = this.fixedSheetWidthRpx
+			if (!w) return {}
+			return {
+				width: `${w}rpx`,
+				minWidth: `${w}rpx`,
+				maxWidth: `${w}rpx`
+			}
+		},
+		sheetLayoutStyle() {
+			if (this.partSeparators || this.readingLineActive) {
+				return { width: '100%' }
+			}
+			const w = this.fixedSheetWidthRpx
+			if (!w) return {}
+			return {
+				width: `${w}rpx`,
+				minWidth: `${w}rpx`,
+				maxWidth: `${w}rpx`
+			}
+		},
 		list() {
 			const raw = Array.isArray(this.syllables) ? this.syllables : []
 			if (!raw.length) return ['—']
@@ -124,20 +220,36 @@ export default {
 			})
 		},
 		sheetColorStyle() {
-			const bg = String(this.sheetBg || '').trim()
 			const bd = String(this.sheetBd || '').trim()
-			if (!bg && !bd) return {}
-			const style = {}
-			if (bg) style.backgroundColor = bg
-			if (bd) {
-				style.borderWidth = '1rpx'
-				style.borderStyle = 'solid'
-				style.borderColor = bd
-				style.borderRadius = '8rpx'
+			if (!bd) return {}
+			return {
+				borderWidth: '1rpx',
+				borderStyle: 'solid',
+				borderColor: bd,
+				borderRadius: '8rpx',
+				boxSizing: 'border-box'
 			}
-			return style
 		},
 		columns() {
+			if (this.readingLineActive) {
+				const syl = this.list[0]
+				if (syl == null) {
+					return [{ syl: '', glyphs: [], empty: true, readingLine: false }]
+				}
+				const raw = String(syl || '').trim()
+				if (!raw) {
+					return [{ syl: '', glyphs: [], empty: true, readingLine: false }]
+				}
+				return [
+					{
+						syl: raw,
+						glyphs: [],
+						empty: false,
+						readingLine: true,
+						segments: this.readingSegments
+					}
+				]
+			}
 			return this.list.map((syl) => {
 				if (syl == null) {
 					return { syl: '', glyphs: [], empty: true }
@@ -157,6 +269,49 @@ export default {
 		}
 	},
 	methods: {
+		/** 拼读段列宽随字母多少变化，避免等分格撑爆/留空 */
+		cellPartLayoutStyle(col) {
+			if (!this.partSeparators || !col || col.empty) return {}
+			const n = Math.max(1, (col.glyphs && col.glyphs.length) || String(col.syl || '').length)
+			const em = n * 0.56 + 0.35
+			return {
+				flex: '0 0 auto',
+				width: 'auto',
+				minWidth: `${em}em`,
+				maxWidth: 'none'
+			}
+		},
+		colorsForColumn(col) {
+			if (!col || col.empty) return { bg: '', bd: '' }
+			const tab = String(this.categoryTab || '').trim()
+			if (tab) {
+				const cat = getPinyinSymbolCategory(col.syl, tab)
+				return { bg: cat.bg || '', bd: cat.bd || '' }
+			}
+			return {
+				bg: String(this.sheetBg || '').trim(),
+				bd: String(this.sheetBd || '').trim()
+			}
+		},
+		glyphColorStyle(ci, col) {
+			if (!col || col.empty || this.highlightColumnIndex !== ci) return {}
+			const { bd } = this.colorsForColumn(col)
+			return { color: bd || '#c44d6a' }
+		},
+		readingPartColorStyle(seg) {
+			if (!seg || seg.type !== 'part' || this.highlightReadingPartIndex !== seg.lookupIndex) {
+				return {}
+			}
+			const { bd } = this.colorsForColumn({ syl: seg.text, empty: false })
+			return { color: bd || '#c44d6a' }
+		},
+		onReadingPartClick(ev, seg) {
+			if (!this.interactive || !seg || seg.type !== 'part') return
+			const idx = Number(seg.lookupIndex)
+			if (!Number.isFinite(idx) || idx < 0) return
+			this.$emit('cell-click', { index: idx, syllable: String(seg.text || '').trim() })
+			if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation()
+		},
 		onCellClick(ev, ci, col) {
 			if (!this.interactive || !col || col.empty) return
 			this.$emit('cell-click', { index: ci, syllable: col.syl })
@@ -261,6 +416,122 @@ export default {
 	border-right: none;
 }
 
+/* 拼读序列：同一套四线三格铺满行宽，各段按字数宽窄排列（非等分格） */
+.pflr--reading-flow {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pflr--reading-flow .pflr-sheet {
+	width: 100%;
+	box-sizing: border-box;
+	overflow: visible;
+}
+
+.pflr--reading-flow.pflr--tone,
+.pflr--reading-line.pflr--tone {
+	--pfl-cell-h: 124rpx;
+}
+
+.pflr--reading-line {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pflr--reading-line .pflr-sheet {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pflr-glyphs-row--reading-line {
+	width: 100%;
+	max-width: 100%;
+	justify-content: center;
+	flex-wrap: nowrap;
+	white-space: nowrap;
+	padding-left: 0.2em;
+	padding-right: 0.2em;
+	box-sizing: border-box;
+}
+
+.pflr-reading-sep {
+	font-size: 0.42em;
+	font-weight: 500;
+	color: rgba(92, 61, 46, 0.28);
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.pflr-reading-part {
+	font-size: 1em;
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.pflr-reading-part--on {
+	font-weight: 600;
+}
+
+.pflr-cols--separated {
+	width: 100%;
+	justify-content: space-evenly;
+	align-items: stretch;
+	padding: 0 8rpx;
+	box-sizing: border-box;
+}
+
+.pflr-cols--separated .pflr-cell--part {
+	flex: 0 0 auto;
+	width: auto;
+	min-width: min-content;
+	max-width: none;
+	border-right: none;
+	border-radius: 0;
+	padding: 0 6rpx;
+	box-sizing: content-box;
+}
+
+.pflr-cols--separated .pflr-cell--part .pflr-write-area {
+	left: 0;
+	right: 0;
+}
+
+.pflr-cols--separated .pflr-cell--part .pflr-glyphs-row {
+	width: auto;
+	max-width: none;
+	padding-left: 0.12em;
+	padding-right: 0.12em;
+	box-sizing: content-box;
+	justify-content: center;
+	white-space: nowrap;
+}
+
+.pflr-cols--separated .pflr-cell--part.pflr-cell--reading {
+	background: rgba(255, 228, 240, 0.38);
+	border-radius: 8rpx;
+}
+
+.pflr-part-sep {
+	flex: 0 0 auto;
+	width: 28rpx;
+	min-width: 28rpx;
+	max-width: 28rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	align-self: stretch;
+	pointer-events: none;
+	box-sizing: border-box;
+}
+
+.pflr-part-sep-text {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: rgba(92, 61, 46, 0.26);
+	line-height: 1;
+	transform: translateY(calc(var(--pfl-cell-h) * -0.05));
+}
+
 .pflr-cell--empty {
 	pointer-events: none;
 }
@@ -277,37 +548,9 @@ export default {
 	opacity: 0.92;
 }
 
-.pflr-cell--reading {
-	z-index: 2;
-}
-
-.pflr-cell--reading .pflr-sheet,
-.pflr-cell--reading .pflr-write-area {
-	filter: none;
-}
-
-.pflr--reading-glow .pflr-sheet {
-	box-shadow: 0 0 0 4rpx rgba(255, 120, 150, 0.55), 0 8rpx 24rpx rgba(196, 77, 106, 0.28);
-}
-
-.pflr-cell--reading .pflr-glyphs-row {
-	transform: scale(1.12) translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
-}
-
-.pflr-cell--reading .pflr-glyph {
-	color: #c44d6a;
-	font-weight: 600;
-}
-
 .pflr-glyph--tone {
-	/* 避免连读放大时声调相对主体偏小 */
 	font-size: 1em;
 	line-height: 1;
-}
-
-.pflr-cell--reading .pflr-glyph--tone {
-	font-size: 1.08em;
-	font-weight: 600;
 }
 
 .pflr-write-area {
@@ -359,7 +602,7 @@ export default {
 	font-size: 0.88em;
 }
 
-/* —— 尺寸（--pfl-cell-h 为格高，字号与格高成比例）—— */
+/* —— 尺寸（--pfl-cell-h 为格高；字号仅设在 glyphs-row，.font-pinyin 用 em 叠乘缩放）—— */
 .pflr--compact {
 	--pfl-cell-h: 88rpx;
 }
@@ -368,8 +611,7 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--compact .pflr-glyphs-row,
-.pflr--compact .pflr-glyph {
+.pflr--compact .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 35 / 44);
 }
 
@@ -381,8 +623,7 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--grid .pflr-glyphs-row,
-.pflr--grid .pflr-glyph {
+.pflr--grid .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 56 / 72);
 }
 
@@ -394,17 +635,8 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--tone .pflr-glyphs-row,
-.pflr--tone .pflr-glyph {
+.pflr--tone .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 46 / 58);
-}
-
-.pflr--tone .pflr-cell--reading .pflr-glyphs-row {
-	transform: scale(1.16) translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
-}
-
-.pflr--tone .pflr-cell--reading .pflr-glyph--tone {
-	font-size: 1.12em;
 }
 
 .pflr--md {
@@ -415,8 +647,7 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--md .pflr-glyphs-row,
-.pflr--md .pflr-glyph {
+.pflr--md .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 42 / 58);
 }
 
@@ -428,8 +659,7 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--lg .pflr-glyphs-row,
-.pflr--lg .pflr-glyph {
+.pflr--lg .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 51 / 80);
 }
 
@@ -442,8 +672,7 @@ export default {
 	height: var(--pfl-cell-h);
 }
 
-.pflr--xl .pflr-glyphs-row,
-.pflr--xl .pflr-glyph {
+.pflr--xl .pflr-glyphs-row {
 	font-size: calc(var(--pfl-cell-h) * 44 / 58);
 }
 </style>

@@ -91,6 +91,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import { navigateToPinyinHome } from '@/utils/root-nav.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import {
 	PINYIN_DRILL_CATEGORIES,
@@ -320,7 +321,7 @@ export default {
 			stopDrillAudio()
 			uni.navigateBack({
 				fail: () => {
-					uni.switchTab({ url: '/pages/pinyin/index' })
+					navigateToPinyinHome()
 				}
 			})
 		}

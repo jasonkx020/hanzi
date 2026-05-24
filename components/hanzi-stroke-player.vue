@@ -27,12 +27,17 @@
 
 <script>
 import drawNative from '@/utils/draw-native.js'
+import {
+	loadHanziWriterCharData,
+	peekHanziWriterCharCache
+} from '@/utils/hanzi-writer-loader.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import {
 	getCncharStrokeNameList,
-	enqueueStrokeSegmentAudio,
-	enqueueStrokeTrailAudio,
-	getStrokeAudioQueueTail,
+	enqueueStrokeLabelForStroke,
+	awaitStrokeLabelAudio,
+	estimateStrokeLabelAudioDurationMs,
+	preloadStrokeNamesForChar,
 	resetStrokeAudioQueue,
 	stopStrokeOrderAudio
 } from '@/utils/stroke-order-audio.js'
@@ -211,9 +216,9 @@ export default {
 			const base = {
 				autoAnimate: false,
 				loopAnimate: this.loopAnimate,
-				strokeAnimationSpeed: 0.5,
-				strokeDurationMs: 920,
-				delayBetweenStrokes: 144,
+				strokeAnimationSpeed: 0.48,
+				strokeDurationMs: 980,
+				delayBetweenStrokes: 180,
 				delayBetweenLoops: 1600,
 				cornerPauseMs: 0
 			}
@@ -234,14 +239,22 @@ export default {
 				onStrokeWillStart(strokeIndex, hanzi) {
 					vm.strokeIndex = strokeIndex
 					vm.$emit('stroke-index', strokeIndex)
-					enqueueStrokeSegmentAudio(strokeIndex, 0, hanzi, strokeAudioOpts())
+					const opts = strokeAudioOpts()
+					const names = preloadStrokeNamesForChar(hanzi)
+					if (!names[strokeIndex] && process.env.NODE_ENV !== 'production') {
+						console.warn('[hanzi-stroke-player] missing stroke name', hanzi, strokeIndex, names.length)
+					}
+					const audioMs = estimateStrokeLabelAudioDurationMs(strokeIndex, hanzi, opts)
+					if (vm.writer && typeof vm.writer.setStrokeDurationFloor === 'function' && audioMs > 0) {
+						vm.writer.setStrokeDurationFloor(audioMs)
+					}
+					enqueueStrokeLabelForStroke(strokeIndex, hanzi, opts)
 				},
-				onStrokeCorner(strokeIndex, cornerIndex, hanzi) {
-					enqueueStrokeSegmentAudio(strokeIndex, cornerIndex + 1, hanzi, strokeAudioOpts())
+				onStrokeCorner() {
+					// 读音按笔画名音节播放，不再按中线拐点分段（避免与 cnchar 音节数不一致）
 				},
-				onStrokeTrailSegments(strokeIndex, fromSegmentIndex, hanzi) {
-					enqueueStrokeTrailAudio(strokeIndex, fromSegmentIndex, hanzi, strokeAudioOpts())
-					return getStrokeAudioQueueTail()
+				onStrokeTrailSegments(strokeIndex) {
+					return awaitStrokeLabelAudio(strokeIndex)
 				}
 			}
 		},
@@ -284,6 +297,9 @@ export default {
 			}
 			this.registerWordNotFoundOnce()
 			this.refreshStrokeNames()
+			if (!peekHanziWriterCharCache(ch)) {
+				loadHanziWriterCharData(ch).catch(() => {})
+			}
 			this.strokeReady = true
 			this.animFallback = false
 			const token = ++this.mountGen
@@ -354,6 +370,7 @@ export default {
 				return
 			}
 			resetStrokeAudioQueue()
+			preloadStrokeNamesForChar(ch)
 			this.playbackPaused = false
 			this.registerWordNotFoundOnce()
 			this.destroyWriterOnly()

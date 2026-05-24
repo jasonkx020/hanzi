@@ -1,6 +1,6 @@
 /**
  * 课次模式页一次性传参（避免 URL 过长）。
- * 写入后由小测/跟读等页读取并立即清除。
+ * 写入后由小测/听写等页读取并立即清除。
  */
 
 const STORAGE_KEY = 'lesson_session_transfer_v1'
@@ -32,35 +32,6 @@ export function takeLessonQuizTransfer() {
 		return o.payload
 	} catch (e) {
 		console.warn('[lesson-mode-session] takeLessonQuizTransfer', e)
-		return null
-	}
-}
-
-/**
- * 跟读页传参（与 quiz 同结构，读页后清除）。
- * @param {object} payload 同 putLessonQuizTransfer
- */
-export function putLessonFollowTransfer(payload) {
-	try {
-		uni.setStorageSync(STORAGE_KEY, {
-			type: 'follow',
-			payload: payload || {},
-			at: Date.now()
-		})
-	} catch (e) {
-		console.warn('[lesson-mode-session] putLessonFollowTransfer', e)
-	}
-}
-
-/** @returns {null | { lessonTitle?: string, rjLessonIdx?: number|null, rows: Array<{ hanzi: string, pinyin?: string }> }} */
-export function takeLessonFollowTransfer() {
-	try {
-		const o = uni.getStorageSync(STORAGE_KEY)
-		uni.removeStorageSync(STORAGE_KEY)
-		if (!o || o.type !== 'follow' || !o.payload) return null
-		return o.payload
-	} catch (e) {
-		console.warn('[lesson-mode-session] takeLessonFollowTransfer', e)
 		return null
 	}
 }

@@ -56,7 +56,7 @@
 		</view>
 
 		<view class="foot-note">
-			<text class="foot-line">· 「听音找字」「跟读」不计入课次小测通关数。</text>
+			<text class="foot-line">· 「听音找字」不计入课次小测通关数。</text>
 			<text class="foot-line">· 切换教材与年级后，本页会显示对应册别数据。</text>
 		</view>
 	</meng-sub-page>

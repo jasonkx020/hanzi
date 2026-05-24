@@ -1,7 +1,7 @@
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 
 /**
- * Tab 主页面：顶图铺满状态栏区 + 底部给自定义 tabBar 留白 + 同步选中项
+ * 原 Tab 主页面壳：顶图铺满状态栏区（已取消底部 TabBar）
  */
 export default {
 	data() {
@@ -25,21 +25,7 @@ export default {
 		refreshStatusBarMetrics() {
 			this.statusBarHeight = getMengNavMetrics().statusBarPx
 		},
-		setTabBarIndex(index) {
-			this.$nextTick(() => {
-				let bar = null
-				try {
-					if (typeof this.getTabBar === 'function') bar = this.getTabBar()
-				} catch (_) {}
-				if (!bar) return
-				if (typeof bar.setData === 'function') {
-					bar.setData({ selected: index })
-				} else if (bar.$vm && typeof bar.$vm.syncSelected === 'function') {
-					bar.$vm.syncSelected(index)
-				} else if (bar.$vm) {
-					bar.$vm.selected = index
-				}
-			})
-		}
+		/** @deprecated TabBar 已移除，保留空实现避免旧页面 onShow 报错 */
+		setTabBarIndex(_index) {}
 	}
 }

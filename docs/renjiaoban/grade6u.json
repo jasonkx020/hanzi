@@ -1,0 +1,308 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 6,
+    "semester": "上",
+    "catalog_note": "统编人教版六年级上册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "草原",
+                    "page": 2
+                },
+                {
+                    "sort": 2,
+                    "title": "丁香结",
+                    "page": 5
+                },
+                {
+                    "sort": 3,
+                    "title": "古诗词三首",
+                    "page": 8,
+                    "sub_title": ["宿建德江", "六月二十七日望湖楼醉书", "西江月·夜行黄沙道中"]
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "花之歌",
+                    "page": 10
+                },
+                {
+                    "type": "习作",
+                    "title": "变形记",
+                    "page": 12
+                },
+                {
+                    "type": "语文园地",
+                    "page": 13
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 15,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "七律·长征",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "狼牙山五壮士",
+                    "page": 18
+                },
+                {
+                    "sort": 7,
+                    "title": "开国大典",
+                    "page": 21
+                },
+                {
+                    "sort": 8,
+                    "mark": "*略读",
+                    "title": "灯光",
+                    "page": 26
+                },
+                {
+                    "sort": 9,
+                    "mark": "*略读",
+                    "title": "我的战友邱少云",
+                    "page": 28
+                },
+                {
+                    "type": "口语交际",
+                    "title": "演讲",
+                    "page": 31
+                },
+                {
+                    "type": "习作",
+                    "title": "多彩的活动",
+                    "page": 32
+                },
+                {
+                    "type": "语文园地",
+                    "page": 33
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 35,
+            "article_list": [
+                {
+                    "sort": 10,
+                    "title": "竹节人",
+                    "page": 36
+                },
+                {
+                    "sort": 11,
+                    "title": "宇宙生命之谜",
+                    "page": 40
+                },
+                {
+                    "sort": 12,
+                    "mark": "*略读",
+                    "title": "故宫博物院",
+                    "page": 44
+                },
+                {
+                    "type": "习作",
+                    "title": "____让生活更美好",
+                    "page": 50
+                },
+                {
+                    "type": "语文园地",
+                    "page": 51
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 53,
+            "article_list": [
+                {
+                    "sort": 13,
+                    "title": "桥",
+                    "page": 54
+                },
+                {
+                    "sort": 14,
+                    "title": "穷人",
+                    "page": 57
+                },
+                {
+                    "sort": 15,
+                    "mark": "*略读",
+                    "title": "金色的鱼钩",
+                    "page": 62
+                },
+                {
+                    "type": "口语交际",
+                    "title": "请你支持我",
+                    "page": 67
+                },
+                {
+                    "type": "习作",
+                    "title": "笔尖流出的故事",
+                    "page": 68
+                },
+                {
+                    "type": "语文园地",
+                    "page": 69
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "笑与泪，经历与成长",
+                    "page": 71
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 73,
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "夏天里的成长",
+                    "page": 74
+                },
+                {
+                    "sort": 17,
+                    "title": "盼",
+                    "page": 76
+                },
+                {
+                    "type": "习作例文",
+                    "sub_title": ["爸爸的计划", "小站"],
+                    "page": 81
+                },
+                {
+                    "type": "习作",
+                    "title": "围绕中心意思写",
+                    "page": 84
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 85,
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "古诗三首",
+                    "page": 86,
+                    "sub_title": ["浪淘沙（其一）", "江南春", "书湖阴先生壁"]
+                },
+                {
+                    "sort": 19,
+                    "title": "只有一个地球",
+                    "page": 88
+                },
+                {
+                    "sort": 20,
+                    "mark": "*略读",
+                    "title": "青山不老",
+                    "page": 90
+                },
+                {
+                    "sort": 21,
+                    "mark": "*略读",
+                    "title": "三黑和土地",
+                    "page": 92
+                },
+                {
+                    "type": "口语交际",
+                    "title": "意见不同怎么办",
+                    "page": 97
+                },
+                {
+                    "type": "习作",
+                    "title": "学写倡议书",
+                    "page": 98
+                },
+                {
+                    "type": "语文园地",
+                    "page": 99
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 101,
+            "article_list": [
+                {
+                    "sort": 22,
+                    "title": "文言文二则",
+                    "page": 102,
+                    "sub_title": ["伯牙鼓琴", "书戴嵩画牛"]
+                },
+                {
+                    "sort": 23,
+                    "title": "月光曲",
+                    "page": 105
+                },
+                {
+                    "sort": 24,
+                    "mark": "*略读",
+                    "title": "京剧趣谈",
+                    "page": 107
+                },
+                {
+                    "type": "口语交际",
+                    "title": "聊聊书法",
+                    "page": 109
+                },
+                {
+                    "type": "习作",
+                    "title": "我的拿手好戏",
+                    "page": 110
+                },
+                {
+                    "type": "语文园地",
+                    "page": 111
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 113,
+            "article_list": [
+                {
+                    "sort": 25,
+                    "title": "少年闰土",
+                    "page": 114
+                },
+                {
+                    "sort": 26,
+                    "title": "好的故事",
+                    "page": 118
+                },
+                {
+                    "sort": 27,
+                    "mark": "*略读",
+                    "title": "我的伯父鲁迅先生",
+                    "page": 121
+                },
+                {
+                    "sort": 28,
+                    "mark": "*略读",
+                    "title": "有的人——纪念鲁迅有感",
+                    "page": 125
+                },
+                {
+                    "type": "习作",
+                    "title": "有你，真好",
+                    "page": 127
+                },
+                {
+                    "type": "语文园地",
+                    "page": 128
+                }
+            ]
+        },
+        "附录": {
+            "写字表": {
+                "page": 130
+            },
+            "词语表": {
+                "page": 132
+            }
+        },
+        "note": "标*的是略读课文"
+    }
+}

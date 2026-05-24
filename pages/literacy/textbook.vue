@@ -39,8 +39,8 @@
 		<view v-if="!curriculumPickerRequired" class="tb-sheet">
 		<view v-if="textbookTexts.length" class="textbook-panel">
 			<view class="textbook-panel-head">
-				<text class="textbook-panel-title">人教版（部编）课文原文</text>
-				<text class="textbook-panel-sub">当前册别共 {{ textbookTexts.length }} 篇，点标题可阅读</text>
+				<text class="textbook-panel-title">{{ textbookTextsPanelTitle }}</text>
+				<text class="textbook-panel-sub">当前册别共 {{ textbookTexts.length }} 课，点标题可阅读说明</text>
 			</view>
 			<view
 				v-for="(item, idx) in textbookTexts.slice(0, 12)"
@@ -158,7 +158,7 @@
 </template>
 
 <script>
-import { TEXTBOOK_VERSION_IDS, COL_PROGRESS, LIST_TYPE } from '@/constants/curriculum-schema.js'
+import { TEXTBOOK_VERSION_IDS, COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import {
 	getCurriculumPrefs,
 	setCurriculumPrefs,
@@ -167,9 +167,10 @@ import {
 } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
-	buildLessonCharRowsFromRenjiaoItem,
-	buildLiteracyOnlyCharRowsFromRenjiaoItem,
-	filterRenjiaoTextbookSyncLessons,
+	buildTextbookSyncLessonList,
+	filterRenjiaoTextbookReadableTexts,
+	getRenjiaoTextbookLoaderParams,
+	isRenjiaoTextbookSyncPrefs,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
@@ -177,6 +178,7 @@ import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
+import { reLaunchHome } from '@/utils/root-nav.js'
 
 const COVER_BOOKS = [
 	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
@@ -263,7 +265,14 @@ export default {
 			})
 			return Object.values(map).sort((a, b) => a.grade - b.grade)
 		},
-		/** 人教版 JSON 课次为识字+写字条数之和；其它版本用生字库行数 */
+		textbookTextsPanelTitle() {
+			const p = getCurriculumPrefs()
+			if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
+				return '课标基本字 · 小课说明'
+			}
+			return '人教版（部编）课文原文'
+		},
+		/** 课本 JSON 课次：识字+写字条数之和；其它版本用生字库行数 */
 		statSlotCount() {
 			if (this.lessons.length && typeof this.lessons[0].rjIdx === 'number') {
 				return this.lessons.reduce((s, l) => s + (Number(l.count) || 0), 0)
@@ -303,26 +312,12 @@ export default {
 				this.syncHeroBookCover()
 				this.summary = formatCurriculumSummary(prefs)
 				this.textbookTexts = []
-				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
-					const raw = await loadRenjiaoTextbookTexts({
-						grade: prefs.grade,
-						semester: prefs.semester
-					})
-					const syncLessons = filterRenjiaoTextbookSyncLessons(raw)
+				if (isRenjiaoTextbookSyncPrefs(prefs)) {
+					const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
+					const raw = await loadRenjiaoTextbookTexts(loaderParams)
+					this.textbookTexts = filterRenjiaoTextbookReadableTexts(raw)
 					this.chars = []
-					this.lessons = syncLessons.map((item, idx) => {
-						const charRows = buildLessonCharRowsFromRenjiaoItem(item)
-						const litRows = buildLiteracyOnlyCharRowsFromRenjiaoItem(item)
-						const learnCheckKeys = this.collectLessonLearnCharKeys(litRows)
-						return {
-							hint: String(item.title || `第${idx + 1}课`),
-							count: charRows.length,
-							rjIdx: idx,
-							learnCheckKeys,
-							doneBadgeKind: learnCheckKeys.length ? 'literacy' : '',
-							doneBadgeText: ''
-						}
-					})
+					this.lessons = buildTextbookSyncLessonList(raw)
 				} else {
 					this.chars = await queryCurriculumChars(prefs)
 					const map = Object.create(null)
@@ -437,7 +432,7 @@ export default {
 			})
 		},
 		goHome() {
-			uni.switchTab({ url: '/pages/home/home' })
+			reLaunchHome()
 		},
 		openLesson(lesson) {
 			if (this.curriculumPickerRequired) {

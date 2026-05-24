@@ -38,6 +38,48 @@ const PRECOMPOSED_TONE_TO_BASE = new Map([
 	['\u01dc', '\u00fc']
 ])
 
+/** 预组合带调字母 → 声调 1–4 */
+const TONE_CHAR_TO_NUMBER = {
+	'\u0101': 1,
+	'\u00e1': 2,
+	'\u01ce': 3,
+	'\u00e0': 4,
+	'\u0113': 1,
+	'\u00e9': 2,
+	'\u011b': 3,
+	'\u00e8': 4,
+	'\u012b': 1,
+	'\u00ed': 2,
+	'\u01d0': 3,
+	'\u00ec': 4,
+	'\u014d': 1,
+	'\u00f3': 2,
+	'\u01d2': 3,
+	'\u00f2': 4,
+	'\u016b': 1,
+	'\u00fa': 2,
+	'\u01d4': 3,
+	'\u00f9': 4,
+	'\u01d6': 1,
+	'\u01d8': 2,
+	'\u01da': 3,
+	'\u01dc': 4
+}
+
+/**
+ * 从带调音节识别声调（1–4）；无声调返回 0。
+ * @param {string} syllable
+ * @returns {number}
+ */
+export function detectToneNumberFromSyllable(syllable) {
+	const s = String(syllable || '').normalize('NFC')
+	for (const ch of s) {
+		const n = TONE_CHAR_TO_NUMBER[ch]
+		if (n) return n
+	}
+	return 0
+}
+
 /**
  * @param {string} s
  * @returns {string}

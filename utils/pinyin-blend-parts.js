@@ -1,7 +1,8 @@
 /**
- * 拼读练习：按拼音规则拆成「声母 → 介母 → 韵母」顺序（用于分步播放）。
- * - 整体认读音节：不拆分，整段播放（与「整体认读」表一致，含 zhi…shi、yue、yun 等）。
- * - 否则：两拼 / 三拼；j/q/x 后写的 ue → 韵母 üe；j/q/x + un → ün（与 lun/gun 等真 un 区分）。
+ * 拼读练习：按汉语拼音拼读规则拆分（用于分步播放）。
+ * - 整体认读音节：不拆分（zhi…shi、yi…ying、yuan 等，见 pinyin-pep-category）。
+ * - 两拼为主：声母 + 韵母（含介音韵母，如 tián → t + ián，韵母为 ian 整体带调）。
+ * - 三拼仅用于教材示例音节（如 hua → h + u + a）；j/q/x 的 üe、ün 等仍按原规则。
  */
 
 import { isPinyinWholeReadingSyllable } from '@/utils/pinyin-pep-category.js'
@@ -35,6 +36,53 @@ const INITIALS_LONG_FIRST = [
 	'w'
 ]
 
+/**
+ * 与《汉语拼音方案》一致的韵母表（含介音韵母 ia/ian/iang、ua/uan 等）。
+ * 与剩余部分 R 完全一致时走两拼，不把 i/u/ü 再拆成「介母 + 韵尾」。
+ */
+const BLEND_WHOLE_FINALS = new Set([
+	'a',
+	'o',
+	'e',
+	'er',
+	'ai',
+	'ei',
+	'ao',
+	'ou',
+	'an',
+	'en',
+	'ang',
+	'eng',
+	'ong',
+	'i',
+	'ia',
+	'iao',
+	'ie',
+	'iu',
+	'ian',
+	'in',
+	'iang',
+	'ing',
+	'iong',
+	'u',
+	'ua',
+	'uo',
+	'uai',
+	'ui',
+	'uan',
+	'un',
+	'uang',
+	'ueng',
+	U_UML,
+	'ue',
+	`${U_UML}e`,
+	`${U_UML}an`,
+	`${U_UML}n`
+])
+
+/** 拼读页「三拼音节示例」，覆盖两拼（hua 的韵母写作 ua，但教学按 h-u-a 拼读） */
+const FORCE_TRIPLE_SYLLABLES = new Set(['hua'])
+
 function normBlend(raw) {
 	return String(raw || '')
 		.trim()
@@ -56,8 +104,36 @@ function isJqxSingle(initial) {
 	return initial.length === 1 && 'jqx'.includes(initial)
 }
 
+/** 韵母书写归一（j/q/x、y 后 u→ü；ue→üe） */
+function normalizeBlendFinalR(initial, R) {
+	let fin = R
+	if (fin === 'ue') fin = `${U_UML}e`
+	if ((isJqxSingle(initial) || initial === 'y') && fin.startsWith('u')) {
+		fin = U_UML + fin.slice(1)
+	}
+	return fin
+}
+
+function isBlendWholeFinal(initial, R) {
+	return BLEND_WHOLE_FINALS.has(normalizeBlendFinalR(initial, R))
+}
+
+function tryTripleMedialSplit(initial, R) {
+	if (R.length < 2) return null
+	const c0 = R[0]
+	const isMedialHead = c0 === 'i' || c0 === 'u' || c0 === U_UML
+	if (!isMedialHead) return null
+	const tail = R.slice(1)
+	if (!tailHasVowel(tail)) return null
+	let medial = c0 === U_UML ? 'ü' : c0
+	if ((isJqxSingle(initial) || initial === 'y') && medial === 'u') {
+		medial = 'ü'
+	}
+	return [initial, medial, tail]
+}
+
 /**
- * @param {string} symbol 格子上的拼音，如 hua、xue、qiu
+ * @param {string} symbol 格子上的拼音，如 hua、xue、qiu、tian
  * @returns {string[]} 按朗读顺序的片段，用于依次播放 static/pinyin 下对应 opus
  */
 export function splitPinyinBlendParts(symbol) {
@@ -106,21 +182,14 @@ export function splitPinyinBlendParts(symbol) {
 		return [initial, R]
 	}
 
-	if (R.length >= 2) {
-		const c0 = R[0]
-		const isMedialHead = c0 === 'i' || c0 === 'u' || c0 === U_UML
-		if (isMedialHead) {
-			const tail = R.slice(1)
-			if (tailHasVowel(tail)) {
-				let medial = c0 === U_UML ? 'ü' : c0
-				if ((isJqxSingle(initial) || initial === 'y') && medial === 'u') {
-					medial = 'ü'
-				}
-				return [initial, medial, tail]
-			}
-		}
+	if (isBlendWholeFinal(initial, R)) {
+		return [initial, normalizeBlendFinalR(initial, R)]
+	}
+
+	if (FORCE_TRIPLE_SYLLABLES.has(s)) {
+		const triple = tryTripleMedialSplit(initial, R)
+		if (triple) return triple
 	}
 
 	return [initial, R]
 }
-

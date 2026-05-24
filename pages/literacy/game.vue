@@ -155,8 +155,6 @@ import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { normLessonPayloadPinyin, playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
 import { playOpusForDisplayPinyin, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { stopHanziSpeech } from '@/utils/speak-hanzi.js'
-import { getAudioNarrator } from '@/utils/audio-settings.js'
-import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { MENG_VOICE_PLANNED, playMengmengVoice } from '@/utils/mengmeng-voice.js'
 import {
 	addCharWrongCount,
@@ -167,6 +165,7 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
 import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
+import { reLaunchHome } from '@/utils/root-nav.js'
 import { recordGameLevelClear } from '@/utils/achievement-stats-storage.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
@@ -652,18 +651,13 @@ export default {
 			stopHanziSpeech()
 			if (cancelled()) return
 			if (tokens.length > 1) {
-				const narrator = getAudioNarrator()
 				for (let i = 0; i < tokens.length; i++) {
 					if (cancelled()) return
 					this.hearHighlightCol = i
-					let ok = await playOpusForDisplayPinyin(tokens[i], {
+					const ok = await playOpusForDisplayPinyin(tokens[i], {
 						isCancelled: cancelled,
-						gapMs: 0,
-						timeoutMs: 3200
+						gapMs: 0
 					})
-					if (!ok && !cancelled()) {
-						ok = await speakPinyinSymbolAsync(tokens[i], narrator)
-					}
 					if (ok && i < tokens.length - 1 && !cancelled()) {
 						await new Promise((r) => setTimeout(r, 80))
 					}
@@ -786,7 +780,7 @@ export default {
 		},
 		goHome() {
 			this.stopGameAudio()
-			uni.switchTab({ url: '/pages/home/home' })
+			reLaunchHome()
 		}
 	}
 }

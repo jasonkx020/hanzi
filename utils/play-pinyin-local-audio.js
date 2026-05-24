@@ -1,13 +1,16 @@
 /**
- * 拼音格子本地音频（如 static 下的 opus/mp3）。
+ * 拼音 / 字母读音：仅播放 static/pinyin/{stem}.opus，无对应文件则不播（无 TTS）。
  * 单例 InnerAudioContext：切换曲目时先 destroy，避免泄漏。
  */
-import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
-import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
-import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
+import {
+	normalizeStaticWebPath,
+	resolveAppStaticAbsoluteUrl,
+	resolveAppStaticLogicalUrl
+} from '@/utils/resolve-app-static-url.js'
+import { isAppPlus } from '@/utils/uni-platform.js'
 
 /** ü */
 const U_UML = '\u00fc'
@@ -82,6 +85,51 @@ export function applyToneToSyllableStem(symbol, tone) {
 		marked = reps ? reps[tone - 1] : v
 	}
 	return raw.slice(0, idx) + marked + raw.slice(idx + 1)
+}
+
+/**
+ * 在完整无声调音节中定位片段（优先后缀匹配，对应韵母/介韵部分）。
+ * @param {string} fullBare
+ * @param {string} partBare
+ * @returns {number}
+ */
+export function findPartOffsetInBareSyllable(fullBare, partBare) {
+	const full = stripPinyinToneMarks(normTone(fullBare))
+	const part = stripPinyinToneMarks(normTone(partBare))
+	if (!full || !part) return -1
+	const idx = full.lastIndexOf(part)
+	return idx >= 0 ? idx : -1
+}
+
+/**
+ * 按完整音节的标调规则，把声调标到拆分出的韵母/尾音节片段上（与整读调号位置一致）。
+ * 若该片段不含主元音调位则返回无声调片段。
+ * @param {string} fullBare 完整音节无声调，如 zhuang
+ * @param {string} partBare 拆分片段，如 ang
+ * @param {number} tone 1–4
+ * @returns {string}
+ */
+export function applyToneFromFullSyllableToPart(fullBare, partBare, tone) {
+	const toneNum = Number(tone)
+	const part = stripPinyinToneMarks(normTone(partBare))
+	if (!part) return ''
+	if (toneNum < 1 || toneNum > 4) return part
+
+	const full = stripPinyinToneMarks(normTone(fullBare))
+	const pos = vowelMarkIndex(full)
+	if (!pos || !full) return applyToneToSyllableStem(part, toneNum)
+
+	const [toneIdx, vKey] = pos
+	const start = findPartOffsetInBareSyllable(full, part)
+	if (start < 0) return applyToneToSyllableStem(part, toneNum)
+	if (toneIdx < start || toneIdx >= start + part.length) {
+		return part
+	}
+
+	const localIdx = toneIdx - start
+	const reps = vKey === 'a' ? TONE_VOWELS.a : TONE_VOWELS[vKey]
+	const marked = reps ? reps[toneNum - 1] : part[localIdx]
+	return part.slice(0, localIdx) + marked + part.slice(localIdx + 1)
 }
 
 let _inner = null
@@ -216,7 +264,6 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 				errMsg: err.errMsg || err.message || String(e),
 				errCode: err.errCode
 			})
-			console.warn('[pinyin] local audio failed', src, e)
 		}
 	}
 	logHanziSpeak('local.all_failed', { symbol, urls: tryUrls })
@@ -224,40 +271,38 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 }
 
 /**
- * 「音调」页：格内为带调 stem，走对应 opus / TTS。
- * opts.asNeutral 为 true 时走无调+一声替补（保留兼容；当前音调表已不展示本音/轻声列）。
+ * 「音调」页：格内为带调 stem，仅播对应 opus。
+ * opts.asNeutral 为 true 时走无调 + 一声替补 opus。
  * @param {string} symbol 播放用字符串（带调音节）
- * @param {{ asNeutral?: boolean, narrator?: string }} opts
+ * @param {{ asNeutral?: boolean }} opts
  */
 export async function playToneGridCell(symbol, opts = {}) {
 	const sym = String(symbol || '').trim()
 	if (!sym) return false
-	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	if (opts.asNeutral) {
 		return playLocalPinyinNeutralThenTone1(sym, true)
 	}
 	const path = getLocalPinyinAudioPath(sym)
+	if (!path) return false
 	try {
 		await playPinyinLocalAudio(path)
 		return true
 	} catch (e) {
 		if (isPinyinPlayAborted(e)) return false
-		const ok = await speakPinyinSymbolAsync(sym, narrator)
-		return !!ok
+		return false
 	}
 }
 
 /**
  * 用户当前看到的拼音串：拆音节后按 `/static/pinyin/{音节}.opus` 查找播放；
- * 带调文件不存在时再试无声调 + 一声替补，仍失败则 TTS。
+ * 带调文件不存在时再试无声调 + 一声替补 opus，均无则跳过该段。
  * @param {string} displayPinyin 与界面展示一致（如 pyShow）
- * @param {{ gapMs?: number, narrator?: string }} [opts]
+ * @param {{ gapMs?: number, timeoutMs?: number, isCancelled?: () => boolean }} [opts]
  * @returns {Promise<boolean>} 是否至少有一段成功播放
  */
 export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 	const raw = String(displayPinyin || '').trim()
 	if (!raw || raw === '-') return false
-	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	let tokens = splitPinyinDisplayTokens(raw)
 	if (!tokens.length) tokens = [raw]
 	const gapMs = opts.gapMs != null ? opts.gapMs : 100
@@ -289,11 +334,6 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 			played = await playLocalPinyinNeutralThenTone1(sym, true, { skipTonedExact: true })
 			if (played) logHanziSpeak('lesson.display_pinyin.fallback_neutral_ok', { sym })
 		}
-		if (!played) {
-			const tts = await speakPinyinSymbolAsync(sym, narrator)
-			played = !!tts
-			logHanziSpeak(played ? 'lesson.display_pinyin.tts_ok' : 'lesson.display_pinyin.tts_fail', { sym })
-		}
 		if (played) anyOk = true
 		if (i < tokens.length - 1 && gapMs > 0) {
 			if (!(await sleepUnlessCancelled(gapMs, isCancelled))) return anyOk
@@ -302,14 +342,39 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 	return anyOk
 }
 
+function normalizeInnerAudioError(err) {
+	if (!err) return new Error('play error')
+	if (err instanceof Error) return err
+	const msg = err.errMsg || err.message || String(err)
+	const e = new Error(msg)
+	if (err.errCode != null) e.errCode = err.errCode
+	return e
+}
+
 /**
- * App 端：InnerAudioContext 使用 _www/static/... 逻辑路径。
- * 禁止 plus.io.convertLocalFileSystemURL(整条路径)，release 会与运行时二次拼接导致路径重复。
- * @param {string} src
+ * 按端生成 InnerAudio 可尝试的 src 列表（App 失败时可再试绝对路径）。
+ * @param {string} src 如 /static/pinyin/b.opus
+ * @returns {string[]}
  */
+function resolveLocalAudioSrcCandidates(src) {
+	const web = normalizeStaticWebPath(src)
+	if (!web) return []
+	const out = []
+	const push = (u) => {
+		const s = String(u || '').trim()
+		if (s && out.indexOf(s) === -1) out.push(s)
+	}
+	push(resolveAppStaticLogicalUrl(web))
+	if (isAppPlus()) {
+		push(resolveAppStaticAbsoluteUrl(web))
+	}
+	return out
+}
+
+/** @param {string} src */
 function resolveLocalAudioSrc(src) {
-	if (!src || typeof src !== 'string') return src
-	return resolveAppStaticLogicalUrl(src)
+	const list = resolveLocalAudioSrcCandidates(src)
+	return list[0] || src
 }
 
 /**
@@ -318,19 +383,44 @@ function resolveLocalAudioSrc(src) {
  */
 export function playPinyinLocalAudio(src, opts = {}) {
 	if (!src) return Promise.reject(new Error('empty src'))
+	const candidates = resolveLocalAudioSrcCandidates(src)
+	if (!candidates.length) return Promise.reject(new Error('empty src'))
+
+	const tryAt = (idx) => {
+		if (idx >= candidates.length) {
+			return Promise.reject(new Error('play error'))
+		}
+		return playPinyinLocalAudioOnce(candidates[idx], opts).catch((e) => {
+			if (isPinyinPlayAborted(e)) return Promise.reject(e)
+			if (idx + 1 < candidates.length) return tryAt(idx + 1)
+			return Promise.reject(e)
+		})
+	}
+	return tryAt(0)
+}
+
+/**
+ * @param {string} resolvedSrc 已解析的 InnerAudio src
+ */
+function playPinyinLocalAudioOnce(resolvedSrc, opts = {}) {
 	stopLocalPinyinAudio()
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
-	inner.src = resolveLocalAudioSrc(src)
+	try {
+		inner.obeyMuteSwitch = false
+	} catch (_) {}
 	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 3200
 	return new Promise((resolve, reject) => {
 		let settled = false
+		let started = false
 		let timer = null
+		let canplayTimer = null
 		const finish = (fn) => {
 			if (settled) return
 			settled = true
 			if (_activePlay && _activePlay.inner === inner) _activePlay = null
 			if (timer != null) clearTimeout(timer)
+			if (canplayTimer != null) clearTimeout(canplayTimer)
 			try {
 				inner.stop()
 			} catch (_) {}
@@ -340,19 +430,30 @@ export function playPinyinLocalAudio(src, opts = {}) {
 			if (_inner === inner) _inner = null
 			fn()
 		}
+		const startPlay = () => {
+			if (started || settled) return
+			started = true
+			try {
+				inner.play()
+			} catch (e) {
+				finish(() => reject(e))
+			}
+		}
 		_activePlay = { inner, reject, timer: null }
 		timer = setTimeout(() => finish(() => reject(new Error('play timeout'))), timeoutMs)
 		_activePlay.timer = timer
+		inner.onCanplay(() => {
+			if (canplayTimer != null) clearTimeout(canplayTimer)
+			canplayTimer = null
+			startPlay()
+		})
 		inner.onEnded(() => finish(() => resolve()))
-		inner.onError((err) => finish(() => reject(err || new Error('play error'))))
+		inner.onError((err) => finish(() => reject(normalizeInnerAudioError(err))))
 		inner.onStop(() => {
 			if (!settled) finish(() => reject(makePlayAbortedError()))
 		})
-		try {
-			inner.play()
-		} catch (e) {
-			finish(() => reject(e))
-		}
+		inner.src = resolvedSrc
+		canplayTimer = setTimeout(() => startPlay(), 120)
 	})
 }
 
@@ -371,7 +472,7 @@ function getLocalPinyinTryUrls(sym, useTone1Fallback) {
 /**
  * 同一 InnerAudioContext 连续播多个音节，避免每段 destroy 造成的长停顿（复合笔画名连读）。
  * @param {string[]} symbols 带调音节列表
- * @param {{ gapMs?: number, narrator?: string, useTone1Fallback?: boolean }} [opts]
+ * @param {{ gapMs?: number, useTone1Fallback?: boolean, isCancelled?: () => boolean }} [opts]
  * @returns {Promise<boolean>}
  */
 export function playPinyinLocalAudioSequence(symbols, opts = {}) {
@@ -380,10 +481,10 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 		.filter(Boolean)
 	if (!list.length) return Promise.resolve(false)
 
-	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const gapMs = opts.gapMs != null ? opts.gapMs : 0
 	const useTone1Fallback = opts.useTone1Fallback !== false
 	const isCancelled = opts.isCancelled
+	const forStrokeOrder = opts.forStrokeOrder === true
 
 	stopLocalPinyinAudio()
 	const inner = uni.createInnerAudioContext()
@@ -454,42 +555,83 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 				}
 			}
 
-			const tryTts = () => {
-				speakPinyinSymbolAsync(sym, narrator)
-					.then((ok) => {
-						if (ok) anyOk = true
-						advance()
-					})
-					.catch(() => advance())
-			}
-
 			const tryUrlAt = (urlIdx) => {
 				if (aborted) return
 				if (urlIdx >= urls.length) {
-					tryTts()
+					advance()
 					return
 				}
-				const src = resolveLocalAudioSrc(urls[urlIdx])
+				const candidates = resolveLocalAudioSrcCandidates(urls[urlIdx])
+				if (!candidates.length) {
+					tryUrlAt(urlIdx + 1)
+					return
+				}
 				let settled = false
 				const done = (ok) => {
 					if (settled || aborted) return
 					settled = true
 					if (ok) {
 						anyOk = true
-						logHanziSpeak('local.chain_ok', { sym, src })
+						logHanziSpeak('local.chain_ok', { sym, src: candidates[0] })
 						advance()
 					} else {
 						tryUrlAt(urlIdx + 1)
 					}
 				}
-				inner.onEnded(() => done(true))
-				inner.onError(() => done(false))
-				inner.src = src
-				try {
-					inner.play()
-				} catch (_) {
-					done(false)
+				const tryCandidateAt = (candIdx) => {
+					if (aborted) return
+					if (candIdx >= candidates.length) {
+						done(false)
+						return
+					}
+					let urlStarted = false
+					let canplayTimer = null
+					const urlStart = () => {
+						if (urlStarted || aborted || settled) return
+						urlStarted = true
+						try {
+							inner.play()
+						} catch (_) {
+							tryCandidateAt(candIdx + 1)
+						}
+					}
+					inner.onCanplay(() => {
+						if (canplayTimer != null) clearTimeout(canplayTimer)
+						urlStart()
+					})
+					let symbolTimer = null
+					const symbolTimeoutMs =
+						opts.timeoutPerSymbolMs != null
+							? opts.timeoutPerSymbolMs
+							: forStrokeOrder
+								? 5200
+								: 0
+					const clearSymbolTimer = () => {
+						if (symbolTimer != null) {
+							clearTimeout(symbolTimer)
+							symbolTimer = null
+						}
+					}
+					inner.onEnded(() => {
+						clearSymbolTimer()
+						done(true)
+					})
+					inner.onError(() => {
+						clearSymbolTimer()
+						tryCandidateAt(candIdx + 1)
+					})
+					inner.src = candidates[candIdx]
+					canplayTimer = setTimeout(urlStart, 120)
+					if (symbolTimeoutMs > 0) {
+						symbolTimer = setTimeout(() => {
+							if (!settled && !aborted) {
+								clearSymbolTimer()
+								done(false)
+							}
+						}, symbolTimeoutMs)
+					}
 				}
+				tryCandidateAt(0)
 			}
 
 			tryUrlAt(0)

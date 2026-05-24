@@ -113,7 +113,7 @@ export const MENG_VOICE_COPY = {
 	[MENG_VOICE.DICTATION_STROKE_SHORT]: '笔画画长一点，再松手。',
 	[MENG_VOICE.DICTATION_DONE_PERFECT]: '全写对啦，你是小小书法家！',
 	[MENG_VOICE.DICTATION_DONE_GOOD]: '很棒，多练几遍就更熟啦。',
-	[MENG_VOICE.DICTATION_DONE_ENCOURAGE]: '没关系，先跟读再来听写也很好。',
+	[MENG_VOICE.DICTATION_DONE_ENCOURAGE]: '没关系，回字卡多练几遍再来听写也很好。',
 	[MENG_VOICE.DICTATION_UNSUPPORTED]: '这个字暂时不能写，我们写下一个。'
 }
 
@@ -137,7 +137,7 @@ export const MENG_VOICE_PLANNED = {
 export const MENG_VOICE_COPY_PLANNED = {
 	[MENG_VOICE_PLANNED.HOME_TEXTBOOK]: '跟着课本，和萌萌一起学新字。',
 	[MENG_VOICE_PLANNED.HOME_GAME]: '萌萌的气球营开张啦，来玩吧！',
-	[MENG_VOICE_PLANNED.HOME_PINYIN]: '拼音跟读，大声读出来喔。',
+	[MENG_VOICE_PLANNED.HOME_PINYIN]: '拼音页，点格子听读音喔。',
 	[MENG_VOICE_PLANNED.DAILY_EMPTY]: '今天没有新字要练啦，去课本里看看吧。',
 	[MENG_VOICE_PLANNED.LESSON_QUIZ_CORRECT]: '答对了，真棒！',
 	[MENG_VOICE_PLANNED.LESSON_QUIZ_WRONG]: '再想想，萌萌陪你。',

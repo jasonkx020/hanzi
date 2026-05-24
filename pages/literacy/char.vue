@@ -1,5 +1,5 @@
 <template>
-	<meng-sub-page title="单字学习" subtitle="字形、笔顺、组词与跟读">
+	<meng-sub-page title="单字学习" subtitle="字形、笔顺与组词">
 		<view class="card meng-card">
 			<meng-avatar pose="book" size="md" />
 			<text class="title">功能整合中</text>

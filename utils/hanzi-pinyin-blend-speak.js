@@ -1,15 +1,12 @@
 /**
- * 汉字 → cnchar/字库拼音 → 按完整音节查找本地 opus 播放（失败则 TTS）。
+ * 汉字 → 字库拼音 → 仅按 static/pinyin/*.opus 播放（无文件则不播，无 TTS）。
  * 默认不拆声母/介母/韵母；仅 opts.blend===true 时走拼读拆分（如拼音页「拼读练习」）。
- * 不使用 cnchar.voice。
  */
 import { listSpellReadingsForHanzi, parsePinyinDisplayToReadings } from '@/utils/cnchar-spell-display.js'
-import { splitPinyinBlendParts } from '@/utils/pinyin-blend-parts.js'
+import { splitPinyinReadingSequences } from '@/utils/pinyin-reading-split.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
-import { getAudioNarrator, getAudioNarratorLabel } from '@/utils/audio-settings.js'
 import { playLocalPinyinNeutralThenTone1, sleep } from '@/utils/play-pinyin-local-audio.js'
-import { speakPinyinSymbolAsync, waitForSpeechSynthesisIdle } from '@/utils/speak-pinyin-symbol.js'
 
 /** 与拼音页「拼读练习」一致的间隔 */
 export const PINYIN_BLEND_TIMING = {
@@ -52,45 +49,35 @@ export function resolveHanziPinyinReadings(hanzi, fallbackPinyinDisplay) {
 }
 
 /**
- * 播放一个带调音节：先按无声调形拆分拼读，再播完整带调音节。
+ * 播放一个音节：仅本地 opus；blend 时先拆段再播整音节。
  * @param {string} tonedSyllable 如 zhāng、ba（可无调）
  * @param {object} [opts]
- * @param {string} [opts.narrator]
  * @param {boolean} [opts.useTone1Fb=true]
- * @param {boolean} [opts.blend=false] true 时先拆段拼读再播整音节
+ * @param {boolean} [opts.blend=false]
  * @param {number} [opts.betweenParts]
  * @param {number} [opts.beforeWhole]
- * @param {boolean} [opts.showFailToast=false] TTS 也失败时是否 Toast
  */
 export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 	const text = String(tonedSyllable || '').trim()
 	if (!text) return false
 
-	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const useTone1Fb = opts.useTone1Fb !== false
 	const blend = opts.blend === true
 	const betweenParts = opts.betweenParts != null ? opts.betweenParts : PINYIN_BLEND_TIMING.betweenParts
 	const beforeWhole = opts.beforeWhole != null ? opts.beforeWhole : PINYIN_BLEND_TIMING.beforeWhole
-	const showFailToast = opts.showFailToast === true
 
 	let anyOk = false
 
 	const playOne = async (sym) => {
-		logHanziSpeak('syllable.try_local', { symbol: sym, useTone1Fb, narrator })
+		logHanziSpeak('syllable.try_local', { symbol: sym, useTone1Fb })
 		const played = await playLocalPinyinNeutralThenTone1(sym, useTone1Fb)
 		if (played) {
 			anyOk = true
 			logHanziSpeak('syllable.local_ok', { symbol: sym })
-			return true
+		} else {
+			logHanziSpeak('syllable.local_miss', { symbol: sym })
 		}
-		logHanziSpeak('syllable.local_failed_try_tts', { symbol: sym, narrator })
-		const sp = await speakPinyinSymbolAsync(sym, narrator)
-		if (sp) anyOk = true
-		logHanziSpeak(sp ? 'syllable.tts_ok' : 'syllable.tts_fail', { symbol: sym })
-		if (!sp && showFailToast) {
-			uni.showToast({ title: `${getAudioNarratorLabel(narrator)}：${sym}`, icon: 'none' })
-		}
-		return sp
+		return played
 	}
 
 	if (!blend) {
@@ -98,29 +85,56 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 		return anyOk
 	}
 
-	const bare = stripPinyinToneMarks(text)
-	const parts = splitPinyinBlendParts(bare)
+	return speakBlendedLookupSteps(text, 0, { betweenParts, beforeWhole, playOne })
+}
 
-	if (parts.length >= 2) {
-		for (let i = 0; i < parts.length; i++) {
-			await playOne(parts[i])
-			if (i < parts.length - 1) await sleep(betweenParts)
-		}
-		await sleep(beforeWhole)
-		await playOne(text)
-		return anyOk
+/**
+ * 拼读练习：从 lookup 序列某一格起播到整音节（含末尾整读）。
+ * @param {string} tonedSyllable
+ * @param {number} [startIndex]
+ * @param {object} [opts]
+ */
+export async function speakBlendedPinyinFromIndex(tonedSyllable, startIndex = 0, opts = {}) {
+	const text = String(tonedSyllable || '').trim()
+	if (!text) return false
+	const useTone1Fb = opts.useTone1Fb !== false
+	const betweenParts = opts.betweenParts != null ? opts.betweenParts : PINYIN_BLEND_TIMING.betweenParts
+
+	let anyOk = false
+	const playOne = async (sym) => {
+		const played = await playLocalPinyinNeutralThenTone1(sym, useTone1Fb)
+		if (played) anyOk = true
+		return played
 	}
 
-	await playOne(text)
+	return speakBlendedLookupSteps(text, Math.max(0, Number(startIndex) || 0), {
+		betweenParts,
+		beforeWhole: 0,
+		playOne
+	})
+}
+
+async function speakBlendedLookupSteps(text, startIndex, ctx) {
+	const { lookupSequence } = splitPinyinReadingSequences(text)
+	const steps = (lookupSequence.length ? lookupSequence : [text]).slice(startIndex)
+	if (!steps.length) return false
+
+	let anyOk = false
+	for (let i = 0; i < steps.length; i++) {
+		const played = await ctx.playOne(steps[i])
+		if (played) anyOk = true
+		if (i < steps.length - 1 && ctx.betweenParts > 0) {
+			await sleep(ctx.betweenParts)
+		}
+	}
 	return anyOk
 }
 
 /**
- * 按字朗读：多音字连续播多个音节，每个音节走拼读流程。
+ * 按字朗读：多音字连续播多个音节，每个音节仅走本地 opus。
  * @param {object} opts
  * @param {string} opts.hanzi
  * @param {string} [opts.fallbackPinyin]
- * @param {string} [opts.narrator]
  * @param {boolean} [opts.useTone1Fb]
  * @param {boolean} [opts.blend=false]
  * @param {number} [opts.readingGapMs] 多音之间停顿
@@ -149,7 +163,6 @@ export async function speakHanziViaPinyinBlend(opts = {}) {
 					: PINYIN_BLEND_TIMING.readingGapMs
 	})
 
-	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const useTone1Fb = opts.useTone1Fb !== false
 	const blend = opts.blend === true
 	const readingGapMs =
@@ -160,24 +173,19 @@ export async function speakHanziViaPinyinBlend(opts = {}) {
 				: PINYIN_BLEND_TIMING.readingGapMs
 	const betweenParts = opts.betweenParts != null ? opts.betweenParts : PINYIN_BLEND_TIMING.betweenParts
 	const beforeWhole = opts.beforeWhole != null ? opts.beforeWhole : PINYIN_BLEND_TIMING.beforeWhole
-	const showFailToast = opts.showFailToast === true
 
 	let anyOk = false
-	const multi = readings.length > 1
 	for (let i = 0; i < readings.length; i++) {
 		logHanziSpeak('speak.reading_start', { hanzi: h, index: i, total: readings.length, reading: readings[i] })
 		const ok = await speakBlendedPinyinSyllable(readings[i], {
-			narrator,
 			useTone1Fb,
 			blend,
 			betweenParts,
-			beforeWhole,
-			showFailToast
+			beforeWhole
 		})
 		logHanziSpeak('speak.reading_finish', { hanzi: h, index: i, reading: readings[i], ok })
 		if (ok) anyOk = true
 		if (i < readings.length - 1) {
-			if (multi) await waitForSpeechSynthesisIdle()
 			await sleep(readingGapMs)
 		}
 	}

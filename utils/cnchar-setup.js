@@ -35,7 +35,9 @@ cncharDrawImplementation = 'cnchar-draw'
 
 // #ifndef H5
 import drawNative from './draw-native.js'
+import { LOCAL_HANZI_WRITER_BASE } from './hanzi-writer-loader.js'
 
+drawNative.setResourceBase(LOCAL_HANZI_WRITER_BASE)
 cnchar.use(drawNative)
 cncharDrawImplementation = 'draw-native'
 // #endif

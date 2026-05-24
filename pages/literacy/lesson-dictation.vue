@@ -78,6 +78,8 @@
 						canvas-id="lesson-dictation-canvas"
 						class="dictation-canvas"
 						disable-scroll
+						:width="canvasPixelSize"
+						:height="canvasPixelSize"
 						:style="canvasStyle"
 						@touchstart="onTouchStart"
 						@touchmove="onTouchMove"
@@ -204,6 +206,8 @@ const FEEDBACK = {
 	/** 单笔写错（过程内），语气柔和、不报「第几笔」 */
 	strokeWrong: '笔顺不太对哦，继续加油',
 	strokeShort: '笔画再长一点哦，继续加油',
+	strokeDirection: '请按笔顺方向写，不要横穿哦',
+	strokeOff: '与标准字不够重合，再试一次哦',
 	charPass: (ch) => `全写对了，是「${ch}」！点「下一个」`,
 	charFinishWithMistakes: (n) =>
 		n > 1 ? `写过 ${n} 处小失误，要不要再练一遍？` : '有过小失误，要不要再练一遍？'
@@ -249,8 +253,11 @@ export default {
 		}
 	},
 	computed: {
+		canvasPixelSize() {
+			return this.canvasLength + 30
+		},
 		canvasStyle() {
-			const px = this.canvasLength + 30
+			const px = this.canvasPixelSize
 			return { width: px + 'px', height: px + 'px', display: 'block' }
 		},
 		currentStrokeNo() {
@@ -476,7 +483,19 @@ export default {
 		/** 听写过程单笔写错：屏上文案 + daily_stroke_wrong 口播 */
 		playStrokeWrongHint(reason) {
 			this.feedbackType = 'bad'
-			this.feedbackText = reason === 'tooShort' ? FEEDBACK.strokeShort : FEEDBACK.strokeWrong
+			if (reason === 'tooShort') {
+				this.feedbackText = FEEDBACK.strokeShort
+			} else if (reason === 'offStroke' || reason === 'unstable') {
+				this.feedbackText = FEEDBACK.strokeOff
+			} else if (
+				reason === 'direction' ||
+				reason === 'directionReverse' ||
+				reason === 'endpoints'
+			) {
+				this.feedbackText = FEEDBACK.strokeDirection
+			} else {
+				this.feedbackText = FEEDBACK.strokeWrong
+			}
 			return this.playDictVoice(MENG_VOICE.DAILY_STROKE_WRONG, { minGapMs: 1400 })
 		},
 		playDictationDoneVoice() {
@@ -592,19 +611,18 @@ export default {
 						animation: { autoAnimate: false },
 						test: {
 							testStrictOrder: true,
-							testDirectionWeight: 0.32,
-							testScoreThreshold: 26,
+							testDebugLog: true,
 							showHintAfterMisses: 2,
+							onWriterReady: (writer) => {
+								const total = writer?.charData?.medians?.length || 0
+								if (total) vm.strokeTotal = total
+								if (writer?.updateCanvasRect) writer.updateCanvasRect()
+							},
 							onTestStatus: ({ index, status, data }) => {
 								vm.handleTestStatus(index, status, data || {})
 							}
 						}
 					})
-					const total = this.writer?.charData?.medians?.length || 0
-					if (total) this.strokeTotal = total
-					if (typeof this.writer.updateCanvasRect === 'function') {
-						this.writer.updateCanvasRect()
-					}
 				} catch (e) {
 					console.warn('[lesson-dictation] mount test', e)
 					vm.playDictVoice(MENG_VOICE.DICTATION_UNSUPPORTED)
@@ -766,10 +784,13 @@ export default {
 				this.writer.handleTouchMove(t, e.detail)
 			}
 		},
-		onTouchEnd() {
+		onTouchEnd(e) {
 			if (this.completed || this.advancing || this.awaitingRetryChoice) return
+			const t =
+				(e && e.changedTouches && e.changedTouches[0]) ||
+				this.pickCanvasTouch(e)
 			if (this.writer?.handleTouchEnd) {
-				this.writer.handleTouchEnd()
+				this.writer.handleTouchEnd(t, e && e.detail)
 			}
 		},
 		onTouchCancel() {

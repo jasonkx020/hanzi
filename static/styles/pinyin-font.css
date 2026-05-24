@@ -1,24 +1,41 @@
-/**
- * 汉语拼音常规体：jaywcjlove/pinyin-font（docs/pinyin-regular.ttf）
- * 授权见 static/fonts/Pinyin-Regular-LICENSE.txt（SIL Open Font License 1.1）
- *
- * 全项目拼音（四线三格、纯文本）统一用本字体；App/小程序另见 utils/pinyin-font-loader.js
- */
 @font-face {
-	font-family: 'Pinyin Regular';
-	src: url('/static/fonts/Pinyin-Regular.ttf') format('truetype');
+	font-family: 'pinyinstep';
+	src: url('/static/fonts/pinyin-step.woff2') format('woff2'),
+	url("/static/fonts/pinyin-step.ttf") format("truetype");
+	font-weight: 100 900 ;
+	font-style: normal;
+	font-display: swap;
+  }
+  
+  @font-face {
+	font-family: 'pinyin';
+	src: url('/static/fonts/pinyin-regular.woff2') format('woff2'),
+	url("/static/fonts/Pinyin-Regular.ttf") format("truetype");
+	font-weight: 100 900 ;
+	font-style: normal;
+	font-display: swap;
+  }
+  
+  @font-face {
+	font-family: 'pinyin-wenkai-light';
+	src: url('/static/fonts/pinyin-wenkai-light.woff2') format('woff2'),
+	url("/static/fonts/pinyin-wenkai-light.ttf") format("truetype");
 	font-weight: 100 900;
 	font-style: normal;
 	font-display: swap;
-}
+  }
+
 
 :root,
 page {
-	--meng-pinyin-font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+	--meng-pinyin-font-family: 'pinyin', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+	/* wenkai 同字号偏大，叠在 .font-pinyin 上；换回 pinyin 时设为 1 */
+	--meng-pinyin-font-size-scale: 1.0;
 }
 
 .font-pinyin {
 	font-family: var(--meng-pinyin-font-family);
+	font-size: calc(1em * var(--meng-pinyin-font-size-scale, 1));
 	font-weight: normal;
 	font-synthesis: none;
 }

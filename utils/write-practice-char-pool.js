@@ -1,12 +1,25 @@
 /**
- * 写字练习：换字池。已选教材 → 当前课本生字；未选教材 → 全库识字表。
+ * 写字练习：连续 8 字一组。
+ *
+ * 选字原则（学生视角）：
+ * - 已设置教材：以「当前课文写字表 + 正在学的课」为主，穿插 1～2 个练过的易错字；
+ *   不从未见过的字里随机，避免挫败感。
+ * - 未设置教材：从识字表温和抽样（家长需先设教材才能对齐课堂）。
  */
+import { COL_PROGRESS, LIST_TYPE } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars, queryAllShiziCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	getCurriculumPrefs,
 	hasUserCurriculumPrefsSaved
 } from '@/utils/curriculum-storage.js'
-import { buildDailyTrainingQueue } from '@/services/daily-training-service.js'
+import { buildDailyTrainingPlan } from '@/services/daily-training-service.js'
+import {
+	getUserProgressMap,
+	listWrongOftenCharsForCurriculumPrefs,
+	makeProgressKey
+} from '@/utils/user-progress-storage.js'
+
+export const WRITE_PRACTICE_SESSION_SIZE = 8
 
 const FALLBACK_CHARS = ['大', '小', '天', '口', '手', '人', '山', '水']
 
@@ -32,63 +45,175 @@ function uniqueHanziList(rows, exclude) {
 		const h = firstHanzi(r && r.hanzi)
 		if (!h || seen.has(h) || (ex && h === ex)) continue
 		seen.add(h)
-		out.push(h)
+		out.push(r)
 	}
 	return out
 }
 
+function buildProgressHelpers(prefs, progressMap) {
+	const p = prefs || getCurriculumPrefs()
+	const isLearned = (hanzi) => {
+		const key = makeProgressKey(p.textbook_version_id, p.grade, p.semester, hanzi)
+		return !!(progressMap[key] && Number(progressMap[key][COL_PROGRESS.learned]) === 1)
+	}
+	const wrongCount = (hanzi) => {
+		const key = makeProgressKey(p.textbook_version_id, p.grade, p.semester, hanzi)
+		return Number(progressMap[key]?.[COL_PROGRESS.wrong_count]) || 0
+	}
+	return { isLearned, wrongCount }
+}
+
 /**
- * @param {{ excludeChar?: string, poolLimit?: number, shuffleSalt?: string|number }} [options]
- * @returns {Promise<string[]>}
+ * @typedef {{ hanzi: string, pinyin: string|null }} WritePracticeSessionItem
+ * @typedef {{ items: WritePracticeSessionItem[], sourceHint: string }} WritePracticeSession
  */
-export async function buildWritePracticeCharPool(options = {}) {
+
+/**
+ * @param {{ excludeChar?: string, shuffleSalt?: string|number, pinFirst?: string }} [options]
+ * @returns {Promise<WritePracticeSession>}
+ */
+export async function buildWritePracticeSession(options = {}) {
 	const exclude = firstHanzi(options.excludeChar)
-	const limit = Math.max(8, Math.min(80, Number(options.poolLimit) || 40))
+	const pinFirst = firstHanzi(options.pinFirst)
+	const size = WRITE_PRACTICE_SESSION_SIZE
 	const salt = options.shuffleSalt != null ? options.shuffleSalt : Date.now()
 
-	let list = []
+	/** @type {Array<{ hanzi: string, pinyin: string|null, tier: number }>} */
+	const bucket = []
+	const seen = new Set()
+
+	const pushRow = (row, tier) => {
+		const h = firstHanzi(row?.hanzi)
+		if (!h || seen.has(h) || (exclude && h === exclude)) return
+		seen.add(h)
+		bucket.push({
+			hanzi: h,
+			pinyin: row?.pinyin != null ? String(row.pinyin) : null,
+			tier
+		})
+	}
+
+	const pushHanzi = (hanzi, pinyin, tier) => {
+		const h = firstHanzi(hanzi)
+		if (!h || seen.has(h) || (exclude && h === exclude)) return
+		seen.add(h)
+		bucket.push({ hanzi: h, pinyin: pinyin || null, tier })
+	}
+
+	let sourceHint = '识字表随机（建议在设置里选好教材，字会更贴课堂）'
 
 	if (hasUserCurriculumPrefsSaved()) {
+		sourceHint = '课文写字表 · 易错复习 · 学过的字'
 		const prefs = getCurriculumPrefs()
+		const progressMap = getUserProgressMap()
+		const { isLearned, wrongCount } = buildProgressHelpers(prefs, progressMap)
+		const rows = await queryCurriculumChars(prefs)
+		const rowByHanzi = new Map()
+		for (const r of rows) {
+			const h = firstHanzi(r.hanzi)
+			if (h && !rowByHanzi.has(h)) rowByHanzi.set(h, r)
+		}
+
+		let plan = null
 		try {
-			const plan = await buildDailyTrainingQueue(prefs, {
-				limit: Math.min(28, limit),
+			plan = await buildDailyTrainingPlan(prefs, {
+				limits: { write: 5, weak: 3, reviewFromPrev: 2, reviewRefresh: 2 },
 				shuffleSalt: salt
 			})
-			list = (plan.items || [])
-				.map((it) => firstHanzi(it.hanzi || it.char))
-				.filter(Boolean)
 		} catch (_) {
-			list = []
+			plan = null
 		}
-		if (list.length < limit) {
-			const rows = await queryCurriculumChars(prefs)
-			const more = shuffle(uniqueHanziList(rows, exclude))
-			const seen = new Set(list)
-			for (const h of more) {
-				if (list.length >= limit) break
-				if (seen.has(h)) continue
-				seen.add(h)
-				list.push(h)
+
+		const writeSeg = plan?.segments?.find((s) => s.key === 'write')
+		for (const it of writeSeg?.items || []) {
+			if (bucket.filter((b) => b.tier === 1).length >= 5) break
+			pushHanzi(it.hanzi, it.pinyin, 1)
+		}
+
+		for (const wr of listWrongOftenCharsForCurriculumPrefs(prefs, 6)) {
+			if (bucket.filter((b) => b.tier === 0).length >= 2) break
+			const h = firstHanzi(wr.hanzi)
+			const row = rowByHanzi.get(h)
+			if (row) pushRow(row, 0)
+			else pushHanzi(h, null, 0)
+		}
+
+		if (plan?.items?.length) {
+			for (const it of plan.items) {
+				if (it.reason === 'weak') continue
+				if (bucket.length >= size) break
+				const h = firstHanzi(it.hanzi)
+				if (!h || !isLearned(h)) continue
+				const row = rowByHanzi.get(h)
+				if (row) pushRow(row, 2)
 			}
+		}
+
+		const learnedWrite = rows.filter((r) => {
+			const h = firstHanzi(r.hanzi)
+			return h && isLearned(h) && r.list_type === LIST_TYPE.XIEZI
+		})
+		learnedWrite.sort(
+			(a, b) =>
+				wrongCount(firstHanzi(b.hanzi)) - wrongCount(firstHanzi(a.hanzi)) ||
+				Math.random() - 0.5
+		)
+		for (const r of learnedWrite) {
+			if (bucket.length >= size) break
+			pushRow(r, 2)
+		}
+
+		const writeRows = shuffle(
+			rows.filter((r) => r.list_type === LIST_TYPE.XIEZI || isLearned(firstHanzi(r.hanzi)))
+		)
+		for (const r of writeRows) {
+			if (bucket.length >= size) break
+			pushRow(r, 3)
 		}
 	} else {
 		const rows = await queryAllShiziCurriculumChars()
-		list = shuffle(uniqueHanziList(rows, exclude))
-	}
-
-	list = list.filter((h) => !exclude || h !== exclude)
-
-	if (list.length < 5) {
-		const extra = shuffle(FALLBACK_CHARS.filter((h) => h !== exclude))
-		const seen = new Set(list)
-		for (const h of extra) {
-			if (seen.has(h)) continue
-			list.push(h)
-			seen.add(h)
-			if (list.length >= 5) break
+		for (const r of shuffle(uniqueHanziList(rows, exclude))) {
+			if (bucket.length >= size) break
+			pushRow(r, 1)
 		}
 	}
 
-	return list.slice(0, limit)
+	if (bucket.length < size) {
+		for (const h of shuffle(FALLBACK_CHARS)) {
+			if (bucket.length >= size) break
+			pushHanzi(h, null, 9)
+		}
+	}
+
+	bucket.sort((a, b) => a.tier - b.tier)
+	let ordered = bucket.slice(0, size)
+	const writeFirst = ordered.find((x) => x.tier === 1) || ordered[0]
+	if (writeFirst) {
+		ordered = [writeFirst, ...shuffle(ordered.filter((x) => x.hanzi !== writeFirst.hanzi))]
+	} else {
+		ordered = shuffle(ordered)
+	}
+
+	if (pinFirst) {
+		const rest = ordered.filter((x) => x.hanzi !== pinFirst)
+		const pinned = ordered.find((x) => x.hanzi === pinFirst)
+		ordered = [
+			pinned || { hanzi: pinFirst, pinyin: null, tier: 1 },
+			...rest
+		].slice(0, size)
+	}
+
+	return {
+		items: ordered.map(({ hanzi, pinyin }) => ({ hanzi, pinyin })),
+		sourceHint
+	}
+}
+
+/**
+ * @param {object} [options]
+ * @returns {Promise<string[]>}
+ */
+export async function buildWritePracticeCharPool(options = {}) {
+	const session = await buildWritePracticeSession(options)
+	return session.items.map((it) => it.hanzi)
 }

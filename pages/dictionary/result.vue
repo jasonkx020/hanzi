@@ -187,6 +187,8 @@ import {
 	buildMengAssetSrcCandidates,
 	resolveMengAssetUrl
 } from '@/utils/mengmeng-assets.js'
+import { navigateToDictionaryHome } from '@/utils/root-nav.js'
+import { stopStrokeOrderAudio } from '@/utils/stroke-order-audio.js'
 
 export default {
 	components: {
@@ -345,7 +347,7 @@ export default {
 				uni.navigateBack({ delta: 1 })
 				return
 			}
-			uni.switchTab({ url: '/pages/dictionary/index' })
+			navigateToDictionaryHome()
 		},
 		markCurrentAsLearned() {
 			const h = String(this.hanzi || '')
@@ -422,6 +424,7 @@ export default {
 		},
 		async speakCurrentPinyin() {
 			if (!this.hanzi || this.hanzi === '—' || this.dictPinyinPlaying) return
+			if (this.resultStrokeAnimating) stopStrokeOrderAudio()
 			this.dictPinyinPlaying = true
 			try {
 				const ok = await speakDictionaryEntryPinyin({

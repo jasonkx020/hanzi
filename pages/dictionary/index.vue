@@ -528,7 +528,7 @@ export default {
 				null
 			)
 		},
-		/** 从首页示范等 switchTab 带入的待查字 */
+		/** 从首页示范等 navigateTo 带入的待查字 */
 		async applyPendingDictionaryHanzi() {
 			const ch = consumeDictionaryPendingHanzi()
 			if (!ch) return

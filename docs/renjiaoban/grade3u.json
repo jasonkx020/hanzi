@@ -1,0 +1,305 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 3,
+    "semester": "上",
+    "catalog_note": "统编人教版三年级上册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "大青树下的小学",
+                    "page": 2
+                },
+                {
+                    "sort": 2,
+                    "title": "花的学校",
+                    "page": 5
+                },
+                {
+                    "sort": 3,
+                    "mark": "*略读",
+                    "title": "不懂就要问",
+                    "page": 7
+                },
+                {
+                    "type": "口语交际",
+                    "title": "我的暑假生活",
+                    "page": 9
+                },
+                {
+                    "type": "习作",
+                    "title": "猜猜他是谁",
+                    "page": 10
+                },
+                {
+                    "type": "语文园地",
+                    "page": 11
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 13,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 4,
+                    "title": "古诗三首",
+                    "page": 14,
+                    "sub_title": ["望洞庭", "山行", "夜书所见"]
+                },
+                {
+                    "sort": 5,
+                    "title": "铺满金色巴掌的水泥道",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "秋天的雨",
+                    "page": 19
+                },
+                {
+                    "sort": 7,
+                    "mark": "*略读",
+                    "title": "听听，秋的声音",
+                    "page": 22
+                },
+                {
+                    "type": "习作",
+                    "title": "写日记",
+                    "page": 24
+                },
+                {
+                    "type": "语文园地",
+                    "page": 25
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 27,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 8,
+                    "title": "总也倒不了的老屋",
+                    "page": 28
+                },
+                {
+                    "sort": 9,
+                    "mark": "*略读",
+                    "title": "犟龟",
+                    "page": 32
+                },
+                {
+                    "sort": 10,
+                    "mark": "*略读",
+                    "title": "小狗学叫",
+                    "page": 36
+                },
+                {
+                    "type": "口语交际",
+                    "title": "名字里的故事",
+                    "page": 41
+                },
+                {
+                    "type": "习作",
+                    "title": "续写故事",
+                    "page": 42
+                },
+                {
+                    "type": "语文园地",
+                    "page": 43
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 45,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 11,
+                    "title": "宝葫芦的秘密（节选）",
+                    "page": 46
+                },
+                {
+                    "sort": 12,
+                    "title": "在牛肚子里旅行",
+                    "page": 49
+                },
+                {
+                    "sort": 13,
+                    "mark": "*略读",
+                    "title": "一块奶酪",
+                    "page": 52
+                },
+                {
+                    "type": "习作",
+                    "title": "我来编童话",
+                    "page": 54
+                },
+                {
+                    "type": "语文园地",
+                    "page": 55
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "在那奇妙的王国里",
+                    "page": 57
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 59,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 14,
+                    "title": "搭船的鸟",
+                    "page": 60
+                },
+                {
+                    "sort": 15,
+                    "title": "金色的草地",
+                    "page": 62
+                },
+                {
+                    "type": "习作",
+                    "title": "我们眼中的缤纷世界",
+                    "page": 65
+                },
+                {
+                    "type": "例文",
+                    "sub_title": ["我家的小狗", "我爱故乡的杨梅"],
+                    "page": 66
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 69,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "富饶的西沙群岛",
+                    "page": 70
+                },
+                {
+                    "sort": 17,
+                    "title": "海滨小城",
+                    "page": 73
+                },
+                {
+                    "sort": 18,
+                    "title": "美丽的小兴安岭",
+                    "page": 75
+                },
+                {
+                    "sort": 19,
+                    "mark": "*略读",
+                    "title": "香港，璀璨的明珠",
+                    "page": 78
+                },
+                {
+                    "type": "习作",
+                    "title": "这儿真美",
+                    "page": 80
+                },
+                {
+                    "type": "语文园地",
+                    "page": 81
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 83,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 20,
+                    "title": "古诗三首",
+                    "page": 84,
+                    "sub_title": ["鹿柴", "望天门山", "饮湖上初晴后雨"]
+                },
+                {
+                    "sort": 21,
+                    "title": "大自然的声音",
+                    "page": 86
+                },
+                {
+                    "sort": 22,
+                    "title": "读不完的大书",
+                    "page": 89
+                },
+                {
+                    "type": "口语交际",
+                    "title": "身边的“小事”",
+                    "page": 91
+                },
+                {
+                    "type": "习作",
+                    "title": "我有一个想法",
+                    "page": 92
+                },
+                {
+                    "type": "语文园地",
+                    "page": 93
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 95,
+            "type": "阅读",
+            "article_list": [
+                {
+                    "sort": 23,
+                    "title": "司马光",
+                    "page": 96
+                },
+                {
+                    "sort": 24,
+                    "title": "一定要争气",
+                    "page": 97
+                },
+                {
+                    "sort": 25,
+                    "title": "手术台就是阵地",
+                    "page": 100
+                },
+                {
+                    "sort": 26,
+                    "mark": "*略读",
+                    "title": "一个粗瓷大碗",
+                    "page": 103
+                },
+                {
+                    "type": "口语交际",
+                    "title": "请教",
+                    "page": 105
+                },
+                {
+                    "type": "习作",
+                    "title": "那次经历真难忘",
+                    "page": 106
+                },
+                {
+                    "type": "语文园地",
+                    "page": 107
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 109
+            },
+            "写字表": {
+                "page": 112
+            },
+            "词语表": {
+                "page": 114
+            }
+        },
+        "note": "标*的是略读课文。第三单元是阅读策略单元，第五单元是习作单元。"
+    }
+}

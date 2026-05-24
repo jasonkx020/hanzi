@@ -25,11 +25,11 @@ export const MEDAL_LIST = [
 	{
 		id: 'm03',
 		name: '拼音开口',
-		rule: '跟读评分通过 20 次',
+		rule: '完成 5 次拼音自动连读',
 		theme: '喇叭与四线格',
 		iconEmoji: '📣',
 		fallbackPose: 'wave',
-		check: { type: 'pinyinFollowPass', min: 20 }
+		check: { type: 'pinyinAutoReadChain', min: 5 }
 	},
 	{
 		id: 'm04',

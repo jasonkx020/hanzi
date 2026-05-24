@@ -34,19 +34,44 @@ export function normalizeStaticWebPath(src) {
 }
 
 /**
+ * H5：InnerAudio 需要可请求的绝对 URL（含 base）。
+ * @param {string} src
+ * @returns {string}
+ */
+export function resolveH5StaticAbsoluteUrl(src) {
+	const web = normalizeStaticWebPath(src)
+	if (!web || typeof window === 'undefined' || !window.location?.origin) return ''
+	try {
+		let base = '/'
+		if (typeof __uniConfig !== 'undefined' && __uniConfig.router?.base != null) {
+			base = String(__uniConfig.router.base)
+		}
+		if (!base.startsWith('/')) base = '/' + base
+		if (!base.endsWith('/')) base += '/'
+		const rel = web.replace(/^\//, '')
+		return window.location.origin + base + rel
+	} catch (_) {
+		return ''
+	}
+}
+
+/**
  * 5+ 逻辑路径（打包资源），供 InnerAudio 等使用；勿再 convertLocalFileSystemURL。
+ * H5 返回绝对 URL；其它非 App 端返回 /static/... 站点路径。
  * @param {string} src 如 /static/pinyin/b.opus
  * @returns {string}
  */
 export function resolveAppStaticLogicalUrl(src) {
 	const web = normalizeStaticWebPath(src)
 	if (!web) return String(src || '')
-	// #ifdef APP-PLUS
-	return '_www' + web
-	// #endif
-	// #ifndef APP-PLUS
+	try {
+		if (typeof plus !== 'undefined' && plus.runtime) {
+			return '_www' + web
+		}
+	} catch (_) {}
+	const h5Abs = resolveH5StaticAbsoluteUrl(src)
+	if (h5Abs) return h5Abs
 	return web
-	// #endif
 }
 
 /**

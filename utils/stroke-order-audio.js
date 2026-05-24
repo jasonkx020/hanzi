@@ -1,6 +1,6 @@
 /**
- * 笔顺动画：笔画读音与绘制并行；同一笔内按拐点分段入队。
- * 拐点仅触发分段读音（与绘制并行）；每一笔收尾后 await getStrokeAudioQueueTail() 再进下一笔。
+ * 笔顺动画读音：每笔按 cnchar 笔画名音节整段入队播放；
+ * 动画收尾 await getStrokeAudioQueueTail() 再进下一笔（避免与整字读音叠音）。
  */
 import cnchar from '@/utils/cnchar-setup.js'
 import {
@@ -12,26 +12,39 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import {
 	playOpusForDisplayPinyin,
 	playPinyinLocalAudioSequence,
+	playLocalPinyinNeutralThenTone1,
 	sleepUnlessCancelled,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
+import { STROKE_CHAR_PINYIN } from '@/data/stroke-name-pinyin.js'
 
-/** 同一笔画名内多音节连读间隔（毫秒）；笔与笔之间由队列串行，不在此叠加长停顿 */
-const STROKE_COMPOUND_GAP_MS = 0
+/** 复合笔画名音节间隔（毫秒） */
+const STROKE_COMPOUND_GAP_MS = 72
+/** 估算单音节播放时长（用于拉长绘制，避免画完音未播完） */
+const STROKE_SYLLABLE_AUDIO_MS = 520
+const STROKE_AUDIO_TAIL_MS = 320
 
 /** cnchar-order 笔画名称列表，如 ['横','竖折钩','撇'] */
 export function getCncharStrokeNameList(char) {
 	const c = String(char || '').trim().charAt(0)
 	if (!c) return []
-	try {
-		const rows = cnchar.stroke(c, 'order', 'name')
-		if (Array.isArray(rows) && rows[0] && Array.isArray(rows[0])) {
-			return rows[0]
-				.map((s) => normalizeStrokeLabel(String(s || '').trim()))
-				.filter(Boolean)
-		}
-	} catch (_) {}
+	for (let attempt = 0; attempt < 2; attempt++) {
+		try {
+			const rows = cnchar.stroke(c, 'order', 'name')
+			if (Array.isArray(rows) && rows[0] && Array.isArray(rows[0])) {
+				const list = rows[0]
+					.map((s) => normalizeStrokeLabel(String(s || '').trim()))
+					.filter(Boolean)
+				if (list.length) return list
+			}
+		} catch (_) {}
+	}
 	return []
+}
+
+/** 开笔顺动画前预热 cnchar 笔画名（减少首笔名为空） */
+export function preloadStrokeNamesForChar(char) {
+	return getCncharStrokeNameList(char)
 }
 
 /**
@@ -157,7 +170,9 @@ export async function playStrokeGuidanceAudio(strokeIndexZeroBased, label, optio
 		(typeof options.isCancelled === 'function' && options.isCancelled())
 
 	const strokeNo = Number(strokeIndexZeroBased) + 1
-	const prefix = buildOrdinalStrokePrefixSyllables(strokeNo)
+	const prefix = options.skipOrdinalPrefix
+		? []
+		: buildOrdinalStrokePrefixSyllables(strokeNo)
 	const strokeSyl = resolveStrokeLabelSyllables(label)
 	const narrator = options.narrator
 	const gapMs = options.gapMs != null ? options.gapMs : 95
@@ -241,13 +256,171 @@ let _audioQueueTail = Promise.resolve()
 let _audioQueueGen = 0
 /** 写字引导「N 笔 + 笔画名」播放代次（换字时与队列一并作废） */
 let _strokeGuidancePlayGen = 0
+/** 当前笔已入队的整笔读音 Promise */
+let _activeStrokeLabelAudio = { index: -1, gen: 0, promise: null }
+/** @type {Map<string, Promise<boolean>>} */
+const _strokeAudioPromiseMap = new Map()
+
+function strokeAudioMapKey(gen, strokeIndex) {
+	return `${gen}:${Number(strokeIndex)}`
+}
+
+function registerStrokeAudioPromise(strokeIndex, gen, promise) {
+	_strokeAudioPromiseMap.set(strokeAudioMapKey(gen, strokeIndex), promise)
+}
 
 /** 新开一字或停止动画时清空队列 */
 export function resetStrokeAudioQueue() {
 	_audioQueueGen += 1
 	_strokeGuidancePlayGen += 1
 	_audioQueueTail = Promise.resolve()
+	_activeStrokeLabelAudio = { index: -1, gen: 0, promise: null }
+	_strokeAudioPromiseMap.clear()
 	stopLocalPinyinAudio()
+}
+
+async function playStrokeSyllablesWithRetry(syllables, options = {}) {
+	const list = Array.isArray(syllables)
+		? syllables.map((s) => String(s || '').trim()).filter(Boolean)
+		: []
+	if (!list.length) return false
+
+	const seqOpts = {
+		narrator: options.narrator,
+		gapMs: options.gapMs != null ? options.gapMs : 0,
+		compoundGapMs:
+			options.compoundGapMs != null ? options.compoundGapMs : STROKE_COMPOUND_GAP_MS,
+		isCancelled: options.isCancelled,
+		forStrokeOrder: true,
+		useTone1Fallback: options.useTone1Fallback !== false
+	}
+
+	let ok = await playStrokeSyllableSequence(list, seqOpts)
+	if (ok) return true
+	if (typeof options.isCancelled === 'function' && options.isCancelled()) return false
+
+	for (let i = 0; i < list.length; i++) {
+		if (typeof options.isCancelled === 'function' && options.isCancelled()) return ok
+		const syl = list[i]
+		const one = await playOpusForDisplayPinyin(syl, {
+			narrator: options.narrator,
+			gapMs: 0,
+			useTone1Fallback: seqOpts.useTone1Fallback
+		})
+		if (one) {
+			ok = true
+			continue
+		}
+		const fb = await playLocalPinyinNeutralThenTone1(syl, true)
+		if (fb) ok = true
+	}
+	return ok
+}
+
+/**
+ * 估算该笔笔画名连读时长（毫秒），供动画拉齐绘制速度
+ */
+export function estimateStrokeLabelAudioDurationMs(strokeIndex, hanzi, options = {}) {
+	const syllables = resolveStrokePlaybackSyllables(strokeIndex, hanzi, options)
+	if (!syllables.length) return 0
+	const gaps = Math.max(0, syllables.length - 1) * STROKE_COMPOUND_GAP_MS
+	return syllables.length * STROKE_SYLLABLE_AUDIO_MS + gaps + STROKE_AUDIO_TAIL_MS
+}
+
+/**
+ * 解析某一笔应播的带调音节（笔画名优先，否则整字拼音按笔序号回退）
+ * @param {number} strokeIndex
+ * @param {string} hanzi
+ * @param {{ displayPinyin?: string }} options
+ * @returns {string[]}
+ */
+export function resolveStrokePlaybackSyllables(strokeIndex, hanzi, options = {}) {
+	const idx = Number(strokeIndex)
+	if (!Number.isFinite(idx) || idx < 0) return []
+	const char = String(hanzi || '').trim().charAt(0)
+	if (!char) return []
+
+	const names = getCncharStrokeNameList(char)
+	const label = names[idx]
+	if (label) {
+		const fromLabel = resolveStrokeLabelSyllables(label)
+		if (fromLabel.length) return fromLabel
+		const rawChars = String(label).match(/[\u4e00-\u9fff]/g) || []
+		const parts = []
+		for (let i = 0; i < rawChars.length; i++) {
+			const py = STROKE_CHAR_PINYIN[rawChars[i]]
+			if (py) parts.push(py)
+		}
+		if (parts.length) return parts
+	}
+
+	const displayPinyin = String(options.displayPinyin || '').trim()
+	if (!displayPinyin) return []
+
+	let tokens = splitPinyinDisplayTokens(displayPinyin)
+	if (!tokens.length) {
+		const plain = displayPinyin.replace(/[()（）]/g, '').trim()
+		if (plain) tokens = [plain]
+	}
+	if (!tokens.length) return []
+	if (tokens.length === 1) return idx === 0 ? [tokens[0]] : []
+	return idx < tokens.length ? [tokens[idx]] : []
+}
+
+/**
+ * 该笔笔画名一次性入队播放（每笔独立 Promise，避免复用已完成的 tail 导致静音）
+ * @returns {Promise<boolean>}
+ */
+export function enqueueStrokeLabelForStroke(strokeIndex, hanzi, options = {}) {
+	const idx = Number(strokeIndex)
+	const gen = _audioQueueGen
+	const syllables = resolveStrokePlaybackSyllables(idx, hanzi, options)
+
+	const job = _audioQueueTail.then(async () => {
+		if (gen !== _audioQueueGen) return false
+		if (!syllables.length) {
+			if (process.env.NODE_ENV !== 'production') {
+				const names = getCncharStrokeNameList(String(hanzi || '').trim().charAt(0))
+				console.warn(
+					'[stroke-audio] no syllables for stroke',
+					idx,
+					hanzi,
+					'label=',
+					names[idx] || '(missing)'
+				)
+			}
+			return false
+		}
+		return playStrokeSyllablesWithRetry(syllables, {
+			narrator: options.narrator,
+			gapMs: options.gapMs != null ? options.gapMs : 0,
+			compoundGapMs:
+				options.compoundGapMs != null ? options.compoundGapMs : STROKE_COMPOUND_GAP_MS,
+			isCancelled: () => gen !== _audioQueueGen
+		})
+	})
+
+	const tracked = job.catch(() => false)
+	_audioQueueTail = tracked
+	_activeStrokeLabelAudio = { index: idx, gen, promise: tracked }
+	registerStrokeAudioPromise(idx, gen, tracked)
+	return tracked
+}
+
+/** 等待指定笔画已入队的整笔读音播完（笔顺动画收尾用） */
+export function awaitStrokeLabelAudio(strokeIndex) {
+	const idx = Number(strokeIndex)
+	const key = strokeAudioMapKey(_audioQueueGen, idx)
+	const mapped = _strokeAudioPromiseMap.get(key)
+	if (mapped) return mapped
+	if (
+		_activeStrokeLabelAudio.gen === _audioQueueGen &&
+		_activeStrokeLabelAudio.index === idx &&
+		_activeStrokeLabelAudio.promise
+	) {
+		return _activeStrokeLabelAudio.promise
+	}
+	return Promise.resolve(false)
 }
 
 /**

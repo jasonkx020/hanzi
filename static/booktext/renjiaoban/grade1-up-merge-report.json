@@ -1,0 +1,33 @@
+{
+    "grade": 1,
+    "semester": "上",
+    "missing_files": [
+        "grade1-up-words.json"
+    ],
+    "unmatched_catalog": [
+        {
+            "unit": "第一单元·识字",
+            "title": "读书真快乐",
+            "type": "快乐读书吧"
+        }
+    ],
+    "unmatched_appendix": [],
+    "orphan_text": [
+        {
+            "title": "我是中国人"
+        },
+        {
+            "title": "我爱我们的祖国"
+        },
+        {
+            "title": "我是小学生"
+        },
+        {
+            "title": "我爱学语文"
+        },
+        {
+            "title": "快乐读书吧"
+        }
+    ],
+    "composite_mismatch": []
+}

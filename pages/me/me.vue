@@ -67,13 +67,6 @@
 				<text>笔顺实验室</text>
 				<text class="arrow">›</text>
 			</view>
-			<view v-if="showRecordTestEntry" class="item item-record-test" @click="goRecordTest">
-				<view class="item-main">
-					<text>麦克风录音测试</text>
-					<text class="item-subline">按住录音、松开后播放，排查跟读问题</text>
-				</view>
-				<text class="arrow">›</text>
-			</view>
 		</view>
 	</view>
 </template>
@@ -98,8 +91,6 @@ import {
 import { MEDAL_LIST } from '@/data/medals.js'
 import { getActiveProfile, listLearningProfiles } from '@/utils/learning-profile-storage.js'
 import { hasFamilyPlan } from '@/utils/vip-entitlements.js'
-import { PINYIN_RECORD_TEST_ENTRY_ALWAYS } from '@/config/pinyin-follow-read-config.js'
-
 export default {
 	components: { MengTabHero },
 	mixins: [tabMain],
@@ -110,11 +101,6 @@ export default {
 			wrongCount: 0,
 			medalHint: '',
 			profileHint: ''
-		}
-	},
-	computed: {
-		showRecordTestEntry() {
-			return PINYIN_RECORD_TEST_ENTRY_ALWAYS
 		}
 	},
 	onShow() {
@@ -164,9 +150,6 @@ export default {
 		},
 		goWrongOften() {
 			uni.navigateTo({ url: '/pages/me/wrong-often' })
-		},
-		goRecordTest() {
-			uni.navigateTo({ url: '/pages/debug/record-test' })
 		}
 	}
 }

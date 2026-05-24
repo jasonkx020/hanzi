@@ -1,0 +1,309 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 4,
+    "semester": "下",
+    "catalog_note": "统编人教版四年级下册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "古诗词三首",
+                    "page": 2,
+                    "sub_title": ["四时田园杂兴（其二十五）", "宿新市徐公店", "清平乐·村居"]
+                },
+                {
+                    "sort": 2,
+                    "title": "乡下人家",
+                    "page": 4
+                },
+                {
+                    "sort": 3,
+                    "title": "天窗",
+                    "page": 7
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "三月桃花水",
+                    "page": 10
+                },
+                {
+                    "type": "口语交际",
+                    "title": "转述",
+                    "page": 11
+                },
+                {
+                    "type": "习作",
+                    "title": "我的乐园",
+                    "page": 12
+                },
+                {
+                    "type": "语文园地",
+                    "page": 13
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 15,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "琥珀",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "飞向蓝天的恐龙",
+                    "page": 20
+                },
+                {
+                    "sort": 7,
+                    "title": "纳米技术就在我们身边",
+                    "page": 24
+                },
+                {
+                    "sort": 8,
+                    "mark": "*略读",
+                    "title": "千年梦圆在今朝",
+                    "page": 26
+                },
+                {
+                    "type": "口语交际",
+                    "title": "说新闻",
+                    "page": 29
+                },
+                {
+                    "type": "习作",
+                    "title": "我的奇思妙想",
+                    "page": 30
+                },
+                {
+                    "type": "语文园地",
+                    "page": 31
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "探索科学的奥秘",
+                    "page": 33
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 35,
+            "article_list": [
+                {
+                    "sort": 9,
+                    "title": "短诗三首",
+                    "page": 36,
+                    "sub_title": ["繁星（七一）", "繁星（一三一）", "繁星（一五九）"]
+                },
+                {
+                    "sort": 10,
+                    "title": "绿",
+                    "page": 38
+                },
+                {
+                    "sort": 11,
+                    "title": "白桦",
+                    "page": 40
+                },
+                {
+                    "sort": 12,
+                    "mark": "*略读",
+                    "title": "在天晴了的时候",
+                    "page": 42
+                },
+                {
+                    "type": "综合性学习",
+                    "title": "轻叩诗歌大门",
+                    "page": 44
+                },
+                {
+                    "type": "语文园地",
+                    "page": 45
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 47,
+            "article_list": [
+                {
+                    "sort": 13,
+                    "title": "猫",
+                    "page": 48
+                },
+                {
+                    "sort": 14,
+                    "title": "母鸡",
+                    "page": 51
+                },
+                {
+                    "sort": 15,
+                    "title": "白鹅",
+                    "page": 54
+                },
+                {
+                    "type": "习作",
+                    "title": "我的动物朋友",
+                    "page": 59
+                },
+                {
+                    "type": "语文园地",
+                    "page": 60
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 63,
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "海上日出",
+                    "page": 64
+                },
+                {
+                    "sort": 17,
+                    "title": "记金华的双龙洞",
+                    "page": 66
+                },
+                {
+                    "type": "习作例文",
+                    "sub_title": ["颐和园", "七月的天山"],
+                    "page": 70
+                },
+                {
+                    "type": "习作",
+                    "title": "游____",
+                    "page": 74
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 75,
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "文言文二则",
+                    "page": 76,
+                    "sub_title": ["囊萤夜读", "铁杵成针"]
+                },
+                {
+                    "sort": 19,
+                    "title": "小英雄雨来（节选）",
+                    "page": 78
+                },
+                {
+                    "sort": 20,
+                    "mark": "*略读",
+                    "title": "我们家的男子汉",
+                    "page": 87
+                },
+                {
+                    "sort": 21,
+                    "mark": "*略读",
+                    "title": "芦花鞋",
+                    "page": 91
+                },
+                {
+                    "type": "口语交际",
+                    "title": "朋友相处的秘诀",
+                    "page": 97
+                },
+                {
+                    "type": "习作",
+                    "title": "我学会了____",
+                    "page": 98
+                },
+                {
+                    "type": "语文园地",
+                    "page": 99
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 101,
+            "article_list": [
+                {
+                    "sort": 22,
+                    "title": "古诗三首",
+                    "page": 102,
+                    "sub_title": ["芙蓉楼送辛渐", "塞下曲", "墨梅"]
+                },
+                {
+                    "sort": 23,
+                    "title": "黄继光",
+                    "page": 104
+                },
+                {
+                    "sort": 24,
+                    "title": "\"诺曼底号\"遇难记",
+                    "page": 109
+                },
+                {
+                    "sort": 25,
+                    "mark": "*略读",
+                    "title": "挑山工",
+                    "page": 114
+                },
+                {
+                    "type": "口语交际",
+                    "title": "自我介绍",
+                    "page": 117
+                },
+                {
+                    "type": "习作",
+                    "title": "我的\"自画像\"",
+                    "page": 118
+                },
+                {
+                    "type": "语文园地",
+                    "page": 119
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 121,
+            "article_list": [
+                {
+                    "sort": 26,
+                    "title": "宝葫芦的秘密（节选）",
+                    "page": 122
+                },
+                {
+                    "sort": 27,
+                    "title": "巨人的花园",
+                    "page": 125
+                },
+                {
+                    "sort": 28,
+                    "mark": "*略读",
+                    "title": "海的女儿",
+                    "page": 129
+                },
+                {
+                    "type": "习作",
+                    "title": "故事新编",
+                    "page": 134
+                },
+                {
+                    "type": "语文园地",
+                    "page": 135
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 137
+            },
+            "写字表": {
+                "page": 140
+            },
+            "词语表": {
+                "page": 142
+            }
+        },
+        "note": "标*的是略读课文"
+    }
+}

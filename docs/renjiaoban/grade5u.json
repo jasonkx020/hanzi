@@ -1,0 +1,296 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 5,
+    "semester": "上",
+    "catalog_note": "统编人教版五年级上册语文教材完整目录",
+    "book_catalog": {
+        "第一单元": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "白鹭",
+                    "page": 2
+                },
+                {
+                    "sort": 2,
+                    "title": "落花生",
+                    "page": 4
+                },
+                {
+                    "sort": 3,
+                    "title": "桂花雨",
+                    "page": 6
+                },
+                {
+                    "sort": 4,
+                    "mark": "*略读",
+                    "title": "珍珠鸟",
+                    "page": 9
+                },
+                {
+                    "type": "口语交际",
+                    "title": "制定班级公约",
+                    "page": 11
+                },
+                {
+                    "type": "习作",
+                    "title": "我的心爱之物",
+                    "page": 12
+                },
+                {
+                    "type": "语文园地",
+                    "page": 13
+                }
+            ]
+        },
+        "第二单元": {
+            "start_page": 15,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "搭石",
+                    "page": 16
+                },
+                {
+                    "sort": 6,
+                    "title": "将相和",
+                    "page": 18
+                },
+                {
+                    "sort": 7,
+                    "title": "什么比猎豹的速度更快",
+                    "page": 22
+                },
+                {
+                    "sort": 8,
+                    "title": "冀中的地道战",
+                    "page": 25
+                },
+                {
+                    "type": "习作",
+                    "title": "\"漫画\"老师",
+                    "page": 28
+                },
+                {
+                    "type": "语文园地",
+                    "page": 29
+                }
+            ]
+        },
+        "第三单元": {
+            "start_page": 31,
+            "article_list": [
+                {
+                    "sort": 9,
+                    "title": "猎人海力布",
+                    "page": 32
+                },
+                {
+                    "sort": 10,
+                    "title": "牛郎织女（一）",
+                    "page": 35
+                },
+                {
+                    "sort": 11,
+                    "mark": "*略读",
+                    "title": "牛郎织女（二）",
+                    "page": 40
+                },
+                {
+                    "type": "口语交际",
+                    "title": "讲民间故事",
+                    "page": 43
+                },
+                {
+                    "type": "习作",
+                    "title": "缩写故事",
+                    "page": 44
+                },
+                {
+                    "type": "语文园地",
+                    "page": 45
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "从前有座山",
+                    "page": 47
+                }
+            ]
+        },
+        "第四单元": {
+            "start_page": 49,
+            "article_list": [
+                {
+                    "sort": 12,
+                    "title": "古诗三首",
+                    "page": 50,
+                    "sub_title": ["示儿", "题临安邸", "己亥杂诗"]
+                },
+                {
+                    "sort": 13,
+                    "title": "少年中国说（节选）",
+                    "page": 52
+                },
+                {
+                    "sort": 14,
+                    "title": "圆明园的毁灭",
+                    "page": 54
+                },
+                {
+                    "sort": 15,
+                    "mark": "*略读",
+                    "title": "小岛",
+                    "page": 58
+                },
+                {
+                    "type": "习作",
+                    "title": "二十年后的家乡",
+                    "page": 62
+                },
+                {
+                    "type": "语文园地",
+                    "page": 63
+                }
+            ]
+        },
+        "第五单元": {
+            "start_page": 65,
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "太阳",
+                    "page": 66
+                },
+                {
+                    "sort": 17,
+                    "title": "松鼠",
+                    "page": 68
+                },
+                {
+                    "type": "习作例文",
+                    "sub_title": ["鲸", "风向袋的制作"],
+                    "page": 71
+                },
+                {
+                    "type": "习作",
+                    "title": "介绍一种事物",
+                    "page": 74
+                }
+            ]
+        },
+        "第六单元": {
+            "start_page": 75,
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "慈母情深",
+                    "page": 76
+                },
+                {
+                    "sort": 19,
+                    "title": "父爱之舟",
+                    "page": 80
+                },
+                {
+                    "sort": 20,
+                    "mark": "*略读",
+                    "title": "\"精彩极了\"和\"糟糕透了\"",
+                    "page": 84
+                },
+                {
+                    "type": "口语交际",
+                    "title": "父母之爱",
+                    "page": 87
+                },
+                {
+                    "type": "习作",
+                    "title": "我想对您说",
+                    "page": 88
+                },
+                {
+                    "type": "语文园地",
+                    "page": 89
+                }
+            ]
+        },
+        "第七单元": {
+            "start_page": 91,
+            "article_list": [
+                {
+                    "sort": 21,
+                    "title": "古诗词三首",
+                    "page": 92,
+                    "sub_title": ["山居秋暝", "枫桥夜泊", "长相思"]
+                },
+                {
+                    "sort": 22,
+                    "title": "鸟的天堂",
+                    "page": 94
+                },
+                {
+                    "sort": 23,
+                    "mark": "*略读",
+                    "title": "月迹",
+                    "page": 97
+                },
+                {
+                    "type": "习作",
+                    "title": "____即景",
+                    "page": 100
+                },
+                {
+                    "type": "语文园地",
+                    "page": 101
+                }
+            ]
+        },
+        "第八单元": {
+            "start_page": 103,
+            "article_list": [
+                {
+                    "sort": 24,
+                    "title": "古人谈读书",
+                    "page": 104
+                },
+                {
+                    "sort": 25,
+                    "title": "忆读书",
+                    "page": 106
+                },
+                {
+                    "sort": 26,
+                    "mark": "*略读",
+                    "title": "我的\"长生果\"",
+                    "page": 109
+                },
+                {
+                    "type": "口语交际",
+                    "title": "我最喜欢的人物形象",
+                    "page": 112
+                },
+                {
+                    "type": "习作",
+                    "title": "推荐一本书",
+                    "page": 113
+                },
+                {
+                    "type": "语文园地",
+                    "page": 114
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 117
+            },
+            "写字表": {
+                "page": 120
+            },
+            "词语表": {
+                "page": 122
+            }
+        },
+        "note": "标*的是略读课文"
+    }
+}

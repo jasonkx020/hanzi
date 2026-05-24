@@ -45,11 +45,7 @@
 						:id="`quiz-dot-${i}`"
 						:key="i"
 						class="dot"
-						:class="{
-							'dot--done': i < qIndex,
-							'dot--current': i === qIndex,
-							'dot--wrong': wrongAt[i]
-						}"
+						:class="dotClass(i)"
 					/>
 				</view>
 			</scroll-view>
@@ -97,13 +93,31 @@
 
 				<view v-else class="opts opts-py">
 					<view
-						v-for="(py, i) in pyOptions"
-						:key="`p-${qIndex}-${i}-${py}`"
-						class="opt-tile opt-tile--py"
-						:class="optTileClass(py, true)"
-						@click="onPickPinyin(py)"
+						class="quiz-py-wrap"
+						:class="{ 'quiz-py-wrap--reading': pyHighlightCol >= 0 }"
 					>
-						<text class="opt-py">{{ py }}</text>
+						<pinyin-four-lines-row
+							class="quiz-py-pflr"
+							:syllables="pyOptionsForPflr"
+							size="tone"
+							:interactive="!optDisabled"
+							:highlight-column-index="pyHighlightCol"
+							@cell-click="onPickPinyinCell"
+						/>
+					</view>
+					<view class="opts-py-marks">
+						<view
+							v-for="(py, i) in pyOptions"
+							:key="`pm-${qIndex}-${i}-${py}`"
+							class="opt-py-mark-col"
+						>
+							<text
+								v-if="pyOptionMark(py)"
+								class="opt-mark"
+								:class="'opt-mark--' + pyOptionMark(py)"
+							>{{ pyOptionMark(py) === 'ok' ? '✓' : '✗' }}</text>
+							<view v-else class="opt-mark-slot" />
+						</view>
 					</view>
 				</view>
 
@@ -148,7 +162,10 @@ import { addCharWrongCount } from '@/utils/user-progress-storage.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { buildStoredLessonKey, recordLessonQuizAttempt } from '@/utils/user-lesson-progress-storage.js'
 import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
-import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import {
+	playOpusForDisplayPinyin,
+	stopLocalPinyinAudio
+} from '@/utils/play-pinyin-local-audio.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import {
 	orderedUniqueRows,
@@ -159,7 +176,13 @@ import {
 	firstHanzi,
 	normDisplayPinyin
 } from '@/utils/lesson-quiz-plan.js'
-import { MENG_VOICE, playMengmengVoice } from '@/utils/mengmeng-voice.js'
+import {
+	MENG_VOICE,
+	playMengmengVoice,
+	stopMengmengVoice
+} from '@/utils/mengmeng-voice.js'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 function filterValidPlan(plan, pool) {
 	return (plan || []).filter((item) => {
@@ -171,7 +194,7 @@ function filterValidPlan(plan, pool) {
 }
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinFourLinesRow },
 	data() {
 		return {
 			phase: 'quiz',
@@ -196,9 +219,13 @@ export default {
 			/** 听音选字：已揭晓对错标记 */
 			hanziReveal: false,
 			revealCorrect: false,
-			wrongAt: {},
+			/** 听音选字：当前点中的候选字 */
+			pickedHanzi: '',
+			/** 看字选音：当前点中的拼音列下标 */
+			pickedPyIndex: -1,
+			/** 每题结果：correct | wrong */
+			questionResults: {},
 			autoHearTimer: null,
-			advanceTimer: null,
 			dotScrollId: ''
 		}
 	},
@@ -215,16 +242,35 @@ export default {
 			if (r >= 1) return '全对，太棒了！'
 			if (r >= 0.8) return '很不错，再认几遍会更稳哦。'
 			if (r >= 0.6) return '进步很大，多听多读就会更熟。'
-			return '没关系，回字卡跟读几遍再来小测也很好。'
+			return '没关系，回字卡多练几遍再来小测也很好。'
+		},
+		/** 看字选音：三个选项各占四线三格一列，同一行展示 */
+		pyOptionsForPflr() {
+			return (this.pyOptions || []).map((py) => {
+				const raw = String(py || '').trim().replace(/\s+/g, ' ')
+				if (!raw) return '—'
+				const tokens = splitPinyinDisplayTokens(raw)
+				return tokens.length ? tokens[0] : raw
+			})
+		},
+		pyHighlightCol() {
+			if (!this.pyOptions.length) return -1
+			if (this.revealCorrect) {
+				const correct = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
+				const i = this.pyOptions.findIndex((py) => py === correct)
+				return i >= 0 ? i : -1
+			}
+			return this.pickedPyIndex >= 0 ? this.pickedPyIndex : -1
 		}
 	},
 	onUnload() {
 		this.clearAutoHear()
-		this.clearAdvanceTimer()
 		stopLocalPinyinAudio()
+		stopMengmengVoice()
 	},
 	onHide() {
 		stopLocalPinyinAudio()
+		stopMengmengVoice()
 	},
 	onLoad() {
 		const payload = takeLessonQuizTransfer()
@@ -262,8 +308,8 @@ export default {
 	methods: {
 		bootstrapQuiz() {
 			this.clearAutoHear()
-			this.clearAdvanceTimer()
 			stopLocalPinyinAudio()
+			stopMengmengVoice()
 			let plan = buildLessonQuizPlan(this.pool)
 			plan = filterValidPlan(plan, this.pool)
 			if (!plan.length) {
@@ -276,7 +322,7 @@ export default {
 			this.passNeed = calcQuizPassNeed(this.totalQ)
 			this.qIndex = 0
 			this.score = 0
-			this.wrongAt = {}
+			this.questionResults = {}
 			this.quizJustPassed = false
 			this.phase = 'quiz'
 			this.loadQuestion(0)
@@ -299,11 +345,18 @@ export default {
 				this.autoHearTimer = null
 			}
 		},
-		clearAdvanceTimer() {
-			if (this.advanceTimer != null) {
-				clearTimeout(this.advanceTimer)
-				this.advanceTimer = null
-			}
+		async playQuizAnswerVoice(correct) {
+			const id = correct ? MENG_VOICE.STROKE_WRITE_OK : MENG_VOICE.STROKE_WRITE_WRONG
+			try {
+				await playMengmengVoice(id, { minGapMs: 0, allowRepeat: true })
+			} catch (_) {}
+		},
+		async completeQuestion(correct) {
+			if (this.phase !== 'quiz') return
+			stopLocalPinyinAudio()
+			await this.playQuizAnswerVoice(correct)
+			if (this.phase !== 'quiz') return
+			this.advanceQuestion(correct)
 		},
 		scheduleAutoHear() {
 			this.clearAutoHear()
@@ -312,6 +365,15 @@ export default {
 				this.autoHearTimer = null
 				this.onHearAgain()
 			}, 420)
+		},
+		dotClass(i) {
+			const result = this.questionResults[i]
+			if (result === 'correct') return { dot: true, 'dot--correct': true }
+			if (result === 'wrong') return { dot: true, 'dot--wrong': true }
+			if (i === this.qIndex && this.phase === 'quiz') {
+				return { dot: true, 'dot--current': true }
+			}
+			return { dot: true }
 		},
 		scrollDotIntoView() {
 			const i = this.qIndex
@@ -336,6 +398,8 @@ export default {
 			this.feedbackText = ''
 			this.hanziReveal = false
 			this.revealCorrect = false
+			this.pickedHanzi = ''
+			this.pickedPyIndex = -1
 			this.scrollDotIntoView()
 
 			if (item.type === 'hear_pick') {
@@ -364,13 +428,18 @@ export default {
 			const m = this.hanziOptionMark(c)
 			if (m === 'ok') return 'opt-square--ok'
 			if (m === 'bad') return 'opt-square--bad'
+			if (firstHanzi(c) === this.pickedHanzi) return 'opt-square--sel'
 			return ''
 		},
-		optTileClass(val, isPy) {
-			if (!this.revealCorrect || this.optDisabled === false) return ''
+		pyOptionMark(py) {
+			if (!this.revealCorrect) return ''
 			const correct = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
-			if (val === correct) return 'opt-tile--correct'
-			return ''
+			return py === correct ? 'ok' : 'bad'
+		},
+		onPickPinyinCell(payload) {
+			const i = payload && Number(payload.index)
+			if (!Number.isFinite(i) || i < 0 || i >= this.pyOptions.length) return
+			this.onPickPinyin(this.pyOptions[i], i)
 		},
 		async onHearAgain() {
 			if (this.phase !== 'quiz' || this.qType !== 'hear_pick' || !this.targetHanzi) return
@@ -386,9 +455,10 @@ export default {
 				return
 			}
 			const pick = firstHanzi(c)
+			this.pickedHanzi = pick
 			if (pick === this.targetHanzi) {
 				this.optDisabled = true
-				this.advanceQuestion(true)
+				this.completeQuestion(true)
 				return
 			}
 			if (this.attempt === 1) {
@@ -403,16 +473,22 @@ export default {
 			this.optDisabled = true
 			this.feedbackText = ''
 			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
-			this.wrongAt = { ...this.wrongAt, [this.qIndex]: true }
-			this.scheduleAdvance(false, 3000)
+			this.completeQuestion(false)
 		},
-		onPickPinyin(py) {
+		async onPickPinyin(py, pickIndex) {
 			if (this.phase !== 'quiz' || this.optDisabled || this.qType !== 'see_py') return
+			if (Number.isFinite(pickIndex) && pickIndex >= 0) {
+				this.pickedPyIndex = pickIndex
+			}
+			const pyStr = String(py || '').trim()
+			if (pyStr) {
+				await playOpusForDisplayPinyin(pyStr)
+			}
 			const correct = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
 			if (py === correct) {
 				this.feedbackText = '读音对了！'
 				this.optDisabled = true
-				this.scheduleAdvance(true)
+				this.completeQuestion(true)
 				return
 			}
 			if (this.attempt === 1) {
@@ -424,24 +500,23 @@ export default {
 		},
 		markWrongAndReveal() {
 			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
-			this.wrongAt = { ...this.wrongAt, [this.qIndex]: true }
 			this.optDisabled = true
 			if (this.qType === 'see_py') {
 				this.revealCorrect = true
 				const py = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
 				this.feedbackText = `正确读音：${py || this.targetPinyin}`
-				this.scheduleAdvance(false, 1100)
+				this.completeQuestion(false)
 			}
 		},
-		scheduleAdvance(correct, delay = 480) {
-			this.clearAdvanceTimer()
-			this.advanceTimer = setTimeout(() => {
-				this.advanceTimer = null
-				this.advanceQuestion(correct)
-			}, delay)
-		},
 		advanceQuestion(correct) {
-			if (correct) this.score++
+			const qi = this.qIndex
+			if (typeof correct === 'boolean' && qi >= 0 && qi < this.totalQ) {
+				this.questionResults = {
+					...this.questionResults,
+					[qi]: correct ? 'correct' : 'wrong'
+				}
+				if (correct) this.score++
+			}
 			this.qIndex++
 			if (this.qIndex >= this.totalQ) {
 				this.clearAutoHear()
@@ -475,8 +550,8 @@ export default {
 		},
 		goBackLesson() {
 			this.clearAutoHear()
-			this.clearAdvanceTimer()
 			stopLocalPinyinAudio()
+			stopMengmengVoice()
 			uni.navigateBack()
 		}
 	}
@@ -623,10 +698,6 @@ export default {
 	flex-shrink: 0;
 }
 
-.dot--done {
-	background: #f48fb1;
-}
-
 .dot--current {
 	width: 18rpx;
 	height: 18rpx;
@@ -634,8 +705,14 @@ export default {
 	box-shadow: 0 0 0 4rpx rgba(233, 30, 99, 0.2);
 }
 
+.dot--correct {
+	background: #43a047;
+	box-shadow: 0 0 0 2rpx rgba(67, 160, 71, 0.35);
+}
+
 .dot--wrong {
-	background: #ffab91;
+	background: #e53935;
+	box-shadow: 0 0 0 2rpx rgba(229, 57, 53, 0.35);
 }
 
 .quiz-card {
@@ -783,6 +860,22 @@ export default {
 	box-shadow: 0 4rpx 16rpx rgba(229, 115, 115, 0.15);
 }
 
+.opt-square--sel {
+	border-color: #c44d6a;
+	background: #fff5f8;
+	box-shadow: 0 0 0 4rpx rgba(196, 77, 106, 0.22);
+	animation: quiz-opt-pick-flash 0.45s ease forwards;
+}
+
+@keyframes quiz-opt-pick-flash {
+	0% {
+		background-color: #ffd4e8;
+	}
+	100% {
+		background-color: #fff5f8;
+	}
+}
+
 .opt-mark-slot {
 	width: 1rpx;
 	height: 44rpx;
@@ -810,33 +903,46 @@ export default {
 .opts-py {
 	flex-direction: column;
 	align-items: stretch;
+	padding: 8rpx 4rpx 0;
 }
 
-.opt-tile {
-	padding: 28rpx 16rpx;
-	border-radius: 20rpx;
-	background: #fff;
-	border: 2rpx solid rgba(255, 180, 200, 0.5);
-	box-sizing: border-box;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 4rpx 14rpx rgba(255, 140, 170, 0.08);
-}
-
-.opt-tile:active {
-	opacity: 0.92;
-}
-
-.opt-tile--correct {
-	border-color: #66bb6a;
-	background: #fff;
-}
-
-.opt-tile--py {
-	width: 100% !important;
+/* 与拼音页「音调」一致：连读列 scale(1.16)，带调韵母 1.12em */
+.quiz-py-wrap {
+	width: 100%;
 	min-width: 0;
-	padding: 32rpx 20rpx;
+}
+
+.quiz-py-pflr {
+	width: 100%;
+	min-width: 0;
+}
+
+.quiz-py-pflr ::v-deep .pflr-cell {
+	overflow: visible;
+}
+
+.quiz-py-pflr ::v-deep .pflr-cell--reading {
+	z-index: 4;
+}
+
+.quiz-py-wrap--reading ::v-deep .pflr--reading-glow .pflr-sheet {
+	box-shadow: 0 0 0 3rpx rgba(255, 120, 150, 0.35);
+}
+
+.opts-py-marks {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	width: 100%;
+	margin-top: 10rpx;
+}
+
+.opt-py-mark-col {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 }
 
 .opt-char {
@@ -844,14 +950,6 @@ export default {
 	font-weight: 800;
 	color: var(--meng-text, #2c2419);
 	line-height: 1;
-}
-
-.opt-py {
-	font-size: 40rpx;
-	font-weight: 700;
-	color: #5d4037;
-	line-height: 1.35;
-	text-align: center;
 }
 
 .feedback-line {

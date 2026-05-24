@@ -5,13 +5,22 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "book:merge": "node scripts/merge-renjiao-textbook.mjs",
+    "book:merge:all": "node scripts/merge-renjiao-textbook.mjs --all",
+    "book:merge:all-catalog": "node scripts/merge-renjiao-textbook.mjs --all-merge",
+    "book:merge:grade2-down": "node scripts/merge-renjiao-textbook.mjs grade2-down-merge",
+    "book:gen:preschool": "node scripts/gen-youxiaoxianjie-renjiao-json.mjs",
     "db:build": "node scripts/build-db.mjs",
     "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
     "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
-    "pinyin:mfcc-fingerprints": "node scripts/build-pinyin-mfcc-fingerprints.mjs",
     "assets:resize-mengmeng": "python scripts/resize-mengmeng-assets.py",
     "assets:remove-watermark": "python scripts/remove-doubao-watermark.py",
-    "assets:mengmeng": "python scripts/resize-mengmeng-assets.py && python scripts/remove-doubao-watermark.py"
+    "assets:mengmeng": "python scripts/resize-mengmeng-assets.py && python scripts/remove-doubao-watermark.py",
+    "assets:splash": "python scripts/gen-app-splash.py",
+    "assets:hanzi-writer": "node scripts/copy-hanzi-writer-data.mjs",
+    "assets:hanzi-writer:prune": "node scripts/prune-hanzi-writer-data.mjs",
+    "assets:hanzi-writer:sync": "node scripts/copy-hanzi-writer-data.mjs && node scripts/prune-hanzi-writer-data.mjs",
+    "postinstall": "node scripts/copy-hanzi-writer-data.mjs && node scripts/prune-hanzi-writer-data.mjs || exit 0"
   },
   "keywords": [],
   "author": "",
@@ -33,9 +42,7 @@
     "cnchar-voice": "^3.2.6",
     "cnchar-words": "^3.2.6",
     "cnchar-xhy": "^3.2.6",
-    "recorder-core": "^1.3.25011100"
-  },
-  "devDependencies": {
-    "meyda": "^5.6.3"
+    "hanzi-writer-data": "^2.0.1",
+    "hanzi1": "file:"
   }
 }

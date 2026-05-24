@@ -15,7 +15,8 @@ export function renjiaoTextbookJsonFile(grade, semester, kind = 'main') {
 	if (kind === 'main') {
 		if (g === 0) return 'preschool-bridge.json'
 		if (!Number.isFinite(g) || g < 1 || g > 6) return ''
-		return `grade${g}-${sem}.json`
+		// 课本同步学使用 merge 产物（与 merge-renjiao-textbook.mjs --all-merge 一致）
+		return `grade${g}-${sem}-merge.json`
 	}
 	if (!Number.isFinite(g) || g < 1 || g > 6) return ''
 	const suf =

@@ -336,8 +336,7 @@ export default {
 					},
 					test: {
 						testStrictOrder: true,
-						testDirectionWeight: 0.32,
-						testScoreThreshold: 26,
+						testDebugLog: true,
 						showHintAfterMisses: 2,
 						onTestStatus: ({ index, status, data }) => {
 							vm.handleTestStatus(index, status, data || {})

@@ -1,3 +1,10 @@
+import {
+	loadHanziWriterCharData,
+	setHanziWriterDataBase,
+	LOCAL_HANZI_WRITER_BASE
+} from './hanzi-writer-loader.js'
+import { isAppPlus } from './uni-platform.js'
+
 const TYPE = {
 	NORMAL: 'normal',
 	ANIMATION: 'animation',
@@ -47,12 +54,30 @@ const DRAW_OPTION_DEFAULT = {
 	highlightOnComplete: true,
 	highlightCompleteColor: null,
 	onTestStatus: null,
-	// draw-native 扩展：测试模式严格度配置（保持默认兼容）
+	// 测验：松手时只评 testState.activeStroke 对应的一笔
 	testStrictOrder: true,
-	testDirectionWeight: 0.35,
-	testScoreThreshold: null,
+	/** 标准笔画容差半径（px），距离阈值由此推导 */
+	testFitRadius: 30,
+	/** 用户点到标准笔画的最小距离均值上限（默认 fitRadius×0.72） */
+	testMeanDistMax: null,
+	/** 距离方差上限（默认 (fitRadius×0.85)²，方差小=贴合稳定） */
+	testDistVarianceMax: null,
+	/** 落在容差带内的采样点比例下限 */
+	testInBandMin: 0.52,
+	/** 轨迹长度 / 标准中线长度 */
+	testLengthMinRatio: 0.28,
+	testLengthMaxRatio: 1.55,
+	/** 起笔、收笔到标准中线端点的最大距离（默认 fitRadius×1.35） */
+	testEndpointMaxDist: 15,
+	/** 起笔→收笔方向与标准夹角余弦下限（0.707≈45°，小于则判为横穿/方向不对） */
+	testDirectionMinCos: 0.9,
+	/** 动画读音顿笔：中线拐点夹角阈值（仅动画，不参与测验） */
+	testCornerAngleCos: 0.62,
+	/** 为 true 时在控制台输出逐点距离与未通过原因 */
+	testDebugLog: false,
+	onWriterReady: null,
 	// 字形相对外框的内缩比例（基于可绘区域），略大则字离田字格线更远
-	charInsetRatio: 0.08
+	charInsetRatio: 0.0
 }
 
 function normalizeText(text = '') {
@@ -60,15 +85,20 @@ function normalizeText(text = '') {
 	return chars ? chars.join('') : ''
 }
 
+/** 测验阈值：null/undefined/≤0 时用 fallback（避免 Number(null)===0 误判） */
+function resolvePositiveTestOption(value, fallback) {
+	if (value == null || value === '') return fallback
+	const n = Number(value)
+	return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
 function parseCanvasId(el) {
 	if (typeof el !== 'string') return 'cnchar-draw-native'
 	return el.replace(/^#/, '') || 'cnchar-draw-native'
 }
 
-const CHAR_DATA_CACHE = Object.create(null)
 const SVG_PATH_CACHE = Object.create(null)
 const WORD_NOT_FOUND_CALLBACKS = []
-let HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
 
 function mergeOption(type, input = {}) {
 	const style = input.style || {}
@@ -122,11 +152,475 @@ function requestJSON(url) {
 }
 
 async function loadCharData(char) {
-	if (CHAR_DATA_CACHE[char]) return CHAR_DATA_CACHE[char]
-	const url = `${HANZI_WRITER_DATA_BASE}/${encodeURIComponent(char)}.json`
-	const data = await requestJSON(url)
-	CHAR_DATA_CACHE[char] = data
-	return data
+	return loadHanziWriterCharData(char, requestJSON)
+}
+
+function isFinitePoint(p) {
+	return p && Number.isFinite(p.x) && Number.isFinite(p.y)
+}
+
+function isValidPolyline(points) {
+	return Array.isArray(points) && points.length >= 2 && points.every(isFinitePoint)
+}
+
+/** 点到线段最短距离 */
+function distPointToSegment(p, a, b) {
+	const dx = b.x - a.x
+	const dy = b.y - a.y
+	const len2 = dx * dx + dy * dy
+	if (len2 < 1e-6) return Math.hypot(p.x - a.x, p.y - a.y)
+	let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2
+	t = Math.max(0, Math.min(1, t))
+	return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+}
+
+/** 点到折线最短距离 */
+function minDistToPolyline(p, polyline) {
+	if (!isFinitePoint(p) || !isValidPolyline(polyline)) return Number.POSITIVE_INFINITY
+	let min = Number.POSITIVE_INFINITY
+	for (let i = 0; i < polyline.length - 1; i++) {
+		min = Math.min(min, distPointToSegment(p, polyline[i], polyline[i + 1]))
+	}
+	return min
+}
+
+function polylineLength(polyline) {
+	if (!isValidPolyline(polyline)) return 0
+	let len = 0
+	for (let i = 0; i < polyline.length - 1; i++) {
+		len += Math.hypot(polyline[i + 1].x - polyline[i].x, polyline[i + 1].y - polyline[i].y)
+	}
+	return len
+}
+
+function interpLine(p0, p1, stepPx) {
+	const dx = p1.x - p0.x
+	const dy = p1.y - p0.y
+	const dist = Math.hypot(dx, dy)
+	if (dist < 1e-3) return [p0]
+	const n = Math.max(1, Math.ceil(dist / stepPx))
+	const out = []
+	for (let i = 0; i <= n; i++) {
+		const t = i / n
+		out.push({ x: p0.x + dx * t, y: p0.y + dy * t })
+	}
+	return out
+}
+
+function sampleQuadratic(p0, p1, p2, stepPx) {
+	const chord = Math.hypot(p2.x - p0.x, p2.y - p0.y)
+	const n = Math.max(2, Math.ceil(chord / stepPx))
+	const out = []
+	for (let i = 0; i <= n; i++) {
+		const t = i / n
+		const mt = 1 - t
+		out.push({
+			x: mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
+			y: mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y
+		})
+	}
+	return out
+}
+
+function sampleCubic(p0, p1, p2, p3, stepPx) {
+	const chord = Math.hypot(p3.x - p0.x, p3.y - p0.y)
+	const n = Math.max(3, Math.ceil(chord / stepPx))
+	const out = []
+	for (let i = 0; i <= n; i++) {
+		const t = i / n
+		const mt = 1 - t
+		out.push({
+			x:
+				mt * mt * mt * p0.x +
+				3 * mt * mt * t * p1.x +
+				3 * mt * t * t * p2.x +
+				t * t * t * p3.x,
+			y:
+				mt * mt * mt * p0.y +
+				3 * mt * mt * t * p1.y +
+				3 * mt * t * t * p2.y +
+				t * t * t * p3.y
+		})
+	}
+	return out
+}
+
+/** 将 SVG 笔画轮廓采样为 canvas 折线（与绘制用的 mapPoint 一致） */
+function sampleSvgCommandsToPolyline(cmds, mapXY, stepPx = 7) {
+	if (!cmds?.length || typeof mapXY !== 'function') return []
+	const out = []
+	let x = 0
+	let y = 0
+	const push = (p) => {
+		if (isFinitePoint(p)) out.push(p)
+	}
+	for (let i = 0; i < cmds.length; i++) {
+		const c = cmds[i]
+		if (c.type === 'M') {
+			x = c.x
+			y = c.y
+			push(mapXY(x, y))
+		} else if (c.type === 'L') {
+			const p0 = mapXY(x, y)
+			const p1 = mapXY(c.x, c.y)
+			interpLine(p0, p1, stepPx).forEach(push)
+			x = c.x
+			y = c.y
+		} else if (c.type === 'Q') {
+			const p0 = mapXY(x, y)
+			const p1 = mapXY(c.x1, c.y1)
+			const p2 = mapXY(c.x, c.y)
+			sampleQuadratic(p0, p1, p2, stepPx).forEach(push)
+			x = c.x
+			y = c.y
+		} else if (c.type === 'C') {
+			const p0 = mapXY(x, y)
+			const p1 = mapXY(c.x1, c.y1)
+			const p2 = mapXY(c.x2, c.y2)
+			const p3 = mapXY(c.x, c.y)
+			sampleCubic(p0, p1, p2, p3, stepPx).forEach(push)
+			x = c.x
+			y = c.y
+		}
+	}
+	return out
+}
+
+/** 点集中有多少比例落在折线容差带内 */
+function fractionPointsNearPolyline(points, polyline, radius) {
+	if (!points?.length || !isValidPolyline(polyline) || !Number.isFinite(radius)) return 0
+	let hit = 0
+	for (let i = 0; i < points.length; i++) {
+		if (minDistToPolyline(points[i], polyline) <= radius) hit++
+	}
+	return hit / points.length
+}
+
+function minAvgDistToPolylines(samples, polylines) {
+	if (!samples?.length || !polylines?.length) return Number.POSITIVE_INFINITY
+	let sum = 0
+	for (let i = 0; i < samples.length; i++) {
+		let best = Number.POSITIVE_INFINITY
+		for (let j = 0; j < polylines.length; j++) {
+			best = Math.min(best, minDistToPolyline(samples[i], polylines[j]))
+		}
+		sum += best
+	}
+	return sum / samples.length
+}
+
+/**
+ * 用户笔迹到标准笔画（轮廓+中线）的距离统计：均值、方差、容差内占比
+ * @returns {{ mean, variance, max, inBand, count, points: Array<{ i, x, y, dist, inBand, devFromMean }> }}
+ */
+function computeStrokeDistanceStats(userSamples, refPolylines, fitRadius) {
+	const empty = {
+		mean: Number.POSITIVE_INFINITY,
+		variance: Number.POSITIVE_INFINITY,
+		max: Number.POSITIVE_INFINITY,
+		inBand: 0,
+		count: 0,
+		points: []
+	}
+	if (!userSamples?.length || !refPolylines?.length) return empty
+
+	const band = Number.isFinite(fitRadius) ? fitRadius : 24
+	const points = []
+	for (let i = 0; i < userSamples.length; i++) {
+		const p = userSamples[i]
+		let minD = Number.POSITIVE_INFINITY
+		for (let j = 0; j < refPolylines.length; j++) {
+			const line = refPolylines[j]
+			if (!isValidPolyline(line)) continue
+			minD = Math.min(minD, minDistToPolyline(p, line))
+		}
+		if (!Number.isFinite(minD)) continue
+		points.push({
+			i,
+			x: p.x,
+			y: p.y,
+			dist: minD,
+			inBand: minD <= band,
+			devFromMean: 0
+		})
+	}
+	const count = points.length
+	if (!count) return empty
+
+	let mean = 0
+	for (let k = 0; k < count; k++) mean += points[k].dist
+	mean /= count
+	let variance = 0
+	let max = points[0].dist
+	let inBandN = 0
+	for (let k = 0; k < count; k++) {
+		const d = points[k].dist
+		const dev = d - mean
+		points[k].devFromMean = dev
+		variance += dev * dev
+		if (d > max) max = d
+		if (points[k].inBand) inBandN++
+	}
+	variance /= count
+
+	return {
+		mean,
+		variance,
+		max,
+		inBand: inBandN / count,
+		count,
+		points
+	}
+}
+
+/** 点投影到折线，返回弧长参数 t∈[0,1] 及最短距离 */
+function projectPointOntoPolyline(p, polyline) {
+	if (!isFinitePoint(p) || !isValidPolyline(polyline)) {
+		return { t: 0, dist: Number.POSITIVE_INFINITY }
+	}
+	const totalLen = polylineLength(polyline)
+	if (totalLen < 1e-3) {
+		return { t: 0, dist: Math.hypot(p.x - polyline[0].x, p.y - polyline[0].y) }
+	}
+	let bestDist = Number.POSITIVE_INFINITY
+	let bestT = 0
+	let acc = 0
+	for (let i = 0; i < polyline.length - 1; i++) {
+		const a = polyline[i]
+		const b = polyline[i + 1]
+		const dx = b.x - a.x
+		const dy = b.y - a.y
+		const segLen2 = dx * dx + dy * dy
+		let localT = 0
+		if (segLen2 > 1e-6) {
+			localT = ((p.x - a.x) * dx + (p.y - a.y) * dy) / segLen2
+			localT = Math.max(0, Math.min(1, localT))
+		}
+		const px = a.x + dx * localT
+		const py = a.y + dy * localT
+		const dist = Math.hypot(p.x - px, p.y - py)
+		const tGlobal = (acc + localT * Math.sqrt(segLen2)) / totalLen
+		if (dist < bestDist) {
+			bestDist = dist
+			bestT = tGlobal
+		}
+		acc += Math.sqrt(segLen2)
+	}
+	return { t: Math.max(0, Math.min(1, bestT)), dist: bestDist }
+}
+
+/**
+ * 笔顺方向：整体矢量夹角 + 沿中线参数是否单调向前 + 起收笔位置
+ */
+function computeStrokeDirectionMetrics(userSamples, median) {
+	if (!isValidPolyline(median) || !userSamples?.length || userSamples.length < 2) {
+		return {
+			cos: -1,
+			progress: 0,
+			startDist: Number.POSITIVE_INFINITY,
+			endDist: Number.POSITIVE_INFINITY,
+			spanT: 0
+		}
+	}
+	const mStart = median[0]
+	const mEnd = median[median.length - 1]
+	const uStart = userSamples[0]
+	const uEnd = userSamples[userSamples.length - 1]
+	const ux = uEnd.x - uStart.x
+	const uy = uEnd.y - uStart.y
+	const tx = mEnd.x - mStart.x
+	const ty = mEnd.y - mStart.y
+	const uLen = Math.hypot(ux, uy) || 1
+	const tLen = Math.hypot(tx, ty) || 1
+	const cos = (ux / uLen) * (tx / tLen) + (uy / uLen) * (ty / tLen)
+
+	const ts = userSamples.map((p) => projectPointOntoPolyline(p, median).t)
+	let forward = 0
+	let backward = 0
+	for (let i = 1; i < ts.length; i++) {
+		const d = ts[i] - ts[i - 1]
+		if (d > 0.025) forward++
+		else if (d < -0.025) backward++
+	}
+	const progress = forward / Math.max(1, forward + backward)
+	const spanT = Math.max(0, Math.max(...ts) - Math.min(...ts))
+	const startDist = Math.hypot(uStart.x - mStart.x, uStart.y - mStart.y)
+	const endDist = Math.hypot(uEnd.x - mEnd.x, uEnd.y - mEnd.y)
+
+	return {
+		cos,
+		progress,
+		startDist,
+		endDist,
+		spanT
+	}
+}
+
+/** 起笔、收笔端点与标准中线两端点的直线距离（单独判定，避免横穿仅中段重合） */
+function computeStrokeEndpointMetrics(userPath, median) {
+	if (!userPath?.length || !isValidPolyline(median)) {
+		return {
+			startDist: Number.POSITIVE_INFINITY,
+			endDist: Number.POSITIVE_INFINITY,
+			startDistToWrongEnd: Number.POSITIVE_INFINITY,
+			endDistToWrongEnd: Number.POSITIVE_INFINITY
+		}
+	}
+	const mStart = median[0]
+	const mEnd = median[median.length - 1]
+	const uStart = userPath[0]
+	const uEnd = userPath[userPath.length - 1]
+	return {
+		startDist: Math.hypot(uStart.x - mStart.x, uStart.y - mStart.y),
+		endDist: Math.hypot(uEnd.x - mEnd.x, uEnd.y - mEnd.y),
+		startDistToWrongEnd: Math.hypot(uStart.x - mEnd.x, uStart.y - mEnd.y),
+		endDistToWrongEnd: Math.hypot(uEnd.x - mStart.x, uEnd.y - mStart.y)
+	}
+}
+
+/**
+ * 从中线提取拐点（与动画顿笔判定一致：相邻段夹角突变）
+ * @returns {{ corners: Array<{ point: {x,y}, t: number, index: number }>, totalLen: number }}
+ */
+function extractMedianCorners(median, angleCosThreshold = 0.62) {
+	if (!isValidPolyline(median)) {
+		return { corners: [], totalLen: 0 }
+	}
+	const totalLen = polylineLength(median)
+	if (median.length < 3 || totalLen < 1e-3) {
+		return { corners: [], totalLen: Math.max(1, totalLen) }
+	}
+	const cumulative = [0]
+	for (let i = 0; i < median.length - 1; i++) {
+		cumulative.push(
+			cumulative[cumulative.length - 1] +
+				Math.hypot(median[i + 1].x - median[i].x, median[i + 1].y - median[i].y)
+		)
+	}
+	const normalize = (x, y) => {
+		const len = Math.hypot(x, y) || 1
+		return { x: x / len, y: y / len }
+	}
+	const angleCos = (a, b) => a.x * b.x + a.y * b.y
+	const corners = []
+	for (let i = 1; i < median.length - 1; i++) {
+		const p0 = median[i - 1]
+		const p1 = median[i]
+		const p2 = median[i + 1]
+		const vA = normalize(p1.x - p0.x, p1.y - p0.y)
+		const vB = normalize(p2.x - p1.x, p2.y - p1.y)
+		if (angleCos(vA, vB) < angleCosThreshold) {
+			corners.push({
+				point: { x: p1.x, y: p1.y },
+				t: cumulative[i] / totalLen,
+				index: i
+			})
+		}
+	}
+	return { corners, totalLen }
+}
+
+/** 合并弧长上过近的重复拐点 */
+function mergeCloseCorners(corners, minTGap = 0.07) {
+	if (!corners?.length) return []
+	const sorted = corners.slice().sort((a, b) => a.t - b.t)
+	const out = [sorted[0]]
+	for (let i = 1; i < sorted.length; i++) {
+		if (sorted[i].t - out[out.length - 1].t >= minTGap) {
+			out.push(sorted[i])
+		}
+	}
+	return out
+}
+
+/**
+ * 连笔/多折笔：拐点须被经过，且各分段（横→折→弯→钩）按顺序有轨迹覆盖
+ */
+function evaluateCornerCoverage(userSamples, median, corners, fitRadius, options = {}) {
+	if (!corners?.length) {
+		return {
+			required: false,
+			pass: true,
+			hitRatio: 1,
+			segmentRatio: 1,
+			orderPass: true,
+			hitCount: 0,
+			cornerCount: 0
+		}
+	}
+	if (!userSamples?.length || !isValidPolyline(median)) {
+		return {
+			required: true,
+			pass: false,
+			hitRatio: 0,
+			segmentRatio: 0,
+			orderPass: false,
+			hitCount: 0,
+			cornerCount: corners.length
+		}
+	}
+
+	const cornerRadius = fitRadius * (Number(options.cornerRadiusScale) || 1.4)
+	const minHitRatio = Number(options.minHitRatio ?? 0.8)
+	const minSegmentRatio = Number(options.minSegmentCoverage ?? 0.85)
+	const tSlack = Number(options.tSlack ?? 0.04)
+
+	let hitCount = 0
+	const cornerHitT = []
+	for (let c = 0; c < corners.length; c++) {
+		const corner = corners[c]
+		let bestDist = Number.POSITIVE_INFINITY
+		let hitT = null
+		for (let i = 0; i < userSamples.length; i++) {
+			const u = userSamples[i]
+			const d = Math.hypot(u.x - corner.point.x, u.y - corner.point.y)
+			if (d < bestDist) {
+				bestDist = d
+				if (d <= cornerRadius) {
+					hitT = projectPointOntoPolyline(u, median).t
+				}
+			}
+		}
+		if (bestDist <= cornerRadius) {
+			hitCount++
+			cornerHitT.push({ t: hitT != null ? hitT : corner.t, cornerT: corner.t })
+		}
+	}
+	const hitRatio = hitCount / corners.length
+
+	const userTs = userSamples.map((p) => projectPointOntoPolyline(p, median).t)
+	const breaks = [0, ...corners.map((c) => c.t), 1]
+	let segmentsOk = 0
+	for (let s = 0; s < breaks.length - 1; s++) {
+		const t0 = Math.max(0, breaks[s] - tSlack)
+		const t1 = Math.min(1, breaks[s + 1] + tSlack)
+		const covered = userTs.some((t) => t >= t0 && t <= t1)
+		if (covered) segmentsOk++
+	}
+	const segmentRatio = segmentsOk / Math.max(1, breaks.length - 1)
+
+	let orderPass = true
+	let lastT = -1
+	for (let i = 0; i < cornerHitT.length; i++) {
+		const ht = cornerHitT[i].t
+		if (ht < lastT - tSlack * 2) {
+			orderPass = false
+			break
+		}
+		lastT = Math.max(lastT, ht)
+	}
+
+	const pass = hitRatio >= minHitRatio && segmentRatio >= minSegmentRatio && orderPass
+
+	return {
+		required: true,
+		pass,
+		hitRatio,
+		segmentRatio,
+		orderPass,
+		hitCount,
+		cornerCount: corners.length
+	}
 }
 
 function tokenizePath(path) {
@@ -275,7 +769,15 @@ class NativeWriter {
 		this.strokeProgress = 0
 		this.strokeIndex = 0
 		this.frameTimer = null
-		this.frameInterval = 1000 / 60
+		this.frameInterval = isAppPlus() ? 1000 / 30 : 1000 / 60
+		this._lastDrawAt = 0
+		this._mappedMedians = null
+		this._parsedStrokes = null
+		this._renderCanvasSize = 0
+		/** 动画底图：田字格 + 全部灰色轮廓（canvasToTempFilePath） */
+		this._outlineSnapshot = ''
+		this._outlineSnapshotSize = 0
+		this._outlineSnapshotBaking = false
 		this.lastTickTime = 0
 		this.strokeElapsed = 0
 		this.waitElapsed = 0
@@ -288,6 +790,8 @@ class NativeWriter {
 		this.cornerPauseCursor = -1
 		/** 为 true 时笔间 waiting 阶段暂不进入下一笔（等读音播完） */
 		this.strokeAudioHold = false
+		this._strokeDurationFloorMs = 0
+		this._waitAfterAudioMs = 0
 		this.onStrokeWillStart =
 			typeof this.animationOpt.onStrokeWillStart === 'function'
 				? this.animationOpt.onStrokeWillStart
@@ -313,6 +817,8 @@ class NativeWriter {
 		this.testGuideBlinkTimer = null
 		/** @type {{ left: number, top: number, width: number, height: number } | null} */
 		this._canvasRect = null
+		/** 测验几何缓存：按字+canvasSize，逐笔中线/轮廓采样，避免与渲染缓存串笔 */
+		this._strokeTestGeometry = null
 
 		this.init()
 	}
@@ -366,7 +872,10 @@ class NativeWriter {
 		try {
 			const ret = this.onStrokeTrailSegments(strokeIndex, fromSegmentIndex, this.getMainChar())
 			const release = () => {
-				if (!this.destroyed) this.strokeAudioHold = false
+				if (!this.destroyed) {
+					this.strokeAudioHold = false
+					this._waitAfterAudioMs = 0
+				}
 			}
 			if (ret && typeof ret.then === 'function') {
 				ret.then(release, release)
@@ -405,6 +914,16 @@ class NativeWriter {
 
 	getMainChar() {
 		return this.text[0] || ''
+	}
+
+	/** 拉长当前笔绘制，避免画完而笔画名读音未播完 */
+	setStrokeDurationFloor(ms) {
+		const n = Number(ms)
+		this._strokeDurationFloorMs = Number.isFinite(n) && n > 0 ? Math.round(n) : 0
+	}
+
+	_hasStrokeAudioSync() {
+		return !!(this.onStrokeWillStart && this.onStrokeTrailSegments)
 	}
 
 	getSize() {
@@ -497,8 +1016,11 @@ class NativeWriter {
 		if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false
 		const path = this.testState.path
 		const { canvasSize } = this.getSize()
-		const maxJump = Math.max(28, canvasSize * 0.32)
-		const minDist = 2.5
+		const minDist = 2.2
+		const maxJump =
+			path.length <= 1
+				? Math.max(canvasSize * 0.92, 100)
+				: Math.max(32, canvasSize * 0.42)
 		if (path.length) {
 			const last = path[path.length - 1]
 			const d = Math.hypot(point.x - last.x, point.y - last.y)
@@ -510,11 +1032,8 @@ class NativeWriter {
 	}
 
 	getMedianPoint(strokeIndex, t = 1) {
-		const medians = this.charData?.medians || []
-		const stroke = medians[strokeIndex]
-		if (!stroke || stroke.length < 2) return null
-		const { canvasSize } = this.getSize()
-		const mapped = stroke.map((p) => this.mapPoint(p, canvasSize))
+		const mapped = this.getMappedMedian(strokeIndex)
+		if (!isValidPolyline(mapped)) return null
 		const cumulative = [0]
 		let totalLen = 0
 		for (let i = 0; i < mapped.length - 1; i++) {
@@ -537,14 +1056,6 @@ class NativeWriter {
 			x: p1.x + (p2.x - p1.x) * localT,
 			y: p1.y + (p2.y - p1.y) * localT
 		}
-	}
-
-	getMappedMedian(strokeIndex) {
-		const medians = this.charData?.medians || []
-		const stroke = medians[strokeIndex]
-		if (!stroke || stroke.length < 2) return []
-		const { canvasSize } = this.getSize()
-		return stroke.map((p) => this.mapPoint(p, canvasSize))
 	}
 
 	buildPathString(points = []) {
@@ -585,36 +1096,254 @@ class NativeWriter {
 		return out
 	}
 
-	computeStrokeMatchScore(userPath, strokeIndex) {
-		const target = this.getMappedMedian(strokeIndex)
-		if (!userPath || userPath.length < 2 || !target.length) return Number.POSITIVE_INFINITY
-		const userSamples = this.resamplePoints(userPath, 8)
-		const targetSamples = this.resamplePoints(target, 8)
-		let sum = 0
-		for (let i = 0; i < Math.min(userSamples.length, targetSamples.length); i++) {
-			const dx = userSamples[i].x - targetSamples[i].x
-			const dy = userSamples[i].y - targetSamples[i].y
-			sum += Math.hypot(dx, dy)
-		}
-		return sum / Math.min(userSamples.length, targetSamples.length)
+	invalidateTestGeometryCache() {
+		this._strokeTestGeometry = null
 	}
 
-	computeDirectionPenalty(userPath, strokeIndex) {
-		const target = this.getMappedMedian(strokeIndex)
-		if (!userPath || userPath.length < 2 || !target || target.length < 2) return 0
-		const uStart = userPath[0]
-		const uEnd = userPath[userPath.length - 1]
-		const tStart = target[0]
-		const tEnd = target[target.length - 1]
-		const ux = uEnd.x - uStart.x
-		const uy = uEnd.y - uStart.y
-		const tx = tEnd.x - tStart.x
-		const ty = tEnd.y - tStart.y
-		const uLen = Math.hypot(ux, uy) || 1
-		const tLen = Math.hypot(tx, ty) || 1
-		const cos = (ux / uLen) * (tx / tLen) + (uy / uLen) * (ty / tLen)
-		// cos: 1 同向, -1 反向 -> 惩罚范围 [0,1]
-		return (1 - cos) / 2
+	getTestFitRadius(canvasSize) {
+		return resolvePositiveTestOption(
+			this.option.testFitRadius,
+			Math.max(18, Math.min(32, canvasSize * 0.11))
+		)
+	}
+
+	/** 构建/读取当前字逐笔测验几何（中线 + 原始笔画轮廓采样） */
+	prepareTestGeometryCache() {
+		if (!this.charData) {
+			this.invalidateTestGeometryCache()
+			return null
+		}
+		const { canvasSize } = this.getSize()
+		const char = this.getMainChar()
+		const cache = this._strokeTestGeometry
+		if (cache && cache.char === char && cache.canvasSize === canvasSize && cache.strokes?.length) {
+			return cache
+		}
+		const medians = this.charData.medians || []
+		const strokePaths = this.charData.strokes || []
+		const mapXY = (px, py) => this.mapPoint([px, py], canvasSize)
+		const strokes = []
+		for (let i = 0; i < medians.length; i++) {
+			const median = this.getMappedMedian(i, canvasSize)
+			const cmds = this._parsedStrokes?.[i] || parseSvgPath(strokePaths[i] || '')
+			const outline = sampleSvgCommandsToPolyline(cmds, mapXY, Math.max(5, Math.round(canvasSize / 32)))
+			const refPolylines = []
+			if (isValidPolyline(median)) refPolylines.push(median)
+			if (outline.length >= 2) refPolylines.push(outline)
+			strokes.push({
+				median,
+				outline,
+				refPolylines,
+				medianLen: polylineLength(median)
+			})
+		}
+		this._strokeTestGeometry = { char, canvasSize, strokes }
+		return this._strokeTestGeometry
+	}
+
+	/**
+	 * 逐笔判定：用户轨迹与田字格标准笔画（轮廓+中线）的距离均值、方差是否足够小。
+	 */
+	evaluateStrokeWrite(userPath, strokeIndex) {
+		const total = this.charData?.medians?.length || 0
+		const expectedStroke = this.testState.activeStroke
+		if (strokeIndex !== expectedStroke) {
+			return { pass: false, reason: 'order', expectedStroke, strokeIndex }
+		}
+		if (!userPath || userPath.length < 2) {
+			return { pass: false, reason: 'tooShort', expectedStroke }
+		}
+		const geoCache = this.prepareTestGeometryCache()
+		const strokeGeo = geoCache?.strokes?.[strokeIndex]
+		if (!strokeGeo || !strokeGeo.refPolylines?.length) {
+			return { pass: false, reason: 'noTarget', expectedStroke }
+		}
+
+		const { canvasSize } = this.getSize()
+		const fitRadius = this.getTestFitRadius(canvasSize)
+		const userSamples = this.resamplePoints(userPath, 16)
+		const stats = computeStrokeDistanceStats(userSamples, strokeGeo.refPolylines, fitRadius)
+
+		const meanMax = resolvePositiveTestOption(this.option.testMeanDistMax, fitRadius * 0.72)
+		const varianceMax = resolvePositiveTestOption(
+			this.option.testDistVarianceMax,
+			(fitRadius * 0.85) ** 2
+		)
+		const inBandMin = Number(this.option.testInBandMin ?? 0.52)
+		const minLenRatio = Number(this.option.testLengthMinRatio ?? 0.28)
+		const maxLenRatio = Number(this.option.testLengthMaxRatio ?? 1.55)
+		const targetLen = strokeGeo.medianLen || 1
+		const lenRatio = polylineLength(userSamples) / targetLen
+
+		let bestOther = Number.POSITIVE_INFINITY
+		for (let i = 0; i < total; i++) {
+			if (i === strokeIndex) continue
+			const other = geoCache.strokes[i]
+			if (!other?.refPolylines?.length) continue
+			bestOther = Math.min(bestOther, minAvgDistToPolylines(userSamples, other.refPolylines))
+		}
+		const wrongStroke =
+			Number.isFinite(bestOther) &&
+			bestOther < stats.mean * 0.88 &&
+			stats.mean - bestOther > fitRadius * 0.2
+
+		const median = strokeGeo.median
+		const dir =
+			isValidPolyline(median) && userSamples.length >= 2
+				? computeStrokeDirectionMetrics(userSamples, median)
+				: { cos: -1, startDist: Number.POSITIVE_INFINITY, endDist: Number.POSITIVE_INFINITY }
+		const endpoints = computeStrokeEndpointMetrics(userPath, median)
+
+		const endpointMax = resolvePositiveTestOption(
+			this.option.testEndpointMaxDist,
+			fitRadius * 1.35
+		)
+		const minDirectionCos = Number(this.option.testDirectionMinCos ?? 0.707)
+		const angleDeg =
+			dir.cos >= -1 && dir.cos <= 1
+				? (Math.acos(Math.max(-1, Math.min(1, dir.cos))) * 180) / Math.PI
+				: 180
+
+		const passShape =
+			stats.mean <= meanMax &&
+			stats.variance <= varianceMax &&
+			stats.inBand >= inBandMin
+		const passLen = lenRatio >= minLenRatio && lenRatio <= maxLenRatio
+		const passEndpoints =
+			endpoints.startDist <= endpointMax && endpoints.endDist <= endpointMax
+		const passDirection = dir.cos >= minDirectionCos
+
+		const pass = !wrongStroke && passShape && passLen && passEndpoints && passDirection
+
+		let reason = 'offStroke'
+		if (wrongStroke) reason = 'wrongStroke'
+		else if (!passDirection && dir.cos < 0) reason = 'directionReverse'
+		else if (!passDirection) reason = 'direction'
+		else if (!passEndpoints) reason = 'endpoints'
+		else if (lenRatio < minLenRatio) reason = 'tooShort'
+		else if (lenRatio > maxLenRatio) reason = 'tooLong'
+		else if (stats.variance > varianceMax) reason = 'unstable'
+		else if (stats.mean > meanMax) reason = 'offStroke'
+
+		const result = {
+			pass,
+			reason,
+			expectedStroke,
+			strokeIndex,
+			meanDist: Number(stats.mean.toFixed(2)),
+			distVariance: Number(stats.variance.toFixed(2)),
+			maxDist: Number(stats.max.toFixed(2)),
+			inBand: Number(stats.inBand.toFixed(3)),
+			lenRatio: Number(lenRatio.toFixed(3)),
+			fitRadius,
+			meanMax: Number(meanMax.toFixed(2)),
+			varianceMax: Number(varianceMax.toFixed(2)),
+			startDist: Number(endpoints.startDist.toFixed(2)),
+			endDist: Number(endpoints.endDist.toFixed(2)),
+			endpointMax: Number(endpointMax.toFixed(2)),
+			directionCos: Number(dir.cos.toFixed(3)),
+			directionAngleDeg: Number(angleDeg.toFixed(1)),
+			directionMinCos: minDirectionCos,
+			bestOtherDist: Number.isFinite(bestOther) ? Number(bestOther.toFixed(2)) : null,
+			debugPoints: stats.points
+		}
+
+		if (this.option.testDebugLog) {
+			this.logStrokeTestEvaluation(result, {
+				char: this.getMainChar(),
+				meanMax,
+				varianceMax,
+				inBandMin,
+				minLenRatio,
+				maxLenRatio,
+				endpointMax,
+				minDirectionCos,
+				wrongStroke,
+				passShape,
+				passLen,
+				passEndpoints,
+				passDirection,
+				endpoints,
+				rawPathLen: userPath.length
+			})
+		}
+
+		return result
+	}
+
+	/** 控制台输出测验判分明细（需 testDebugLog: true） */
+	logStrokeTestEvaluation(result, ctx = {}) {
+		const tag = '[draw-native][测验]'
+		const strokeNo = Number(result.strokeIndex) + 1
+		const mark = result.pass ? '✓' : '✗'
+		console.log(
+			`${tag} ${ctx.char || '?'} 第${strokeNo}笔 ${mark} ${result.reason || ''}`,
+			{
+				阈值: {
+					fitRadius: result.fitRadius,
+					meanDistMax: ctx.meanMax,
+					varianceMax: ctx.varianceMax,
+					inBandMin: ctx.inBandMin,
+					endpointMax: ctx.endpointMax,
+					directionMinCos: ctx.minDirectionCos,
+					directionMaxDeg: (Math.acos(ctx.minDirectionCos) * 180) / Math.PI,
+					lenRatio: [ctx.minLenRatio, ctx.maxLenRatio]
+				},
+				实测: {
+					meanDist: result.meanDist,
+					distVariance: result.distVariance,
+					maxDist: result.maxDist,
+					inBand: result.inBand,
+					lenRatio: result.lenRatio,
+					起笔距: result.startDist,
+					收笔距: result.endDist,
+					起笔误连收笔端: ctx.endpoints
+						? Number(ctx.endpoints.startDistToWrongEnd.toFixed(2))
+						: null,
+					收笔误连起笔端: ctx.endpoints
+						? Number(ctx.endpoints.endDistToWrongEnd.toFixed(2))
+						: null,
+					方向夹角: `${result.directionAngleDeg}° (cos=${result.directionCos})`,
+					bestOtherDist: result.bestOtherDist
+				},
+				判定: {
+					wrongStroke: ctx.wrongStroke,
+					passShape: ctx.passShape,
+					passLen: ctx.passLen,
+					passEndpoints: ctx.passEndpoints,
+					passDirection: ctx.passDirection,
+					原始触点数: ctx.rawPathLen
+				}
+			}
+		)
+
+		const pts = result.debugPoints || []
+		if (!pts.length) {
+			console.log(`${tag} 无采样点`)
+			return
+		}
+
+		const badBand = pts.filter((p) => !p.inBand)
+		const meanLimit = ctx.meanMax > 0 ? ctx.meanMax : Number.POSITIVE_INFINITY
+		const varLimit = ctx.varianceMax > 0 ? ctx.varianceMax : Number.POSITIVE_INFINITY
+		const badMean = pts.filter((p) => p.dist > meanLimit)
+		const worst = pts
+			.slice()
+			.sort((a, b) => b.dist - a.dist)
+			.slice(0, 5)
+			.map((p) => `#${p.i}(${p.x.toFixed(0)},${p.y.toFixed(0)}) dist=${p.dist.toFixed(1)}`)
+
+		console.log(`${tag} 问题点: 超容差${badBand.length}/${pts.length} 超均值${badMean.length}/${pts.length} 最远→`, worst.join(' | '))
+
+		const rows = pts.map((p) => {
+			const flags = []
+			if (!p.inBand) flags.push('超容差')
+			if (p.dist > meanLimit) flags.push('超均值')
+			if (ctx.varianceMax > 0 && Math.abs(p.devFromMean) > Math.sqrt(varLimit)) flags.push('偏方差')
+			const flagStr = flags.length ? ` ← ${flags.join(',')}` : ''
+			return `  #${String(p.i).padStart(2, '0')} (${p.x.toFixed(1)}, ${p.y.toFixed(1)}) dist=${p.dist.toFixed(2)}${p.inBand ? '' : ' ✗'}${flagStr}`
+		})
+		console.log(`${tag} 逐点距离(${pts.length}):\n` + rows.join('\n'))
 	}
 
 	showHintStroke(strokeIndex) {
@@ -650,17 +1379,15 @@ class NativeWriter {
 
 	handleTouchStart(touch, detail) {
 		if (this.type !== TYPE.TEST || !this.ready || !this.charData) return
-		const begin = () => {
-			this.stopTestGuideBlink()
-			this.testGuideActive = false
-			this.testGuideShown = false
-			this.testState.drawing = true
-			this.testState.path = []
-			const p = this.resolveTouchPoint(touch, detail)
-			if (p) this.appendTestPathPoint(p)
-			if (this.testState.path.length) this.drawState(this.testState.activeStroke, 0)
-		}
-		this.updateCanvasRect(begin)
+		this.stopTestGuideBlink()
+		this.testGuideActive = false
+		this.testGuideShown = false
+		this.testState.drawing = true
+		this.testState.path = []
+		const p = this.resolveTouchPoint(touch, detail)
+		if (p) this.appendTestPathPoint(p)
+		if (this.testState.path.length) this.drawState(this.testState.activeStroke, 0)
+		this.updateCanvasRect()
 	}
 
 	handleTouchMove(touch, detail) {
@@ -671,47 +1398,32 @@ class NativeWriter {
 		this.drawState(this.testState.activeStroke, 0)
 	}
 
-	handleTouchEnd() {
+	handleTouchEnd(touch, detail) {
 		if (this.type !== TYPE.TEST || !this.testState.drawing) return
+		if (touch || detail) {
+			const p = this.resolveTouchPoint(touch, detail)
+			if (p) this.appendTestPathPoint(p)
+		}
 		this.testState.drawing = false
+
 		const total = this.charData?.medians?.length || 0
 		const strokeIndex = this.testState.activeStroke
 		if (strokeIndex >= total) return
-		if (this.testState.path.length < 2) {
-			this.testState.mistakesOnStroke += 1
-			this.testState.totalMistakes += 1
-			this.emitTestStatus(TEST_STATUS.MISTAKE, {
-				expectedStroke: strokeIndex,
-				reason: 'tooShort'
-			})
-			this.drawState(this.testState.activeStroke, 0)
-			return
-		}
-		const endTarget = this.getMedianPoint(strokeIndex, 1)
-		const endPoint = this.testState.path[this.testState.path.length - 1]
-		if (!endTarget || !endPoint) return
-		const endDist = Math.hypot(endPoint.x - endTarget.x, endPoint.y - endTarget.y)
-		const score = this.computeStrokeMatchScore(this.testState.path, strokeIndex)
-		const directionPenalty = this.computeDirectionPenalty(this.testState.path, strokeIndex)
-		const directionWeight = Math.max(0, Math.min(1, Number(this.option.testDirectionWeight ?? 0.35)))
-		const finalScore = score * (1 + directionPenalty * directionWeight)
-		const dynamicThreshold = Math.max(13, Number(this.option.drawingWidth || 4) * 3.6)
-		const passThreshold = Number.isFinite(Number(this.option.testScoreThreshold))
-			? Number(this.option.testScoreThreshold)
-			: dynamicThreshold
-		const endpointThreshold = Math.max(16, Number(this.option.drawingWidth || 4) * 4.8)
-		const strictOrder = this.option.testStrictOrder !== false
-		const expectedStroke = this.testState.activeStroke
-		const orderPass = strictOrder ? strokeIndex === expectedStroke : strokeIndex >= expectedStroke
-		const pass = finalScore <= passThreshold && endDist <= endpointThreshold && orderPass
-		if (pass) {
+
+		const result = this.evaluateStrokeWrite(this.testState.path, strokeIndex)
+
+		if (result.pass) {
 			const finishedPath = this.testState.path.slice()
 			this.emitTestStatus(TEST_STATUS.CORRECT, {
+				strokeIndex,
+				expectedStroke: strokeIndex,
 				drawnPath: {
 					pathString: this.buildPathString(finishedPath),
 					points: finishedPath
 				},
-				score: Number(finalScore.toFixed(3))
+				userOverlap: result.userOverlap,
+				strokeCoverage: result.strokeCoverage,
+				lenRatio: result.lenRatio
 			})
 			this.testState.activeStroke += 1
 			this.testState.mistakesOnStroke = 0
@@ -722,31 +1434,34 @@ class NativeWriter {
 			}
 			this.drawState(this.testState.activeStroke, 0)
 			return
-		} else {
-			this.testState.totalMistakes += 1
-			this.testState.mistakesOnStroke += 1
-			let hinted = false
-			this.emitTestStatus(TEST_STATUS.MISTAKE, {
-				drawnPath: {
-					pathString: this.buildPathString(this.testState.path),
-					points: this.testState.path
-				},
-				score: Number(finalScore.toFixed(3)),
-				expectedStroke
-			})
-			if (
-				this.option.showHintAfterMisses !== false &&
-				this.testState.mistakesOnStroke >= Number(this.option.showHintAfterMisses || 3)
-			) {
-				this.showHintStroke(strokeIndex)
-				hinted = true
-			}
-			if (!hinted) {
-				this.drawState(this.testState.activeStroke, 0)
-			}
-			return
 		}
-		this.drawState(this.testState.activeStroke, 0)
+
+		this.testState.totalMistakes += 1
+		this.testState.mistakesOnStroke += 1
+		let hinted = false
+		this.emitTestStatus(TEST_STATUS.MISTAKE, {
+			strokeIndex,
+			expectedStroke: result.expectedStroke ?? strokeIndex,
+			reason: result.reason || 'shape',
+			drawnPath: {
+				pathString: this.buildPathString(this.testState.path),
+				points: this.testState.path
+			},
+			userOverlap: result.userOverlap,
+			strokeCoverage: result.strokeCoverage,
+			lenRatio: result.lenRatio
+		})
+		this.testState.path = []
+		if (
+			this.option.showHintAfterMisses !== false &&
+			this.testState.mistakesOnStroke >= Number(this.option.showHintAfterMisses || 3)
+		) {
+			this.showHintStroke(strokeIndex)
+			hinted = true
+		}
+		if (!hinted) {
+			this.drawState(this.testState.activeStroke, 0)
+		}
 	}
 
 	drawTestPath() {
@@ -878,6 +1593,19 @@ class NativeWriter {
 			this.ready = true
 			this.charTransformCache = Object.create(null)
 			this.strokeTimelineCache = Object.create(null)
+			this.invalidateTestGeometryCache()
+			if (this.type === TYPE.TEST) {
+				this.testState.activeStroke = 0
+				this.testState.totalMistakes = 0
+				this.testState.mistakesOnStroke = 0
+				this.testState.drawing = false
+				this.testState.path = []
+			}
+			this.prepareRenderCache()
+			this.prepareTestGeometryCache()
+			if (this.type === TYPE.ANIMATION) {
+				this.scheduleBakeOutlineSnapshot()
+			}
 			this.drawState(0, 0)
 			if (this.pendingStart && this.type === TYPE.ANIMATION) {
 				this.pendingStart = false
@@ -885,6 +1613,13 @@ class NativeWriter {
 			}
 			if (this.type === TYPE.NORMAL) {
 				this.notifyComplete(true)
+			}
+			if (this.type === TYPE.TEST && typeof this.option.onWriterReady === 'function') {
+				try {
+					this.option.onWriterReady(this)
+				} catch (e) {
+					console.warn('[draw-native] onWriterReady', e)
+				}
 			}
 		} catch (e) {
 			triggerWordNotFound(this.getMainChar())
@@ -1021,44 +1756,129 @@ class NativeWriter {
 			return { totalLen: 1, cornerLens: [] }
 		}
 		const pts = medianPoints.map((p) => this.mapPoint(p, canvasSize))
-		const cumulative = [0]
-		let totalLen = 0
-		for (let i = 0; i < pts.length - 1; i++) {
-			const dx = pts[i + 1].x - pts[i].x
-			const dy = pts[i + 1].y - pts[i].y
-			totalLen += Math.hypot(dx, dy)
-			cumulative.push(totalLen)
-		}
-		const normalize = (x, y) => {
-			const len = Math.hypot(x, y) || 1
-			return { x: x / len, y: y / len }
-		}
-		const angleCos = (v1, v2) => v1.x * v2.x + v1.y * v2.y
-		const cornerLens = []
-		for (let i = 1; i < pts.length - 1; i++) {
-			const p0 = pts[i - 1]
-			const p1 = pts[i]
-			const p2 = pts[i + 1]
-			const vA = normalize(p1.x - p0.x, p1.y - p0.y)
-			const vB = normalize(p2.x - p1.x, p2.y - p1.y)
-			// 角度突变视为“需要顿笔”的拐点
-			if (angleCos(vA, vB) < 0.62) {
-				cornerLens.push(cumulative[i])
-			}
-		}
+		const threshold = Number(this.option.testCornerAngleCos ?? 0.62)
+		const { corners, totalLen } = extractMedianCorners(pts, threshold)
+		const merged = mergeCloseCorners(corners)
+		const cornerLens = merged.map((c) => c.t * totalLen)
 		return { totalLen: Math.max(1, totalLen), cornerLens }
 	}
 
 	getStrokeTimeline(strokeIndex, canvasSize) {
 		const key = `${strokeIndex}-${canvasSize}`
 		if (this.strokeTimelineCache[key]) return this.strokeTimelineCache[key]
-		const medians = this.charData?.medians || []
-		const timeline = this.buildStrokeTimeline(medians[strokeIndex] || [], canvasSize)
+		let timeline
+		if (
+			this._mappedMedians?.[strokeIndex] &&
+			this._renderCanvasSize === canvasSize
+		) {
+			timeline = this.buildStrokeTimelineFromMapped(this._mappedMedians[strokeIndex])
+		} else {
+			const medians = this.charData?.medians || []
+			timeline = this.buildStrokeTimeline(medians[strokeIndex] || [], canvasSize)
+		}
 		this.strokeTimelineCache[key] = timeline
 		return timeline
 	}
 
-	drawStrokePath(pathString, color, canvasSize) {
+	prepareRenderCache() {
+		if (!this.charData) {
+			this._mappedMedians = null
+			this._parsedStrokes = null
+			this._renderCanvasSize = 0
+			this.invalidateTestGeometryCache()
+			return
+		}
+		const { canvasSize } = this.getSize()
+		const medians = this.charData.medians || []
+		const strokes = this.charData.strokes || []
+		const char = this.getMainChar()
+		if (
+			this._renderCanvasSize !== canvasSize ||
+			this._strokeTestGeometry?.char !== char
+		) {
+			this.invalidateTestGeometryCache()
+		}
+		this._renderCanvasSize = canvasSize
+		this._mappedMedians = medians.map((stroke) =>
+			stroke.map((p) => this.mapPoint(p, canvasSize))
+		)
+		this._parsedStrokes = strokes.map((s) => parseSvgPath(s || ''))
+		if (this.type === TYPE.TEST) {
+			this.prepareTestGeometryCache()
+		}
+	}
+
+	buildStrokeTimelineFromMapped(mappedPts) {
+		if (!mappedPts || mappedPts.length < 2) {
+			return { totalLen: 1, cornerLens: [] }
+		}
+		const threshold = Number(this.option.testCornerAngleCos ?? 0.62)
+		const { corners, totalLen } = extractMedianCorners(mappedPts, threshold)
+		const merged = mergeCloseCorners(corners)
+		const cornerLens = merged.map((c) => c.t * totalLen)
+		return { totalLen: Math.max(1, totalLen), cornerLens }
+	}
+
+	getMappedMedian(strokeIndex, canvasSizeOpt) {
+		const canvasSize =
+			Number.isFinite(Number(canvasSizeOpt)) ? Number(canvasSizeOpt) : this.getSize().canvasSize
+		if (
+			this._mappedMedians &&
+			this._renderCanvasSize === canvasSize &&
+			this._mappedMedians[strokeIndex] &&
+			isValidPolyline(this._mappedMedians[strokeIndex])
+		) {
+			return this._mappedMedians[strokeIndex]
+		}
+		const medians = this.charData?.medians || []
+		const stroke = medians[strokeIndex]
+		if (!stroke || stroke.length < 2) return []
+		const mapped = stroke.map((p) => this.mapPoint(p, canvasSize))
+		if (!isValidPolyline(mapped)) {
+			console.warn('[draw-native] invalid mapped median', this.getMainChar(), strokeIndex)
+			return []
+		}
+		if (this._mappedMedians && this._renderCanvasSize === canvasSize) {
+			this._mappedMedians[strokeIndex] = mapped
+		}
+		return mapped
+	}
+
+	drawStrokePathParsed(cmds, color, canvasSize) {
+		if (!cmds || !cmds.length) return
+		const ctx = this.ctx
+		const mapXY = (px, py) => this.mapPoint([px, py], canvasSize)
+		ctx.setFillStyle(color)
+		ctx.beginPath()
+		for (let i = 0; i < cmds.length; i++) {
+			const c = cmds[i]
+			if (c.type === 'M') {
+				const p = mapXY(c.x, c.y)
+				ctx.moveTo(p.x, p.y)
+			} else if (c.type === 'L') {
+				const p = mapXY(c.x, c.y)
+				ctx.lineTo(p.x, p.y)
+			} else if (c.type === 'C') {
+				const p1 = mapXY(c.x1, c.y1)
+				const p2 = mapXY(c.x2, c.y2)
+				const p = mapXY(c.x, c.y)
+				ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p.x, p.y)
+			} else if (c.type === 'Q') {
+				const p1 = mapXY(c.x1, c.y1)
+				const p = mapXY(c.x, c.y)
+				ctx.quadraticCurveTo(p1.x, p1.y, p.x, p.y)
+			} else if (c.type === 'Z') {
+				ctx.closePath()
+			}
+		}
+		ctx.fill()
+	}
+
+	drawStrokePath(pathString, color, canvasSize, strokeIndex = -1) {
+		if (strokeIndex >= 0 && this._parsedStrokes?.[strokeIndex]) {
+			this.drawStrokePathParsed(this._parsedStrokes[strokeIndex], color, canvasSize)
+			return
+		}
 		if (!pathString) return
 		const cmds = parseSvgPath(pathString)
 		if (!cmds || !cmds.length) return
@@ -1090,9 +1910,7 @@ class NativeWriter {
 		ctx.fill()
 	}
 
-	buildStrokePath(pathString, canvasSize) {
-		if (!pathString) return false
-		const cmds = parseSvgPath(pathString)
+	buildStrokePathFromParsed(cmds, canvasSize) {
 		if (!cmds || !cmds.length) return false
 		const ctx = this.ctx
 		const mapXY = (px, py) => this.mapPoint([px, py], canvasSize)
@@ -1121,11 +1939,19 @@ class NativeWriter {
 		return true
 	}
 
-	drawStrokeProgressClipped(pathString, mappedMedian, ratio, color, width, canvasSize) {
+	buildStrokePath(pathString, canvasSize) {
+		if (!pathString) return false
+		return this.buildStrokePathFromParsed(parseSvgPath(pathString), canvasSize)
+	}
+
+	drawStrokeProgressClipped(pathString, mappedMedian, ratio, color, width, canvasSize, strokeIndex = -1) {
 		if (!pathString || !mappedMedian || !mappedMedian.length) return
 		const ctx = this.ctx
 		ctx.save()
-		const ok = this.buildStrokePath(pathString, canvasSize)
+		const ok =
+			strokeIndex >= 0 && this._parsedStrokes?.[strokeIndex]
+				? this.buildStrokePathFromParsed(this._parsedStrokes[strokeIndex], canvasSize)
+				: this.buildStrokePath(pathString, canvasSize)
 		if (ok) {
 			ctx.clip()
 		}
@@ -1178,35 +2004,155 @@ class NativeWriter {
 		ctx.stroke()
 	}
 
+	_shouldThrottleDraw() {
+		if (!isAppPlus() || this.type !== TYPE.ANIMATION) return false
+		const now = Date.now()
+		if (now - (this._lastDrawAt || 0) < 28) return true
+		this._lastDrawAt = now
+		return false
+	}
+
+	invalidateOutlineSnapshot() {
+		this._outlineSnapshot = ''
+		this._outlineSnapshotSize = 0
+		this._outlineSnapshotBaking = false
+	}
+
+	scheduleBakeOutlineSnapshot() {
+		if (this.type !== TYPE.ANIMATION || !this.charData || this._outlineSnapshotBaking) return
+		const { canvasSize } = this.getSize()
+		if (this._outlineSnapshot && this._outlineSnapshotSize === canvasSize) return
+		this._outlineSnapshotBaking = true
+		const ctx = this.ctx
+		const outlineColor = this.option.outlineColor || '#d5d5d5'
+		const strokePaths = this.charData.strokes || []
+
+		ctx.clearRect(0, 0, canvasSize, canvasSize)
+		this.drawGrid(canvasSize)
+		for (let i = strokePaths.length - 1; i >= 0; i--) {
+			this.drawStrokePath(strokePaths[i], outlineColor, canvasSize, i)
+		}
+		ctx.draw(false, () => {
+			uni.canvasToTempFilePath(
+				{
+					canvasId: this.canvasId,
+					width: canvasSize,
+					height: canvasSize,
+					destWidth: canvasSize,
+					destHeight: canvasSize,
+					fileType: 'png',
+					quality: 0.92,
+					success: (res) => {
+						this._outlineSnapshot = res.tempFilePath || ''
+						this._outlineSnapshotSize = canvasSize
+						this._outlineSnapshotBaking = false
+						if (!this.destroyed && this.type === TYPE.ANIMATION) {
+							this.drawState(this.strokeIndex, this.strokeProgress)
+						}
+					},
+					fail: (err) => {
+						this._outlineSnapshotBaking = false
+						console.warn('[draw-native] bake outline snapshot failed', err)
+					}
+				},
+				this.vm
+			)
+		})
+	}
+
+	drawOutlineSnapshot(canvasSize) {
+		if (
+			!this._outlineSnapshot ||
+			this._outlineSnapshotSize !== canvasSize
+		) {
+			return false
+		}
+		this.ctx.drawImage(this._outlineSnapshot, 0, 0, canvasSize, canvasSize)
+		return true
+	}
+
+	drawAllStrokeOutlines(canvasSize, outlineColor, strokePaths) {
+		for (let i = strokePaths.length - 1; i >= 0; i--) {
+			this.drawStrokePath(strokePaths[i], outlineColor, canvasSize, i)
+		}
+	}
+
 	drawState(completedStrokeCount = 0, currentStrokeRatio = 0) {
 		if (this.destroyed) return
 		const { canvasSize } = this.getSize()
+		if (this._renderCanvasSize !== canvasSize) {
+			this.prepareRenderCache()
+			this.invalidateOutlineSnapshot()
+			if (this.type === TYPE.ANIMATION) this.scheduleBakeOutlineSnapshot()
+		}
 		const outlineColor = this.option.outlineColor || '#d5d5d5'
 		const strokeColor = this.option.strokeColor || '#2c3e50'
 		const currentColor = this.option.currentColor || '#e74c3c'
 		const strokeWidth = Math.max(8, Math.round(canvasSize * 0.05))
 		const medians = this.charData?.medians || []
 		const strokePaths = this.charData?.strokes || []
+		const isAnim = this.type === TYPE.ANIMATION
 
 		const ctx = this.ctx
 		ctx.clearRect(0, 0, canvasSize, canvasSize)
-		this.drawGrid(canvasSize)
 
 		const testCompleted = this.type === TYPE.TEST ? this.testState.activeStroke : completedStrokeCount
+		const hasOutlineSnapshot = isAnim && this.drawOutlineSnapshot(canvasSize)
+
+		if (!hasOutlineSnapshot) {
+			this.drawGrid(canvasSize)
+			if (isAnim) {
+				this.drawAllStrokeOutlines(canvasSize, outlineColor, strokePaths)
+			}
+		}
+
 		// 反向绘制：后写笔画先画，保证先写笔画始终位于最上层
 		for (let i = medians.length - 1; i >= 0; i--) {
-			const mapped = medians[i].map((p) => this.mapPoint(p, canvasSize))
-			// 底层用真实笔画轮廓，贴近标准字形
-			this.drawStrokePath(strokePaths[i], outlineColor, canvasSize)
+			const mapped = this.getMappedMedian(i, canvasSize)
+			const drawPath = (color) => this.drawStrokePath(strokePaths[i], color, canvasSize, i)
 
-			// normal 模式直接完整成字；stroke/test 保留受控绘制
 			if (this.type === TYPE.NORMAL) {
-				this.drawStrokePath(strokePaths[i], strokeColor, canvasSize)
+				drawPath(outlineColor)
+				drawPath(strokeColor)
 				continue
 			}
 
+			if (isAnim) {
+				if (hasOutlineSnapshot && i > testCompleted) {
+					continue
+				}
+
+				if (i < testCompleted) {
+					drawPath(strokeColor)
+					continue
+				}
+				if (i === testCompleted) {
+					if (currentStrokeRatio >= 0.995) {
+						drawPath(strokeColor)
+						continue
+					}
+					drawPath('rgba(44,62,80,0.18)')
+					this.drawStrokeProgressClipped(
+						strokePaths[i],
+						mapped,
+						currentStrokeRatio,
+						currentColor,
+						Math.round(strokeWidth * 1.55),
+						canvasSize,
+						i
+					)
+				}
+				continue
+			}
+
+			if (this.type === TYPE.TEST && i > testCompleted) {
+				continue
+			}
+
+			drawPath(outlineColor)
+
 			if (i < testCompleted) {
-				this.drawStrokePath(strokePaths[i], strokeColor, canvasSize)
+				drawPath(strokeColor)
 			} else if (
 				i === testCompleted &&
 				this.type === TYPE.TEST &&
@@ -1217,31 +2163,7 @@ class NativeWriter {
 					this.option.guideStrokeColor ||
 					this.option.highlightColor ||
 					'#ff8a65'
-				this.drawStrokePath(strokePaths[i], guideColor, canvasSize)
-			} else if (i === testCompleted && this.type === TYPE.ANIMATION) {
-				// 当前笔接近结束时，直接填充完整轮廓，避免“竖钩拐点没写到”的视觉缺口
-				if (currentStrokeRatio >= 0.995) {
-					this.drawStrokePath(strokePaths[i], strokeColor, canvasSize)
-					continue
-				}
-				// 当前笔画仍使用中线渐进，保证一笔一笔写出的动态感
-				this.drawStrokePath(strokePaths[i], 'rgba(44,62,80,0.18)', canvasSize)
-				this.drawStrokeProgressClipped(
-					strokePaths[i],
-					mapped,
-					currentStrokeRatio,
-					currentColor,
-					Math.round(strokeWidth * 1.95),
-					canvasSize
-				)
-				this.drawStrokeProgressClipped(
-					strokePaths[i],
-					mapped,
-					currentStrokeRatio,
-					currentColor,
-					strokeWidth,
-					canvasSize
-				)
+				drawPath(guideColor)
 			}
 		}
 		if (this.type === TYPE.TEST) {
@@ -1257,11 +2179,13 @@ class NativeWriter {
 			this.pendingStart = true
 			return true
 		}
-		const delayBetweenStrokes = Number(this.animationOpt.delayBetweenStrokes) || 280
+		const delayBetweenStrokes = this._hasStrokeAudioSync()
+			? Math.max(160, Number(this.animationOpt.delayBetweenStrokes) || 160)
+			: Number(this.animationOpt.delayBetweenStrokes) || 280
 		const loopAnimate = this.animationOpt.loopAnimate !== false
 		const delayBetweenLoops = Number(this.animationOpt.delayBetweenLoops) || 1000
 		const speed = Number(this.animationOpt.strokeAnimationSpeed) || 1
-		const strokeDuration = Math.max(
+		const strokeDurationBase = Math.max(
 			280,
 			Math.round((Number(this.animationOpt.strokeDurationMs) || 880) / speed)
 		)
@@ -1292,20 +2216,28 @@ class NativeWriter {
 			const { canvasSize } = this.getSize()
 			const timeline = this.getStrokeTimeline(this.strokeIndex, canvasSize)
 			const totalLen = timeline.totalLen || 1
+			const strokeDuration = Math.max(
+				strokeDurationBase,
+				this._strokeDurationFloorMs || 0
+			)
 
 			if (this.phase === 'drawing') {
 				let currentLen = this.strokeProgress * totalLen
 				const deltaLen = (dt / strokeDuration) * totalLen
 				let nextLen = Math.min(totalLen, currentLen + deltaLen)
 
-				const nextCornerLen = timeline.cornerLens[this.cornerPauseCursor + 1]
-				if (
-					typeof nextCornerLen === 'number' &&
-					nextLen >= nextCornerLen &&
-					nextCornerLen > currentLen
-				) {
+				while (true) {
+					const nextCornerLen = timeline.cornerLens[this.cornerPauseCursor + 1]
+					if (
+						typeof nextCornerLen !== 'number' ||
+						nextLen < nextCornerLen ||
+						nextCornerLen <= currentLen
+					) {
+						break
+					}
 					this.cornerPauseCursor += 1
 					this.notifyStrokeCorner(this.strokeIndex, this.cornerPauseCursor)
+					currentLen = nextLen
 				}
 
 				this.strokeProgress = Math.min(1, nextLen / totalLen)
@@ -1313,18 +2245,24 @@ class NativeWriter {
 					const fromSeg = this.cornerPauseCursor + 2
 					this.phase = 'waiting'
 					this.waitElapsed = 0
+					this._waitAfterAudioMs = 0
+					this._strokeDurationFloorMs = 0
 					this.notifyStrokeTrailSegments(this.strokeIndex, fromSeg)
 				}
 			} else {
-				this.waitElapsed += dt
 				this.strokeProgress = 1
-				if (this.waitElapsed >= delayBetweenStrokes && !this.strokeAudioHold) {
+				if (!this.strokeAudioHold) {
+					this._waitAfterAudioMs += dt
+				}
+				if (this._waitAfterAudioMs >= delayBetweenStrokes && !this.strokeAudioHold) {
 					const nextIndex = this.strokeIndex + 1
 					this.strokeIndex = nextIndex
 					this.strokeElapsed = 0
 					this.strokeProgress = 0
 					this.phase = 'drawing'
 					this.cornerPauseCursor = -1
+					this.waitElapsed = 0
+					this._waitAfterAudioMs = 0
 					this.notifyStrokeAudio(nextIndex)
 				}
 			}
@@ -1354,11 +2292,14 @@ class NativeWriter {
 				return
 			}
 
-			this.drawState(this.strokeIndex, this.strokeProgress)
+			if (!this._shouldThrottleDraw()) {
+				this.drawState(this.strokeIndex, this.strokeProgress)
+			}
 			this._scheduleAnimationTick(tick)
 		}
 
 		this.strokeIndex = 0
+		this._lastDrawAt = 0
 		this.strokeProgress = 0
 		this.strokeElapsed = 0
 		this.waitElapsed = 0
@@ -1464,6 +2405,9 @@ class NativeWriter {
 		this.testState.path = []
 		this.testGuideActive = false
 		this.testGuideShown = false
+		this.invalidateTestGeometryCache()
+		this.prepareRenderCache()
+		this.prepareTestGeometryCache()
 		this.drawState(0, 0)
 		return true
 	}
@@ -1503,6 +2447,10 @@ class NativeWriter {
 	destroy() {
 		this.stopTestGuideBlink()
 		this.stop()
+		this.invalidateOutlineSnapshot()
+		this.invalidateTestGeometryCache()
+		this._mappedMedians = null
+		this._parsedStrokes = null
 		this.destroyed = true
 	}
 }
@@ -1534,10 +2482,9 @@ drawNative.pluginName = 'draw'
 drawNative.TYPE = TYPE
 drawNative.TEST_STATUS = TEST_STATUS
 drawNative.setResourceBase = (url) => {
-	if (typeof url === 'string' && url.trim()) {
-		HANZI_WRITER_DATA_BASE = url.replace(/\/$/, '')
-	}
+	setHanziWriterDataBase(url)
 }
+drawNative.LOCAL_RESOURCE_BASE = LOCAL_HANZI_WRITER_BASE
 drawNative.onWordNotFound = (callback) => {
 	if (typeof callback === 'function') {
 		WORD_NOT_FOUND_CALLBACKS.push(callback)

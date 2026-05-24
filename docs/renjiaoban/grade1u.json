@@ -1,0 +1,273 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 1,
+    "semester": "上",
+    "catalog_note": "统编人教版一年级上册语文教材完整目录",
+    "book_catalog": {
+        "我上学了": {
+            "content_list": [
+                {
+                    "title": "我是中国人",
+                    "page": 2
+                },
+                {
+                    "title": "我爱我们的祖国",
+                    "page": 4
+                },
+                {
+                    "title": "我是小学生",
+                    "page": 6
+                },
+                {
+                    "title": "我爱学语文",
+                    "page": 7
+                }
+            ]
+        },
+        "第一单元·识字": {
+            "start_page": 8,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "天地人",
+                    "page": 8
+                },
+                {
+                    "sort": 2,
+                    "title": "金木水火土",
+                    "page": 9
+                },
+                {
+                    "sort": 3,
+                    "title": "口耳目手足",
+                    "page": 11
+                },
+                {
+                    "sort": 4,
+                    "title": "日月山川",
+                    "page": 13
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地一",
+                    "page": 15
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "读书真快乐",
+                    "page": 19
+                }
+            ]
+        },
+        "第二单元·汉语拼音": {
+            "start_page": 20,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "a o e",
+                    "page": 20
+                },
+                {
+                    "sort": 2,
+                    "title": "i u ü",
+                    "page": 22
+                },
+                {
+                    "sort": 3,
+                    "title": "b p m f",
+                    "page": 24
+                },
+                {
+                    "sort": 4,
+                    "title": "d t n l",
+                    "page": 26
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地二",
+                    "page": 28
+                }
+            ]
+        },
+        "第三单元·汉语拼音": {
+            "start_page": 32,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "g k h",
+                    "page": 32
+                },
+                {
+                    "sort": 6,
+                    "title": "j q x",
+                    "page": 34
+                },
+                {
+                    "sort": 7,
+                    "title": "z c s",
+                    "page": 36
+                },
+                {
+                    "sort": 8,
+                    "title": "zh ch sh r",
+                    "page": 38
+                },
+                {
+                    "sort": 9,
+                    "title": "y w",
+                    "page": 40
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地三",
+                    "page": 42
+                }
+            ]
+        },
+        "第四单元·汉语拼音": {
+            "start_page": 45,
+            "article_list": [
+                {
+                    "sort": 10,
+                    "title": "ai ei ui",
+                    "page": 45
+                },
+                {
+                    "sort": 11,
+                    "title": "ao ou iu",
+                    "page": 47
+                },
+                {
+                    "sort": 12,
+                    "title": "ie üe er",
+                    "page": 49
+                },
+                {
+                    "sort": 13,
+                    "title": "an en in un ün",
+                    "page": 51
+                },
+                {
+                    "sort": 14,
+                    "title": "ang eng ing ong",
+                    "page": 54
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地四",
+                    "page": 56
+                }
+            ]
+        },
+        "第五单元·阅读": {
+            "start_page": 60,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "秋天",
+                    "page": 60
+                },
+                {
+                    "sort": 2,
+                    "title": "江南",
+                    "page": 62
+                },
+                {
+                    "sort": 3,
+                    "title": "雪地里的小画家",
+                    "page": 64
+                },
+                {
+                    "sort": 4,
+                    "title": "四季",
+                    "page": 66
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地五",
+                    "page": 68
+                }
+            ]
+        },
+        "第六单元·识字": {
+            "start_page": 73,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "对韵歌",
+                    "page": 73
+                },
+                {
+                    "sort": 6,
+                    "title": "日月明",
+                    "page": 74
+                },
+                {
+                    "sort": 7,
+                    "title": "小书包",
+                    "page": 76
+                },
+                {
+                    "sort": 8,
+                    "title": "升国旗",
+                    "page": 78
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地六",
+                    "page": 80
+                }
+            ]
+        },
+        "第七单元·阅读": {
+            "start_page": 84,
+            "article_list": [
+                {
+                    "sort": 5,
+                    "title": "小小的船",
+                    "page": 84
+                },
+                {
+                    "sort": 6,
+                    "title": "影子",
+                    "page": 86
+                },
+                {
+                    "sort": 7,
+                    "title": "两件宝",
+                    "page": 88
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地七",
+                    "page": 90
+                }
+            ]
+        },
+        "第八单元·阅读": {
+            "start_page": 95,
+            "article_list": [
+                {
+                    "sort": 8,
+                    "title": "比尾巴",
+                    "page": 95
+                },
+                {
+                    "sort": 9,
+                    "title": "乌鸦喝水",
+                    "page": 97
+                },
+                {
+                    "sort": 10,
+                    "title": "雨点儿",
+                    "page": 99
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地八",
+                    "page": 101
+                }
+            ]
+        }
+    }
+}

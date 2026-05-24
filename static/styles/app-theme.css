@@ -3,6 +3,8 @@
  * 由 App.vue 引入；与 pages.json / manifest 底色 #F6F3EC 保持一致。
  */
 page {
+	width: 100%;
+	overflow-x: hidden;
 	--meng-page-bg: #f6f3ec;
 	--meng-card: #fffcf8;
 	--meng-status-bar-px: 44px;

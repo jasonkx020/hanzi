@@ -136,6 +136,9 @@
 	box-sizing: border-box;
 	background: var(--meng-page-bg);
 	padding: 0 20rpx calc(32rpx + env(safe-area-inset-bottom));
+	width: 100%;
+	max-width: 100%;
+	overflow-x: hidden;
 }
 
 /** Tab 顶区：大图 + 蒙层 + 左头像右文案 */

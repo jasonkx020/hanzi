@@ -93,7 +93,6 @@ export function buildWeeklyReport(prefs = getCurriculumPrefs()) {
 	lines.push('')
 	lines.push('—— 本周概览 ——')
 	lines.push(`每日一练完成：${dailyInWeek} 天`)
-	lines.push(`拼音跟读通过（累计）：${ach.pinyinFollowPass || 0} 次`)
 	lines.push(`写字/描红（累计）：${ach.strokePractice || 0} 次`)
 	lines.push(`查字（累计）：${ach.dictLookup || 0} 次`)
 	lines.push(`气球营过关（累计）：${ach.gameLevelClear || 0} 关`)

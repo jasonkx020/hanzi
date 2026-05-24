@@ -5,9 +5,10 @@
 /**
  * 估算音节在四线格中占用的相对宽度（约等于字母个数，略加权）
  * @param {string} sym
+ * @param {{ sidePadUnits?: number }} [opts] 左右各留一字宽时传 sidePadUnits: 2
  * @returns {number}
  */
-export function estimateSyllableWidthUnits(sym) {
+export function estimateSyllableWidthUnits(sym, opts = {}) {
 	const s = String(sym || '').trim()
 	if (!s) return 0
 	const chars = [...s.normalize('NFC')]
@@ -20,12 +21,13 @@ export function estimateSyllableWidthUnits(sym) {
 			units += 1
 		}
 	}
-	return Math.max(2, units)
+	const side = Math.max(0, Number(opts.sidePadUnits) || 0)
+	return Math.max(2, units + side)
 }
 
 /**
  * @param {string[]} symbols
- * @param {number | { maxPerRow?: number, maxUnitsPerRow?: number, padToMaxPerRow?: boolean }} [options]
+ * @param {number | { maxPerRow?: number, maxUnitsPerRow?: number, padToMaxPerRow?: boolean, sidePadUnits?: number }} [options]
  * @returns {(string|null)[][]}
  */
 export function chunkHomeworkSymbols(symbols, options) {
@@ -38,6 +40,7 @@ export function chunkHomeworkSymbols(symbols, options) {
 		Number(opts.maxUnitsPerRow) > 0 ? Number(opts.maxUnitsPerRow) : maxPerRow * 2.35
 	/** 默认补满每行 maxPerRow 格（一行最多 3 个音节，避免四格时 long 拼音重叠） */
 	const padToMaxPerRow = opts.padToMaxPerRow !== false
+	const widthOpts = { sidePadUnits: opts.sidePadUnits }
 
 	const rows = []
 	let current = []
@@ -55,7 +58,7 @@ export function chunkHomeworkSymbols(symbols, options) {
 	}
 
 	for (const sym of arr) {
-		const u = estimateSyllableWidthUnits(sym)
+		const u = estimateSyllableWidthUnits(sym, widthOpts)
 		const overCount = current.length >= maxPerRow
 		const overUnits = current.length > 0 && units + u > maxUnitsPerRow
 		if (overCount || overUnits) flush()

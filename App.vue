@@ -70,10 +70,13 @@ import {
 		min-height: 100%;
 	}
 
-	/* Tab 主页面底部留白，避免内容被自定义 tabBar 遮挡 */
+	/* 主页面底部安全区（已取消底部 TabBar） */
 	.tab-root-page {
-		padding-bottom: calc(168rpx + env(safe-area-inset-bottom));
+		padding-bottom: env(safe-area-inset-bottom);
 		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
+		overflow-x: hidden;
 	}
 
 	/* 避免个别端根节点默认底色断层 */
@@ -83,7 +86,9 @@ import {
 	body {
 		background-color: var(--meng-page-bg);
 		width: 100%;
+		max-width: 100%;
 		min-height: 100%;
+		overflow-x: hidden;
 	}
 
 	/* #ifdef H5 */
@@ -95,6 +100,9 @@ import {
 		min-height: 100%;
 		-webkit-overflow-scrolling: touch;
 		overscroll-behavior-y: auto;
+	}
+	.tab-root-page {
+		touch-action: pan-y;
 	}
 	/* #endif */
 </style>

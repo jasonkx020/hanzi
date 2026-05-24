@@ -3,8 +3,8 @@
 		<meng-tab-hero
 			:status-bar-px="statusBarHeight"
 			title="萌萌识字"
-			:subtitle="heroSlides[heroDotIndex] || '和萌萌一起学汉字'"
-			:avatar-pose="heroMascotPose"
+			:banner-slides="heroBannerSlides"
+			:banner-index="heroDotIndex"
 			@avatar-error="onMascotError"
 		>
 			<template #actions>
@@ -31,7 +31,7 @@
 
 		<home-char-showcase ref="charShowcase" class="tab-dock-overlap" />
 
-		<view class="tab-dock-overlap tab-content-bleed home-main">
+		<view class="tab-dock-overlap home-main">
 				<!-- <scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
 					<view class="grade-row">
 						<view
@@ -76,7 +76,7 @@
 						</view>
 						<view class="cta-text-col">
 							<text class="cta-label">拼音学习</text>
-							<text class="cta-sub">跟读与拼读</text>
+							<text class="cta-sub">拼读与闯关</text>
 						</view>
 					</view>
 				</view>
@@ -100,11 +100,11 @@
 						</view>
 						<text class="quick-label">查字</text>
 					</view>
-					<view class="quick-tile" @click="goSettings">
+					<view class="quick-tile" @click="goMe">
 						<view class="quick-icon-ring quick-icon-ring--cream">
-							<image class="quick-icon" :src="assets.logoIcon" mode="aspectFit" />
+							<image class="quick-icon" :src="assets.tab.meActive" mode="aspectFit" />
 						</view>
-						<text class="quick-label">教材</text>
+						<text class="quick-label">我的</text>
 					</view>
 				</view>
 
@@ -144,6 +144,11 @@ import {
 	playMengmengVoiceOnce,
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
+import {
+	navigateToDictionaryHome,
+	navigateToMe,
+	navigateToPinyinHome
+} from '@/utils/root-nav.js'
 
 const HERO_POSES = ['wave', 'book', 'happy']
 
@@ -169,9 +174,14 @@ export default {
 		}
 	},
 	computed: {
-		heroMascotPose() {
-			if (this.mascotFallback) return 'book'
-			return HERO_POSES[this.heroDotIndex % HERO_POSES.length] || 'wave'
+		heroBannerSlides() {
+			const poses = HERO_POSES
+			return (this.heroSlides || []).map((text, i) => ({
+				text: String(text || ''),
+				pose: this.mascotFallback
+					? 'book'
+					: poses[i % poses.length] || 'wave'
+			}))
 		}
 	},
 	watch: {
@@ -183,7 +193,6 @@ export default {
 		this.scheduleWelcomeVoice()
 	},
 	onShow() {
-		this.setTabBarIndex(0)
 		this.startHeroCarousel()
 		this.refresh()
 		this.scheduleWelcomeVoice()
@@ -287,10 +296,13 @@ export default {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
 		},
 		goPinyin() {
-			uni.switchTab({ url: '/pages/pinyin/index' })
+			navigateToPinyinHome()
 		},
 		goDictionary() {
-			uni.switchTab({ url: '/pages/dictionary/index' })
+			navigateToDictionaryHome()
+		},
+		goMe() {
+			navigateToMe()
 		},
 		goWritePractice() {
 			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
@@ -317,10 +329,22 @@ export default {
 <style scoped>
 .home-page {
 	box-sizing: border-box;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+/* 首页内容区留左右握持间距（不用 tab-content-bleed 贴边） */
+.home-page.tab-page-shell {
+	padding-left: calc(32rpx + constant(safe-area-inset-left));
+	padding-left: calc(32rpx + env(safe-area-inset-left));
+	padding-right: calc(32rpx + constant(safe-area-inset-right));
+	padding-right: calc(32rpx + env(safe-area-inset-right));
 }
 
 .home-main {
 	padding-bottom: 8rpx;
+	box-sizing: border-box;
 }
 
 .home-hero-dots {

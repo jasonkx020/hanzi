@@ -1,0 +1,241 @@
+{
+    "textbook_version_id": "统编(人教版)",
+    "grade": 2,
+    "semester": "上",
+    "catalog_note": "统编人教版二年级上册语文教材完整目录",
+    "book_catalog": {
+        "第一单元·阅读": {
+            "start_page": 1,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "小蝌蚪找妈妈",
+                    "page": 1
+                },
+                {
+                    "sort": 2,
+                    "title": "我是什么",
+                    "page": 5
+                },
+                {
+                    "sort": 3,
+                    "title": "植物妈妈有办法",
+                    "page": 8
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地一",
+                    "page": 11
+                },
+                {
+                    "type": "快乐读书吧",
+                    "title": "读读童话故事",
+                    "page": 15
+                }
+            ]
+        },
+        "第二单元·识字": {
+            "start_page": 16,
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "场景歌",
+                    "page": 16
+                },
+                {
+                    "sort": 2,
+                    "title": "树之歌",
+                    "page": 18
+                },
+                {
+                    "sort": 3,
+                    "title": "拍手歌",
+                    "page": 20
+                },
+                {
+                    "sort": 4,
+                    "title": "田家四季歌",
+                    "page": 23
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地二",
+                    "page": 25
+                }
+            ]
+        },
+        "第三单元·阅读": {
+            "start_page": 28,
+            "article_list": [
+                {
+                    "sort": 4,
+                    "title": "彩虹",
+                    "page": 28
+                },
+                {
+                    "sort": 5,
+                    "title": "去外婆家",
+                    "page": 30
+                },
+                {
+                    "sort": 6,
+                    "title": "数星星的孩子",
+                    "page": 32
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地三",
+                    "page": 35
+                }
+            ]
+        },
+        "第四单元·阅读": {
+            "start_page": 39,
+            "article_list": [
+                {
+                    "sort": 7,
+                    "title": "古诗二首",
+                    "page": 39,
+                    "sub_title": ["登鹳雀楼", "望庐山瀑布"]
+                },
+                {
+                    "sort": 8,
+                    "title": "黄山奇石",
+                    "page": 42
+                },
+                {
+                    "sort": 9,
+                    "title": "日月潭",
+                    "page": 45
+                },
+                {
+                    "sort": 10,
+                    "title": "葡萄沟",
+                    "page": 47
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地四",
+                    "page": 50
+                }
+            ]
+        },
+        "第五单元·阅读": {
+            "start_page": 54,
+            "article_list": [
+                {
+                    "sort": 11,
+                    "title": "坐井观天",
+                    "page": 54
+                },
+                {
+                    "sort": 12,
+                    "title": "寒号鸟",
+                    "page": 56
+                },
+                {
+                    "sort": 13,
+                    "title": "我要的是葫芦",
+                    "page": 60
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地五",
+                    "page": 63
+                }
+            ]
+        },
+        "第六单元·阅读": {
+            "start_page": 67,
+            "article_list": [
+                {
+                    "sort": 14,
+                    "title": "八角楼上",
+                    "page": 67
+                },
+                {
+                    "sort": 15,
+                    "title": "朱德的扁担",
+                    "page": 69
+                },
+                {
+                    "sort": 16,
+                    "title": "难忘的泼水节",
+                    "page": 72
+                },
+                {
+                    "sort": 17,
+                    "title": "刘胡兰",
+                    "page": 75
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地六",
+                    "page": 78
+                }
+            ]
+        },
+        "第七单元·阅读": {
+            "start_page": 81,
+            "article_list": [
+                {
+                    "sort": 18,
+                    "title": "古诗二首",
+                    "page": 81,
+                    "sub_title": ["江雪", "敕勒歌"]
+                },
+                {
+                    "sort": 19,
+                    "title": "雾在哪里",
+                    "page": 84
+                },
+                {
+                    "sort": 20,
+                    "title": "雪孩子",
+                    "page": 87
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地七",
+                    "page": 91
+                }
+            ]
+        },
+        "第八单元·阅读": {
+            "start_page": 95,
+            "article_list": [
+                {
+                    "sort": 21,
+                    "title": "称赞",
+                    "page": 95
+                },
+                {
+                    "sort": 22,
+                    "title": "纸船和风筝",
+                    "page": 98
+                },
+                {
+                    "sort": 23,
+                    "title": "快乐的小河",
+                    "page": 101
+                },
+                {
+                    "type": "语文园地",
+                    "title": "语文园地八",
+                    "page": 104
+                }
+            ]
+        },
+        "附录": {
+            "识字表": {
+                "page": 108
+            },
+            "写字表": {
+                "page": 113
+            },
+            "词语表": {
+                "page": 116
+            }
+        }
+    }
+}

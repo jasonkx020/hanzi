@@ -74,7 +74,7 @@ export default {
 				uni.navigateBack()
 				return
 			}
-			uni.switchTab({ url: '/pages/home/home' })
+			uni.reLaunch({ url: '/pages/home/home' })
 		}
 	}
 }

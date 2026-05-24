@@ -1,5 +1,5 @@
 /**
- * 查字页：汉字读音按完整拼音播本地 opus（失败则 TTS），不拆声母介母韵母；不使用 cnchar.voice。
+ * 查字页：汉字读音仅播 static/pinyin 下 opus，无文件则不播。
  */
 import {
 	beginHanziDictionarySpeakDebug,
@@ -15,8 +15,7 @@ import {
 export const DICTIONARY_LOCAL_PINYIN_OPTS = {
 	useTone1Fb: true,
 	readingGapMs: PINYIN_BLEND_TIMING.readingGapMs,
-	blend: false,
-	showFailToast: false
+	blend: false
 }
 
 /**
@@ -33,20 +32,17 @@ export async function speakDictionaryEntryPinyin(opts = {}) {
 		logHanziSpeak('dict.request', {
 			hanzi: h,
 			fallbackPinyin: opts.fallbackPinyin,
-			narrator: opts.narrator,
 			useTone1Fb: opts.useTone1Fb,
 			blend: opts.blend === true ? true : DICTIONARY_LOCAL_PINYIN_OPTS.blend
 		})
 		const ok = await speakHanziViaPinyinBlend({
 			hanzi: h,
 			fallbackPinyin: opts.fallbackPinyin,
-			narrator: opts.narrator,
 			useTone1Fb: opts.useTone1Fb,
 			blend: opts.blend === true ? true : DICTIONARY_LOCAL_PINYIN_OPTS.blend,
 			readingGapMs: opts.readingGapMs ?? opts.gapMs ?? DICTIONARY_LOCAL_PINYIN_OPTS.readingGapMs,
 			betweenParts: opts.betweenParts,
-			beforeWhole: opts.beforeWhole,
-			showFailToast: opts.showFailToast ?? DICTIONARY_LOCAL_PINYIN_OPTS.showFailToast
+			beforeWhole: opts.beforeWhole
 		})
 		logHanziSpeak('dict.done', { hanzi: h, ok })
 		return ok
