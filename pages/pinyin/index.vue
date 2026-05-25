@@ -7,7 +7,7 @@
 		<meng-tab-hero
 			:status-bar-px="statusBarHeight"
 			title="拼音"
-			subtitle="跟读 · 拼读 · 闯关"
+			subtitle="点格子，听读音"
 			avatar-pose="happy"
 		/>
 
@@ -22,62 +22,66 @@
 							:class="{ 'pinyin-tab-chip--on': activeTab === item }"
 							@click="onPickTab(item)"
 						>
-							<text class="pinyin-tab-chip-text">{{ item }}</text>
+							<text class="pinyin-tab-chip-emoji">{{ tabEmoji(item) }}</text>
+							<text class="pinyin-tab-chip-text">{{ (item) }}</text>
 						</view>
 					</view>
 				</scroll-view>
 
-				<view class="pinyin-mode-bar">
-					<view class="follow-read-check" @click="toggleFollowReadMode">
-						<view class="check-icon" :class="{ 'check-icon--on': followReadMode }">
-							<text v-if="followReadMode" class="check-mark">✓</text>
-						</view>
-						<text class="follow-read-label">跟读模式</text>
-					</view>
-					<view v-if="pinyinModeStatusText" class="pinyin-mode-status">
-						<text
-							class="pinyin-mode-status-text"
-							:class="{
-								'pinyin-mode-status-text--warn': pinyinModeStatusWarn,
-								'pinyin-mode-status-text--ok': pinyinModeStatusOk,
-								'font-pinyin': pinyinModeStatusUsePinyinFont
-							}"
-						>{{ pinyinModeStatusText }}</text>
-					</view>
-					<view class="follow-read-check" @click="toggleAutoReadPrefer">
-						<view class="check-icon" :class="{ 'check-icon--on': autoReadPrefer }">
-							<text v-if="autoReadPrefer" class="check-mark">✓</text>
-						</view>
-						<text class="follow-read-label">自动连读</text>
-					</view>
+				<view v-if="!autoReadRunning" class="pinyin-tap-guide">
+					<text class="pinyin-tap-guide-emoji">👆</text>
+					<text class="pinyin-tap-guide-text">点拼音格子，萌萌读给你听</text>
 				</view>
 
-				<pinyin-follow-read-record-hint
-					:visible="followReadRecordBarVisible"
-					:progress="followReadRecordProgress"
-					:target="followReadTarget"
-					:scoring="followReadScoring"
-					:speech-started="followReadSpeechStarted"
-					:show-debug-playback="followReadDebugPlayVisible && followReadRecordBarVisible"
-					@debug-play="onFollowReadDebugPlay"
-				/>
-				<view
-					v-if="followReadDebugPlayVisible && !followReadRecordBarVisible"
-					class="fr-debug-play-standalone"
-					@click="onFollowReadDebugPlay"
-				>
-					<text class="fr-debug-play-standalone-text">🔊 试听上次跟读录音</text>
+				<view v-else class="pinyin-reading-banner">
+					<text class="pinyin-reading-banner-label">萌萌在读</text>
+					<text
+						class="pinyin-reading-banner-symbol font-pinyin"
+						:class="{ 'pinyin-reading-banner-symbol--empty': !autoReadActiveLabel }"
+					>{{ autoReadActiveLabel || '…' }}</text>
 				</view>
-				<view
-					v-if="showRecordTestEntry"
-					class="fr-debug-play-standalone fr-debug-play-standalone--link"
-					@click="goRecordTestPage"
-				>
-					<text class="fr-debug-play-standalone-text">🎤 麦克风录音测试（按住录、松开播）</text>
+
+				<view class="pinyin-mode-bar">
+					<scroll-view scroll-x class="pinyin-lab-scroll" :show-scrollbar="false">
+						<view class="pinyin-lab-row">
+							<view class="pinyin-lab-entry pinyin-lab-entry--initial" @click="goInitialLab">
+								<text class="pinyin-lab-entry-emoji">🔤</text>
+								<view class="pinyin-lab-entry-texts">
+									<text class="pinyin-lab-entry-title">声母乐园</text>
+									<text class="pinyin-lab-entry-sub">听音 · 学口型</text>
+								</view>
+								<text class="pinyin-lab-entry-arrow">›</text>
+							</view>
+							<view class="pinyin-lab-entry pinyin-lab-entry--vowel" @click="goVowelLab">
+								<text class="pinyin-lab-entry-emoji">🎵</text>
+								<view class="pinyin-lab-entry-texts">
+									<text class="pinyin-lab-entry-title">韵母乐园</text>
+									<text class="pinyin-lab-entry-sub">听音 · 学发音</text>
+								</view>
+								<text class="pinyin-lab-entry-arrow">›</text>
+							</view>
+							<view class="pinyin-lab-entry pinyin-lab-entry--tone" @click="goToneLab">
+								<text class="pinyin-lab-entry-emoji">🎼</text>
+								<view class="pinyin-lab-entry-texts">
+									<text class="pinyin-lab-entry-title">声调乐园</text>
+									<text class="pinyin-lab-entry-sub">听四声 · 学调号</text>
+								</view>
+								<text class="pinyin-lab-entry-arrow">›</text>
+							</view>
+							<view class="pinyin-lab-entry pinyin-lab-entry--whole" @click="goWholeLab">
+								<text class="pinyin-lab-entry-emoji">⭐</text>
+								<view class="pinyin-lab-entry-texts">
+									<text class="pinyin-lab-entry-title">整体认读乐园</text>
+									<text class="pinyin-lab-entry-sub">整音节 · 不用拼</text>
+								</view>
+								<text class="pinyin-lab-entry-arrow">›</text>
+							</view>
+						</view>
+					</scroll-view>
 				</view>
 
 				<view v-if="activeLegend.length" class="legend">
-					<text class="legend-title">颜色分类</text>
+					<text class="legend-title">颜色小提示</text>
 					<view class="legend-row">
 						<view
 							v-for="(leg, li) in activeLegend"
@@ -124,6 +128,7 @@
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('initial', sec.si, row.ri, row.chunk)"
 									:syllables="row.chunk"
+									font-class="font-pinyin-step"
 									@cell-click="onHomeworkCellSpeak"
 								/>
 							</view>
@@ -158,6 +163,7 @@
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('vowel', sec.si, row.ri, row.chunk)"
 									:syllables="row.chunk"
+									font-class="font-pinyin-step"
 									@cell-click="onHomeworkCellSpeak"
 								/>
 							</view>
@@ -194,6 +200,7 @@
 									:sheet-bd="row.cat.bd"
 									:highlight-column-index="autoReadToneHighlightCol(block.key, rowIdx)"
 									:syllables="toneRowDisplays(row)"
+									font-class="font-pinyin-step"
 									@cell-click="onToneHomeworkCell(row, $event)"
 								/>
 							</view>
@@ -230,6 +237,7 @@
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('whole', sec.si, row.ri, row.chunk)"
 									:syllables="row.chunk"
+									font-class="font-pinyin-step"
 									@cell-click="onHomeworkCellSpeak"
 								/>
 							</view>
@@ -256,14 +264,15 @@
 								class="pinyin-tab-panel pinyin-homework-strip"
 							>
 								<view class="drill-practice-bar">
-									<text class="drill-practice-hint clamp-2">{{ drillPracticeHint }}</text>
+									<text class="drill-practice-hint clamp-2">{{ drillPracticeHintChild }}</text>
 									<view
 										class="drill-practice-shuffle"
 										:class="{ 'drill-practice-shuffle--busy': drillPracticeLoading }"
 										@click="refreshDrillPracticePool(true)"
 									>
+										<text class="drill-practice-shuffle-emoji">🎲</text>
 										<text class="drill-practice-shuffle-text">{{
-											drillPracticeLoading ? '抽取中…' : '换一批'
+											drillPracticeLoading ? '换一批…' : '换一批'
 										}}</text>
 									</view>
 								</view>
@@ -299,26 +308,17 @@
 						<view class="pinyin-quick-row">
 							<view class="pinyin-quick-btn pinyin-quick-btn--drill" @click="goDrill">
 								<text class="pinyin-quick-emoji">🎯</text>
-								<text class="pinyin-quick-label">闯关</text>
+								<text class="pinyin-quick-label">拼音闯关</text>
+								<text class="pinyin-quick-sub">玩游戏学拼音</text>
 							</view>
 							<view
 								class="pinyin-quick-btn pinyin-quick-btn--autoread"
-								:class="{
-									'pinyin-quick-btn--autoread-on': autoReadRunning,
-									'pinyin-quick-btn--disabled': followReadBusy
-								}"
+								:class="{ 'pinyin-quick-btn--autoread-on': autoReadRunning }"
 								@click="toggleAutoReadChain"
 							>
-								<text class="pinyin-quick-emoji">{{ autoReadRunning ? '⏹' : '▶' }}</text>
-								<text class="pinyin-quick-label">{{ autoReadRunning ? '停止连读' : '开始连读' }}</text>
-							</view>
-							<view
-								class="pinyin-quick-btn pinyin-quick-btn--stop"
-								:class="{ 'pinyin-quick-btn--disabled': !recording || followReadBusy }"
-								@click="stopRecordAndScore"
-							>
-								<text class="pinyin-quick-emoji">✓</text>
-								<text class="pinyin-quick-label">评分</text>
+								<text class="pinyin-quick-emoji">{{ autoReadRunning ? '⏹' : '▶️' }}</text>
+								<text class="pinyin-quick-label">{{ autoReadRunning ? '停下来' : '一起读' }}</text>
+								<text class="pinyin-quick-sub">{{ autoReadRunning ? '点萌萌也可以停' : '萌萌带读整页' }}</text>
 							</view>
 						</view>
 					</view>
@@ -342,7 +342,7 @@
 						:src="mengMascotIp"
 						mode="aspectFit"
 					/>
-					<text class="pinyin-mascot-hint">点我停止</text>
+					<text class="pinyin-mascot-hint">点我停下</text>
 				</view>
 			</view>
 		</view>
@@ -351,34 +351,6 @@
 
 <script>
 import { getAudioNarrator } from '@/utils/audio-settings.js'
-import { notifyRecorderPageShow } from '@/utils/recorder-pcm-client.js'
-import {
-	getFollowReadState,
-	getFollowReadHistory,
-	getFollowReadEffectiveProgress,
-	setFollowReadRecordProgressListener,
-	startFollowReadRecord,
-	stopFollowReadRecord,
-	cancelFollowReadAutoStop,
-	clearFollowReadAutoStopCallback,
-	requestFollowReadScore
-} from '@/services/pinyin-follow-read-service.js'
-import {
-	followReadStatusBarHint,
-	followReadToastTitle,
-	followReadStatusWithSimilarity
-} from '@/utils/pinyin-follow-read-ui-messages.js'
-import { logFollowReadSimilarity } from '@/utils/pinyin-follow-read-debug-log.js'
-import {
-	FOLLOW_READ_DEBUG_PLAY_RECORDING,
-	PINYIN_RECORD_TEST_ENTRY_ALWAYS
-} from '@/config/pinyin-follow-read-config.js'
-import {
-	playFollowReadDebugRecording,
-	stopFollowReadDebugPlayback
-} from '@/utils/pinyin-follow-read-debug-playback.js'
-import { startFollowReadEffectiveProgressTicker } from '@/utils/pinyin-follow-read-record-progress.js'
-import PinyinFollowReadRecordHint from '@/components/pinyin-follow-read-record-hint.vue'
 import {
 	describePinyinPracticeSource,
 	FALLBACK_BLEND_SYLLABLES,
@@ -395,82 +367,31 @@ import {
 } from '@/utils/pinyin-index-tab-views.js'
 import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
 import { gateAndPrompt, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
-import {
-	recordPinyinFollowPass,
-	recordPinyinAutoReadChainComplete
-} from '@/utils/achievement-stats-storage.js'
+import { recordPinyinAutoReadChainComplete } from '@/utils/achievement-stats-storage.js'
+import { INITIAL_SECTIONS } from '@/utils/pinyin-initial-lab/sections.js'
+import { VOWEL_SECTIONS } from '@/utils/pinyin-vowel-lab/sections.js'
+import { WHOLE_SECTIONS } from '@/utils/pinyin-whole-lab/sections.js'
 
-/** 韵母分块（顺序与教材常见层级一致，自上而下） */
-const VOWEL_SECTIONS = [
-	{ title: '单韵母(6个)', symbols: ['a', 'o', 'e', 'i', 'u', 'ü'] },
-	{ title: '复韵母(8个)', symbols: ['ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe'] },
-	{ title: '特殊韵母(1个)', symbols: ['er'] },
-	{ title: '前鼻韵母(5个)', symbols: ['an', 'en', 'in', 'un', 'ün'] },
-	{ title: '后鼻韵母(4个)', symbols: ['ang', 'eng', 'ing', 'ong'] }
-]
+/** 拼音页韵母块展示（乐园内为儿童向 kidTip） */
+const VOWEL_SECTIONS_VIEW = VOWEL_SECTIONS.map((s) => ({
+	title: s.title,
+	desc: s.kidTip,
+	symbols: s.symbols
+}))
 
-/**
- * 声母：按发音部位分块；块与块之间的顺序为人教版常见「字母先后」教学顺序：
- * b p m f → d t n l → g k h → j q x → zh ch sh r → z c s → y w
- */
-const INITIAL_SECTIONS = [
-	{
-		title: '双唇音',
-		desc: '上唇与下唇接触成阻。b、p、m',
-		symbols: ['b', 'p', 'm']
-	},
-	{
-		title: '唇齿音',
-		desc: '上齿与下唇内侧接触成阻。f',
-		symbols: ['f']
-	},
-	{
-		title: '舌尖中音',
-		desc: '舌尖与上齿龈接触成阻。d、t、n、l',
-		symbols: ['d', 't', 'n', 'l']
-	},
-	{
-		title: '舌根音',
-		desc: '舌根与软腭接触成阻。g、k、h',
-		symbols: ['g', 'k', 'h']
-	},
-	{
-		title: '舌面音',
-		desc: '舌面前部与硬腭前部接触成阻。j、q、x',
-		symbols: ['j', 'q', 'x']
-	},
-	{
-		title: '舌尖后音（翘舌音）',
-		desc: '舌尖与硬腭前部接触成阻。zh、ch、sh、r',
-		symbols: ['zh', 'ch', 'sh', 'r']
-	},
-	{
-		title: '舌尖前音（平舌音）',
-		desc: '舌尖与上齿背接触成阻。z、c、s',
-		symbols: ['z', 'c', 's']
-	},
-	{
-		title: '隔音字母',
-		desc: '写在音节开头起隔音作用，读音分别接近韵母 i、u。y、w',
-		symbols: ['y', 'w']
-	}
-]
+/** 拼音页声母块展示用说明（乐园内为儿童向 kidTip） */
+const INITIAL_SECTIONS_VIEW = INITIAL_SECTIONS.map((s) => ({
+	title: s.title,
+	desc: s.kidTip,
+	symbols: s.symbols
+}))
 
-/** 整体认读：分块 + 说明（与韵母页 vowel-block 一致） */
-const WHOLE_READING_SECTIONS = [
-	{
-		title: '第一类(7个)',
-		desc:
-			'（zhi、chi、shi、ri、zi、ci、si）它们的韵母不是普通的「i（衣）」，而是发音特殊的「-i」，直接拼读很困难，所以需要整体记住读音。',
-		symbols: ['zhi', 'chi', 'shi', 'ri', 'zi', 'ci', 'si']
-	},
-	{
-		title: '第二类(9个)',
-		desc:
-			'（yi、wu、yu、ye、yue、yuan、yin、yun、ying）它们按照拼写规则变化而来（如增加 y 或 w，或省略 ü 上两点等）。为不加重拼写规则负担，就作为整体来认读。',
-		symbols: ['yi', 'wu', 'yu', 'ye', 'yue', 'yuan', 'yin', 'yun', 'ying']
-	}
-]
+/** 拼音页整体认读块展示（乐园内为儿童向 kidTip） */
+const WHOLE_READING_SECTIONS = WHOLE_SECTIONS.map((s) => ({
+	title: s.title === '第一类' ? '第一类(7个)' : '第二类(9个)',
+	desc: s.kidTip,
+	symbols: s.symbols
+}))
 import {
 	applyToneToSyllableStem,
 	playLocalPinyinNeutralThenTone1,
@@ -478,6 +399,7 @@ import {
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
+import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
@@ -485,33 +407,33 @@ import MengAvatar from '@/components/meng-avatar.vue'
 import MengTabHero from '@/components/meng-tab-hero.vue'
 import tabMain from '@/mixins/tab-main-page.js'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
-import { MENG_VOICE, playMengmengVoice, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
+import { MENG_VOICE, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
 
 export default {
 	mixins: [tabMain],
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
-		MengTabHero,
-		PinyinFollowReadRecordHint
+		MengTabHero
 	},
 	data() {
 		return {
 			assets: MENG_ASSETS,
 			mengMascotIp: MENG_ASSETS.ip.book,
-			tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
+			// tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
+			tabList: ['声母', '韵母', '整体认读', '音调'],
 			toneColumnLabels: ['一声', '二声', '三声', '四声'],
 			activeTab: '声母',
 			symbolMap: {
-				声母: INITIAL_SECTIONS.flatMap((s) => s.symbols),
-				韵母: VOWEL_SECTIONS.flatMap((s) => s.symbols),
+				声母: INITIAL_SECTIONS_VIEW.flatMap((s) => s.symbols),
+				韵母: VOWEL_SECTIONS_VIEW.flatMap((s) => s.symbols),
 				整体认读: WHOLE_READING_SECTIONS.flatMap((s) => s.symbols),
 				拼读练习: FALLBACK_BLEND_SYLLABLES.slice()
 			},
 			drillPracticeHint: '正在从识字表抽取拼音…',
 			drillPracticeLoading: false,
 			narrator: 'kid',
-			/** 是否正在自动连读（与跟读复选框可同时开启） */
+			/** 是否正在自动连读 */
 			autoReadRunning: false,
 			/** 进入页面 / 切换 Tab 后是否自动开始连读 */
 			autoReadPrefer: false,
@@ -521,30 +443,8 @@ export default {
 			_lastPinyinScrollTop: 0,
 			/** 自动连读会话 id，用于丢弃过期连读步骤 */
 			autoReadRunId: 0,
-			/** 连读+跟读时等待录音结束 */
-			_autoReadFollowDone: null,
-			_autoReadFollowRunId: null,
-			/** 开启后点格子：先听示范再自动录音 */
-			followReadMode: false,
-			followReadTarget: '',
-			followReadPlayOpts: null,
-			followReadBusy: false,
-			recording: false,
-			followReadHistory: [],
-			lastScoreText: '',
-			/** 模式栏中间跟读结果/提示（优先于连读文案） */
-			followReadStatusHint: '',
-			followReadStatusKind: '',
-			_followReadHintTimer: null,
-			followReadRecordProgress: 0,
-			followReadScoring: false,
-			followReadSpeechStarted: false,
-			_stopFollowReadRecordProgress: null,
-			_followReadScoreBusy: false,
-			lastRecordFile: '',
-			followReadDebugPlayEnabled: FOLLOW_READ_DEBUG_PLAY_RECORDING,
-			vowelSections: VOWEL_SECTIONS,
-			initialSections: INITIAL_SECTIONS,
+			vowelSections: VOWEL_SECTIONS_VIEW,
+			initialSections: INITIAL_SECTIONS_VIEW,
 			wholeReadingSections: WHOLE_READING_SECTIONS,
 			/** scroll-view 高度（px），旧版 Android WebView 需显式高度才能滚动 */
 			scrollAreaHeightPx: 0,
@@ -576,8 +476,8 @@ export default {
 		}
 	},
 	created() {
-		this.tabViewInitial = buildHomeworkSectionViews(INITIAL_SECTIONS, 'initial', '声母')
-		this.tabViewVowel = buildHomeworkSectionViews(VOWEL_SECTIONS, 'vowel', '韵母')
+		this.tabViewInitial = buildHomeworkSectionViews(INITIAL_SECTIONS_VIEW, 'initial', '声母')
+		this.tabViewVowel = buildHomeworkSectionViews(VOWEL_SECTIONS_VIEW, 'vowel', '韵母')
 		this.tabViewWhole = buildHomeworkSectionViews(WHOLE_READING_SECTIONS, 'whole', '整体认读')
 		this.tabViewDrillRows = buildHomeworkDrillRows(this.symbolMap['拼读练习'])
 		this.toneTabBlocksData = [
@@ -613,12 +513,6 @@ export default {
 		},
 		autoReadActiveSection() {
 			return this.autoReadActiveSlot?.sectionTitle || ''
-		},
-		autoReadBannerKicker() {
-			if (this.followReadMode && this.recording) return '连读 · 跟读中'
-			if (this.followReadMode && this.followReadBusy) return '连读 · 播放示范'
-			if (this.followReadMode) return '连读 · 跟读'
-			return '正在连读'
 		},
 		/** 与页面格子一一对应（启动时已预计算） */
 		autoReadSlots() {
@@ -658,51 +552,12 @@ export default {
 			if (this.activeTab === '音调' || this.activeTab === '整体认读' || this.activeTab === '声母') return []
 			return legendForTab(this.activeTab, this.activeSymbols)
 		},
-		pinyinModeStatusWarn() {
-			return this.followReadStatusKind === 'warn'
-		},
-		pinyinModeStatusOk() {
-			return this.followReadStatusKind === 'ok'
-		},
-		pinyinModeStatusUsePinyinFont() {
-			if (this.recording || this.followReadBusy) return true
-			if (this.autoReadRunning) return true
-			const h = this.followReadStatusHint || ''
-			return /[a-züɑ]/i.test(h)
-		},
-		followReadRecordBarVisible() {
-			return !!(this.recording || this.followReadScoring) && (this.followReadMode || this.followReadTarget)
-		},
-		followReadDebugPlayVisible() {
-			return !!(
-				this.followReadDebugPlayEnabled &&
-				this.lastRecordFile &&
-				(this.followReadMode || this.followReadTarget)
-			)
-		},
-		showRecordTestEntry() {
-			return PINYIN_RECORD_TEST_ENTRY_ALWAYS
-		},
-		/** 工具栏中间一行状态（替代原连读大卡片） */
-		pinyinModeStatusText() {
-			if (this.followReadBusy) return '播放示范…'
-			if (this.recording) {
-				const t = String(this.followReadTarget || '').trim()
-				return t ? `跟读中 · ${t}` : '跟读中'
-			}
-			if (this.followReadStatusHint) return this.followReadStatusHint
-			if (this.followReadMode && this.lastScoreText) return this.lastScoreText
-			if (this.autoReadRunning) {
-				const sym = this.autoReadActiveLabel
-				const k = this.autoReadBannerKicker
-				if (sym) return `${k} · ${sym}`
-				return k
-			}
-			return ''
+		drillPracticeHintChild() {
+			const raw = String(this.drillPracticeHint || '').trim()
+			if (!raw) return '点格子听读音，也可以换一批新音节'
+			if (raw.length > 28) return '点格子听读音 · 不会就换一批'
+			return raw
 		}
-	},
-	mounted() {
-		notifyRecorderPageShow(this)
 	},
 	onReady() {
 		if (!this.isLetterPinyinTab) {
@@ -718,28 +573,55 @@ export default {
 		this.handlePinyinScrollMotion()
 	},
 	onShow() {
-		notifyRecorderPageShow(this)
 		this.setTabBarIndex(1)
-		playMengmengVoiceOnce(MENG_VOICE.PINYIN_FOLLOW_START, 'meng_voice_pinyin_tab').catch(() => {})
 		this.narrator = getAudioNarrator()
-		this.recording = getFollowReadState().recording
-		this.followReadHistory = getFollowReadHistory()
 		this.refreshDrillPracticePool()
 		this.scheduleMeasureScrollHeight(80)
 		this.scheduleMeasureScrollHeight(320)
-		this.$nextTick(() => {
-			this.tryAutoStartReadChain()
-		})
+		playMengmengVoiceOnce(MENG_VOICE.PINYIN_FOLLOW_START, 'meng_voice_pinyin_tab')
+			.catch(() => {})
+			.finally(() => {
+				this.$nextTick(() => {
+					this.tryAutoStartReadChain()
+				})
+			})
 	},
 	onHide() {
 		stopMengmengVoice()
-		stopFollowReadDebugPlayback()
 		this.stopAutoReadChain()
-		cancelFollowReadAutoStop()
-		this.stopFollowReadRecordUi()
-		this.clearFollowReadStatusHint()
 	},
 	methods: {
+		tabEmoji(tab) {
+			const map = {
+				声母: '🔤',
+				韵母: '🎵',
+				音调: '🎼',
+				整体认读: '📖',
+				拼读练习: '✨'
+			}
+			return map[String(tab || '')] || '📌'
+		},
+		tabShortLabel(tab) {
+			const t = String(tab || '')
+			if (t === '整体认读') return '整体认读乐园'
+			if (t === '拼读练习') return '练一练'
+			if (t === '音调') return '声调乐园'
+			if (t === '声母') return '声母乐园'
+			if (t === '韵母') return '韵母乐园'
+			return t
+		},
+		goInitialLab() {
+			uni.navigateTo({ url: '/pages/pinyin/initial-lab/index' })
+		},
+		goVowelLab() {
+			uni.navigateTo({ url: '/pages/pinyin/vowel-lab/index' })
+		},
+		goToneLab() {
+			uni.navigateTo({ url: '/pages/pinyin/tone-lab/index' })
+		},
+		goWholeLab() {
+			uni.navigateTo({ url: '/pages/pinyin/whole-lab/index' })
+		},
 		async refreshDrillPracticePool(userInitiated = false) {
 			if (this.drillPracticeLoading) return
 			if (userInitiated) {
@@ -773,105 +655,30 @@ export default {
 				this.drillPracticeLoading = false
 			}
 		},
-		setFollowReadStatusHint(hint, kind = 'warn', ttlMs = 6000) {
-			if (this._followReadHintTimer) {
-				clearTimeout(this._followReadHintTimer)
-				this._followReadHintTimer = null
-			}
-			this.followReadStatusHint = String(hint || '').trim()
-			this.followReadStatusKind = this.followReadStatusHint ? kind : ''
-			if (this.followReadStatusHint && ttlMs > 0) {
-				this._followReadHintTimer = setTimeout(() => {
-					this.followReadStatusHint = ''
-					this.followReadStatusKind = ''
-					this._followReadHintTimer = null
-				}, ttlMs)
-			}
-		},
-		goRecordTestPage() {
-			uni.navigateTo({ url: '/pages/debug/record-test' })
-		},
-		onFollowReadDebugPlay() {
-			if (!this.lastRecordFile) {
-				uni.showToast({ title: '暂无录音文件', icon: 'none' })
-				return
-			}
-			playFollowReadDebugRecording(this.lastRecordFile, { force: true }).then((r) => {
-				if (!r?.ok && !r?.skipped) {
-					uni.showToast({ title: r?.message || '播放失败', icon: 'none' })
-				}
-			})
-		},
-		clearFollowReadStatusHint() {
-			if (this._followReadHintTimer) {
-				clearTimeout(this._followReadHintTimer)
-				this._followReadHintTimer = null
-			}
-			this.followReadStatusHint = ''
-			this.followReadStatusKind = ''
-		},
-		beginFollowReadRecordUi(startRes) {
-			this.stopFollowReadRecordUi()
-			this.followReadScoring = false
-			this.followReadRecordProgress = 0
-			const fixedMs = Number(startRes?.fixedDurationMs) || 0
-			const useFixedWall = fixedMs > 0 && (startRes?.wxzFixedWall || !startRes?.useEffectiveDuration)
-			setFollowReadRecordProgressListener((p, meta) => {
-				this.followReadRecordProgress = p
-				if (meta?.speechStarted != null) {
-					this.followReadSpeechStarted = !!meta.speechStarted
-				}
-			})
-			if (useFixedWall) {
-				this.followReadSpeechStarted = true
-				return
-			}
-			this.followReadSpeechStarted = false
-			this._stopFollowReadRecordProgress = startFollowReadEffectiveProgressTicker(
-				() => getFollowReadEffectiveProgress(),
-				() => {},
-				() => {
-					this.onFollowReadRecordDurationEnd()
-				},
-				() => getFollowReadState().recording
-			)
-		},
-		async onFollowReadRecordDurationEnd() {
-			if (this._followReadScoreBusy) return
-			if (getFollowReadState().recording) {
-				const stopRes = await stopFollowReadRecord()
-				await this.onFollowReadAutoEnded(stopRes)
-				return
-			}
-			if (this.recording && !this.followReadScoring) {
-				await new Promise((r) => setTimeout(r, 60))
-				if (!this.recording || this.followReadScoring || this._followReadScoreBusy) return
-				const stopRes = await stopFollowReadRecord()
-				if (stopRes?.ok) await this.onFollowReadAutoEnded(stopRes)
-				else {
-					this.recording = false
-					this.stopFollowReadRecordUi()
-				}
-			}
-		},
-		stopFollowReadRecordUi() {
-			setFollowReadRecordProgressListener(null)
-			if (this._stopFollowReadRecordProgress) {
-				this._stopFollowReadRecordProgress()
-				this._stopFollowReadRecordProgress = null
-			}
-			this.followReadRecordProgress = 0
-			this.followReadScoring = false
-			this.followReadSpeechStarted = false
-		},
 		onPickTab(tab) {
 			const next = String(tab || '')
-			if (!next || next === this.activeTab) return
+			if (!next) return
+			// if (next === '音调') {
+			// 	uni.navigateTo({ url: '/pages/pinyin/tone-lab/index' })
+			// 	return
+			// }
+			// if (next === '声母') {
+			// 	uni.navigateTo({ url: '/pages/pinyin/initial-lab/index' })
+			// 	return
+			// }
+			// if (next === '韵母') {
+			// 	uni.navigateTo({ url: '/pages/pinyin/vowel-lab/index' })
+			// 	return
+			// }
+			// if (next === '整体认读') {
+			// 	uni.navigateTo({ url: '/pages/pinyin/whole-lab/index' })
+			// 	return
+			// }
+			if (next === this.activeTab) return
 			if (this.autoReadRunning) {
 				this.stopAutoReadChain()
 			} else {
 				stopLocalPinyinAudio()
-				cancelFollowReadAutoStop()
 			}
 			if (!this.mountedTabs[next]) {
 				this.$set(this.mountedTabs, next, true)
@@ -890,20 +697,8 @@ export default {
 				})
 			}
 		},
-		async toggleAutoReadPrefer() {
-			if (!this.autoReadPrefer) {
-				const g = await gateAndPrompt(VIP_FEATURE.PINYIN_AUTO_READ)
-				if (!g.ok) return
-			}
-			this.autoReadPrefer = !this.autoReadPrefer
-			if (this.autoReadPrefer) {
-				this.tryAutoStartReadChain()
-			} else if (this.autoReadRunning) {
-				this.stopAutoReadChain()
-			}
-		},
 		tryAutoStartReadChain() {
-			if (!this.autoReadPrefer || this.autoReadRunning || this.recording || this.followReadBusy) {
+			if (!this.autoReadPrefer || this.autoReadRunning) {
 				return
 			}
 			if (!this.autoReadSlots.length) return
@@ -915,7 +710,7 @@ export default {
 		async toggleAutoReadChain() {
 			if (this.autoReadRunning) {
 				this.stopAutoReadChain()
-				uni.showToast({ title: '已停止连读', icon: 'none', duration: 1600 })
+				uni.showToast({ title: '已停止', icon: 'none', duration: 1600 })
 				return
 			}
 			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_AUTO_READ)
@@ -945,26 +740,9 @@ export default {
 			this._pinyinMascotLastRowId = ''
 			this.clearPinyinMascotScrollTimers()
 			this.autoReadRunId += 1
-			this.releaseAutoReadFollowWait(false)
 			stopLocalPinyinAudio()
-			clearFollowReadAutoStopCallback()
-			cancelFollowReadAutoStop()
 			this.cancelAutoReadSpeech()
 			this.setAutoReadHighlight(null)
-			if (this.recording) {
-				stopFollowReadRecord().catch(() => {})
-				this.recording = false
-				this.stopFollowReadRecordUi()
-			}
-			this.followReadBusy = false
-		},
-		releaseAutoReadFollowWait(ok) {
-			if (typeof this._autoReadFollowDone === 'function') {
-				const done = this._autoReadFollowDone
-				this._autoReadFollowDone = null
-				this._autoReadFollowRunId = null
-				done(!!ok)
-			}
 		},
 		cancelAutoReadSpeech() {
 			try {
@@ -1158,20 +936,23 @@ export default {
 			if (!anchorId) return
 			const colIndex = typeof slot.ci === 'number' ? slot.ci : -1
 			const query = uni.createSelectorQuery().in(this)
-			query.selectAll(`#${anchorId} .pflr-cols .pflr-cell`).boundingClientRect()
+			if (colIndex >= 0) {
+				query.select(`#${anchorId} .pflr-cell[data-pflr-ci="${colIndex}"]`).boundingClientRect()
+			}
 			query.select(`#${anchorId} .pflr-cell--reading`).boundingClientRect()
 			query.select(`#${anchorId}`).boundingClientRect()
 			query.exec((res) => {
 				if (!this.autoReadRunning) return
-				const cellRects = res && res[0]
-				const readingCell = res && res[1]
-				const rowRect = res && res[2]
-
+				let ri = 0
 				let cell = null
-				if (Array.isArray(cellRects) && colIndex >= 0 && colIndex < cellRects.length) {
-					const c = cellRects[colIndex]
-					if (c && c.width > 0) cell = c
+				if (colIndex >= 0) {
+					const byCi = res && res[ri]
+					ri += 1
+					if (byCi && byCi.width > 0) cell = byCi
 				}
+				const readingCell = res && res[ri]
+				ri += 1
+				const rowRect = res && res[ri]
 				if (!cell && readingCell && readingCell.width > 0) {
 					cell = readingCell
 				}
@@ -1310,35 +1091,27 @@ export default {
 		},
 		onHomeworkCellSpeak(payload) {
 			if (!payload || payload.syllable == null || payload.syllable === '') return
-			this.selectFollowReadTarget(String(payload.syllable), {})
+			this.handleCellSpeak(String(payload.syllable), {})
 		},
 		onToneHomeworkCell(row, payload) {
 			const idx = payload && typeof payload.index === 'number' ? payload.index : -1
 			const cell = row && row.cells && idx >= 0 ? row.cells[idx] : null
 			if (!cell || cell.disabled) return
-			this.selectFollowReadTarget(cell.play, { asNeutral: cell.asNeutral })
+			this.handleCellSpeak(cell.play, { asNeutral: cell.asNeutral })
 		},
-		selectFollowReadTarget(symbol, opts = {}) {
+		handleCellSpeak(symbol, opts = {}) {
 			const text = String(symbol || '').trim()
 			if (!text) return
-			this.followReadTarget = text
-			this.followReadPlayOpts = opts || {}
 			const slot =
 				this.findAutoReadSlot(text, opts.asNeutral) ||
 				this.buildPlaySlotFromClick(text, opts)
 			if (this.autoReadRunning) {
 				stopLocalPinyinAudio()
-				cancelFollowReadAutoStop()
-				this.releaseAutoReadFollowWait(false)
 				this.autoReadRunId += 1
 				const runId = this.autoReadRunId
 				if (slot) {
 					this.playSlotInChain(slot, runId)
 				}
-				return
-			}
-			if (this.followReadMode) {
-				this.runFollowReadSession(text, opts, slot)
 				return
 			}
 			this.speakSymbolOnce(text, opts, slot)
@@ -1405,9 +1178,7 @@ export default {
 					return playToneGridCell(text, { asNeutral, narrator })
 				}
 				if (this.activeTab === '整体认读') {
-					const played = await playLocalPinyinNeutralThenTone1(text, true)
-					if (played) return true
-					return speakPinyinSymbolAsync(text, narrator)
+					return playWholeLabSymbol(text)
 				}
 				const blend = this.activeTab === '拼读练习'
 				return speakBlendedPinyinSyllable(text, {
@@ -1448,8 +1219,6 @@ export default {
 				return
 			}
 			const opts = { asNeutral: !!slot.asNeutral }
-			this.followReadTarget = text
-			this.followReadPlayOpts = opts
 			if (slot.scrollId) {
 				this.setAutoReadHighlight(slot)
 			}
@@ -1459,24 +1228,15 @@ export default {
 			const ok = await this.playReferenceSymbol(text, opts)
 			if (!this.autoReadRunning || runId !== this.autoReadRunId) return
 
-			if (this.followReadMode) {
-				const frOk = await this.waitFollowReadUntilDone(text, opts, runId)
-				if (!this.autoReadRunning || runId !== this.autoReadRunId) return
-				if (!frOk) {
-					this.stopAutoReadChain()
-					return
-				}
+			let delayMs = 380
+			if (blend && ok) {
+				delayMs = Math.max(520, Date.now() - t0 + 280)
+			} else if (ok) {
+				delayMs = 520
 			} else {
-				let delayMs = 380
-				if (blend && ok) {
-					delayMs = Math.max(520, Date.now() - t0 + 280)
-				} else if (ok) {
-					delayMs = 520
-				} else {
-					delayMs = 320
-				}
-				await this.sleep(delayMs)
+				delayMs = 320
 			}
+			await this.sleep(delayMs)
 
 			if (!this.autoReadRunning || runId !== this.autoReadRunId) return
 			this.advanceAutoReadChain(slot, runId)
@@ -1496,101 +1256,7 @@ export default {
 				this.pinyinMascotPosReady = false
 				this.setAutoReadHighlight(null)
 				recordPinyinAutoReadChainComplete()
-				uni.showToast({ title: '连读完成', icon: 'none', duration: 1800 })
-			}
-		},
-		waitFollowReadUntilDone(symbol, opts, runId) {
-			const text = String(symbol || '').trim()
-			if (!text) return Promise.resolve(false)
-			if (!this.autoReadRunning || runId !== this.autoReadRunId) {
-				return Promise.resolve(false)
-			}
-			if (this.recording || this.followReadBusy) {
-				return Promise.resolve(false)
-			}
-			return new Promise((resolve) => {
-				this._autoReadFollowDone = resolve
-				this._autoReadFollowRunId = runId
-				startFollowReadRecord({
-					symbol: text,
-					autoStop: true,
-					onAutoStop: (stopRes) => this.onFollowReadAutoEnded(stopRes)
-				}).then((res) => {
-					if (!this.autoReadRunning || runId !== this.autoReadRunId) {
-						this.releaseAutoReadFollowWait(false)
-						return
-					}
-					if (!res.ok) {
-						this.releaseAutoReadFollowWait(false)
-						uni.showToast({ title: res.message || '无法开始录音', icon: 'none' })
-						return
-					}
-					this.recording = true
-					this.lastScoreText = ''
-					this.clearFollowReadStatusHint()
-					this.beginFollowReadRecordUi(res)
-				})
-			})
-		},
-		async runFollowReadSession(symbol, opts, slotHint) {
-			const text = String(symbol || '').trim()
-			if (!text) {
-				uni.showToast({ title: '请先点选要跟读的拼音', icon: 'none' })
-				return
-			}
-			if (this.followReadBusy || this.recording) return
-			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_FOLLOW_SCORE, {
-				quotaKey: QUOTA_KEYS.PINYIN_FOLLOW,
-				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.PINYIN_FOLLOW],
-				quotaTitle: '今日跟读评分次数已用完',
-				quotaMessage: '免费版每日可跟读评分 5 次。开通会员后不限次。'
-			})
-			if (!g.ok) return
-			if (this.autoReadRunning) {
-				this.stopAutoReadChain()
-			}
-			this.followReadTarget = text
-			this.followReadPlayOpts = opts || {}
-			if (slotHint?.scrollId) {
-				this.setAutoReadHighlight(slotHint)
-			}
-			this.followReadBusy = true
-			stopLocalPinyinAudio()
-			const played = await this.playReferenceSymbol(text, opts)
-			await this.sleep(played ? 420 : 120)
-			this.followReadBusy = false
-			if (!played) {
-				uni.showToast({ title: '示范播放失败，请重试', icon: 'none' })
-				return
-			}
-			const res = await startFollowReadRecord({
-				symbol: text,
-				autoStop: true,
-				onAutoStop: (stopRes) => this.onFollowReadAutoEnded(stopRes)
-			})
-			if (!res.ok) {
-				uni.showToast({ title: res.message || '无法开始录音', icon: 'none' })
-				return
-			}
-			this.recording = true
-			this.lastScoreText = ''
-			this.clearFollowReadStatusHint()
-			this.beginFollowReadRecordUi(res)
-		},
-		async onFollowReadAutoEnded(stopRes) {
-			if (this._followReadScoreBusy) return
-			this._followReadScoreBusy = true
-			this.recording = false
-			if (this._stopFollowReadRecordProgress) {
-				this._stopFollowReadRecordProgress()
-				this._stopFollowReadRecordProgress = null
-			}
-			this.followReadRecordProgress = 100
-			this.followReadScoring = true
-			try {
-				await this.finishFollowReadScoring(stopRes, true)
-			} finally {
-				this._followReadScoreBusy = false
+				uni.showToast({ title: '读完啦，真棒！', icon: 'none', duration: 1800 })
 			}
 		},
 		goDrill() {
@@ -1598,97 +1264,6 @@ export default {
 		},
 		goGuardian() {
 			uni.navigateTo({ url: '/pages/settings/guardian' })
-		},
-		toggleFollowReadMode() {
-			this.followReadMode = !this.followReadMode
-			if (!this.followReadMode) {
-				this.clearFollowReadStatusHint()
-			}
-		},
-		async stopRecordAndScore() {
-			if (!this.recording || this._followReadScoreBusy) return
-			cancelFollowReadAutoStop()
-			const stopRes = await stopFollowReadRecord()
-			await this.onFollowReadAutoEnded(stopRes)
-		},
-		async finishFollowReadScoring(stopRes, autoEnded) {
-			this.recording = false
-			try {
-			const g = await gateAndPrompt(VIP_FEATURE.PINYIN_FOLLOW_SCORE, {
-				quotaKey: QUOTA_KEYS.PINYIN_FOLLOW,
-				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.PINYIN_FOLLOW],
-				quotaTitle: '今日跟读评分次数已用完',
-				quotaMessage: '免费版每日可跟读评分 5 次。开通会员后不限次。'
-			})
-			if (!g.ok) {
-				const chainWait = typeof this._autoReadFollowDone === 'function'
-				if (chainWait) this.releaseAutoReadFollowWait(false)
-				return
-			}
-			const chainRunId = this._autoReadFollowRunId
-			const chainWait = typeof this._autoReadFollowDone === 'function'
-			if (!stopRes?.ok) {
-				if (chainWait) {
-					this.releaseAutoReadFollowWait(false)
-					if (this.autoReadRunning && chainRunId === this.autoReadRunId) {
-						this.stopAutoReadChain()
-					}
-				}
-				const failMsg = stopRes?.message || '录音结束失败'
-				if (this.followReadMode) {
-					this.setFollowReadStatusHint('没听清，请靠近麦克风', 'warn', 6500)
-				}
-				uni.showToast({ title: failMsg, icon: 'none' })
-				return
-			}
-			this.lastRecordFile = stopRes.tempFilePath || ''
-			const symbol = String(this.followReadTarget || '').trim() || this.activeSymbols[0] || ''
-			const scoreRes = await requestFollowReadScore({
-				symbol,
-				durationMs: stopRes.durationMs,
-				sampleRate: stopRes.sampleRate,
-				tempFilePath: stopRes.tempFilePath,
-				recordFormat: stopRes.recordFormat,
-				recordPcmBuffer: stopRes.recordPcmBuffer,
-				frameCaptureBytes: stopRes.frameCaptureBytes
-			})
-			this.followReadHistory = getFollowReadHistory()
-			const verdict = scoreRes.details?.verdict || ''
-			const simHint = followReadStatusWithSimilarity(scoreRes, symbol)
-			logFollowReadSimilarity(scoreRes, symbol, { source: 'pinyin-index' })
-			if (scoreRes.ok && scoreRes.pass) {
-				recordPinyinFollowPass()
-				this.lastScoreText = simHint || `跟读 ${scoreRes.score} 分`
-				this.setFollowReadStatusHint(this.lastScoreText, 'ok', 4500)
-				playMengmengVoice(MENG_VOICE.PINYIN_FOLLOW_GOOD, { minGapMs: 1200 }).catch(() => {})
-			} else {
-				this.lastScoreText =
-					simHint || scoreRes.message || '跟读未通过，请再试一次'
-				const hint =
-					simHint ||
-					scoreRes.statusHint ||
-					followReadStatusBarHint(verdict, symbol)
-				const hintTtl =
-					verdict === 'analysis_error' || verdict === 'decode_error' ? 8000 : 6500
-				this.setFollowReadStatusHint(hint, 'warn', hintTtl)
-			}
-			if (!chainWait) {
-				uni.showToast({
-					title: followReadToastTitle(scoreRes, symbol),
-					icon: 'none',
-					duration: scoreRes.ok && scoreRes.pass ? 1800 : 2600
-				})
-			}
-			if (chainWait) {
-				this.releaseAutoReadFollowWait(true)
-			}
-			} finally {
-				this.followReadScoring = false
-				this.followReadRecordProgress = 0
-				if (this.followReadDebugPlayEnabled && this.lastRecordFile) {
-					playFollowReadDebugRecording(this.lastRecordFile, { delayMs: 500 })
-				}
-			}
 		}
 	}
 }
@@ -1770,80 +1345,244 @@ export default {
 .pinyin-tab-scroll {
 	width: 100%;
 	flex-shrink: 0;
-	margin-bottom: 18rpx;
+	margin-bottom: 14rpx;
 }
 
 .pinyin-tab-row {
 	display: flex;
 	flex-direction: row;
 	white-space: nowrap;
-	padding: 4rpx 0;
+	padding: 6rpx 4rpx;
 }
 
 .pinyin-tab-chip {
 	display: inline-flex;
-	padding: 12rpx 24rpx;
-	margin-right: 12rpx;
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	min-height: 72rpx;
+	padding: 14rpx 28rpx;
+	margin-right: 14rpx;
 	border-radius: 999rpx;
 	background: rgba(255, 240, 248, 0.92);
-	border: 2rpx solid rgba(255, 180, 200, 0.22);
+	border: 3rpx solid rgba(255, 180, 200, 0.28);
 }
 
 .pinyin-tab-chip--on {
 	background: #ffd4f0;
 	border-color: var(--meng-chip-active-border);
-	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.18);
+	box-shadow: 0 8rpx 20rpx rgba(255, 120, 160, 0.22);
+	transform: scale(1.02);
+}
+
+.pinyin-tab-chip-emoji {
+	font-size: 28rpx;
+	line-height: 1;
 }
 
 .pinyin-tab-chip-text {
-	font-size: 24rpx;
+	font-size: 28rpx;
 	color: var(--meng-text-secondary);
-	font-weight: 500;
+	font-weight: 600;
 }
 
 .pinyin-tab-chip--on .pinyin-tab-chip-text {
 	color: #c44d6a;
+	font-weight: 800;
+}
+
+.pinyin-tap-guide {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	margin-bottom: 14rpx;
+	padding: 18rpx 20rpx;
+	border-radius: 20rpx;
+	background: linear-gradient(135deg, #fff8e8 0%, #ffe8f4 100%);
+	border: 3rpx solid rgba(255, 180, 120, 0.35);
+	box-shadow: 0 6rpx 16rpx rgba(255, 140, 100, 0.12);
+}
+
+.pinyin-tap-guide-emoji {
+	font-size: 36rpx;
+	line-height: 1;
+}
+
+.pinyin-tap-guide-text {
+	font-size: 28rpx;
 	font-weight: 700;
+	color: #8b4518;
+	line-height: 1.35;
+}
+
+.pinyin-reading-banner {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 14rpx;
+	margin-bottom: 14rpx;
+	padding: 18rpx 22rpx;
+	border-radius: 20rpx;
+	background: linear-gradient(135deg, #e8fff0 0%, #fff0f8 100%);
+	border: 3rpx solid rgba(90, 180, 130, 0.35);
+}
+
+.pinyin-reading-banner-label {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #2a8f5c;
+	flex-shrink: 0;
+}
+
+.pinyin-reading-banner-symbol {
+	font-size: 44rpx;
+	font-weight: 800;
+	color: #c44d6a;
+	line-height: 1.2;
+}
+
+.pinyin-reading-banner-symbol--empty {
+	font-size: 32rpx;
+	color: #9a8a80;
 }
 
 .pinyin-mode-bar {
 	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+	flex-shrink: 0;
+	margin-bottom: 14rpx;
+}
+
+.pinyin-lab-scroll {
+	width: 100%;
+	margin-bottom: 4rpx;
+}
+
+.pinyin-lab-row {
+	display: inline-flex;
+	flex-direction: row;
+	gap: 12rpx;
+	padding: 4rpx 4rpx 8rpx;
+}
+
+.pinyin-lab-entry {
+	flex: 0 0 auto;
+	width: 280rpx;
+	min-width: 280rpx;
+	display: flex;
 	flex-direction: row;
 	align-items: center;
-	flex-wrap: nowrap;
 	gap: 10rpx;
-	flex-shrink: 0;
-	margin-bottom: 10rpx;
+	padding: 16rpx 14rpx;
+	border-radius: 22rpx;
+	border: 3rpx solid var(--meng-border-warm);
+	box-shadow: 0 8rpx 18rpx rgba(44, 36, 25, 0.06);
 }
 
-.pinyin-mode-status {
+.pinyin-lab-entry--initial {
+	background: linear-gradient(135deg, #e8f4ff 0%, #f0fff8 100%);
+	border-color: rgba(110, 181, 255, 0.5);
+}
+
+.pinyin-lab-entry--vowel {
+	background: linear-gradient(135deg, #f5e8ff 0%, #ffe8f4 100%);
+	border-color: rgba(201, 122, 255, 0.5);
+}
+
+.pinyin-lab-entry--tone {
+	background: linear-gradient(135deg, #ffe8f4 0%, #fff8e8 100%);
+	border-color: rgba(255, 138, 171, 0.45);
+}
+
+.pinyin-lab-entry--whole {
+	background: linear-gradient(135deg, #fff8e8 0%, #fff5e0 100%);
+	border-color: rgba(232, 160, 32, 0.5);
+}
+
+.pinyin-lab-entry-emoji {
+	font-size: 36rpx;
+}
+
+.pinyin-lab-entry-texts {
 	flex: 1;
 	min-width: 0;
-	padding: 0 6rpx;
-	text-align: center;
 }
 
-.pinyin-mode-status-text {
+.pinyin-lab-entry-title {
 	display: block;
+	font-size: 28rpx;
+	font-weight: 800;
+	color: #2c2419;
+}
+
+.pinyin-lab-entry-sub {
+	display: block;
+	margin-top: 2rpx;
 	font-size: 22rpx;
-	font-weight: 600;
+	color: #6d5e52;
+}
+
+.pinyin-lab-entry-arrow {
+	font-size: 36rpx;
+	font-weight: 700;
+	color: #9a9088;
+	line-height: 1;
+}
+
+.pinyin-lab-entry--initial .pinyin-lab-entry-arrow {
+	color: #6eb5ff;
+}
+
+.pinyin-lab-entry--vowel .pinyin-lab-entry-arrow {
+	color: #c97aff;
+}
+
+.pinyin-lab-entry--tone .pinyin-lab-entry-arrow {
+	color: #ff8aab;
+}
+
+.pinyin-lab-entry--whole .pinyin-lab-entry-arrow {
+	color: #e8a020;
+}
+
+.pinyin-auto-pill {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	min-height: 80rpx;
+	padding: 16rpx 24rpx;
+	border-radius: 999rpx;
+	background: #fff;
+	border: 3rpx solid rgba(200, 191, 176, 0.55);
+	box-shadow: 0 6rpx 14rpx rgba(44, 36, 25, 0.06);
+}
+
+.pinyin-auto-pill--on {
+	background: linear-gradient(135deg, #ffe8f4 0%, #ffd4f0 100%);
+	border-color: #ff8aab;
+	box-shadow: 0 8rpx 18rpx rgba(255, 120, 160, 0.18);
+}
+
+.pinyin-auto-pill-emoji {
+	font-size: 32rpx;
+	line-height: 1;
+}
+
+.pinyin-auto-pill-text {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #5c554c;
+}
+
+.pinyin-auto-pill--on .pinyin-auto-pill-text {
 	color: #c44d6a;
-	line-height: 1.35;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.pinyin-mode-status-text--warn {
-	color: #b84a20;
-}
-
-.pinyin-mode-status-text--ok {
-	color: #2a8f5c;
-}
-
-.follow-read-check {
-	flex-shrink: 0;
 }
 
 .pinyin-scroll-wrap {
@@ -1876,26 +1615,28 @@ export default {
 	box-sizing: border-box;
 }
 
-/* 拼音页放大四线格，便于点读 */
+/* 拼音页放大四线格，便于 3–9 岁点读（触控目标 ≥ 88rpx） */
 .pinyin-content :deep(.pflr--grid) {
-	--pfl-cell-h: 168rpx;
+	--pfl-cell-h: 184rpx;
 }
 
 .pinyin-content :deep(.pflr--tone) {
-	--pfl-cell-h: 132rpx;
+	--pfl-cell-h: 148rpx;
 }
 
 .pinyin-footer {
 	flex-shrink: 0;
-	margin-top: 6rpx;
-	padding: 8rpx 4rpx 4rpx;
-	border-top: 2rpx solid var(--meng-border);
+	margin-top: 10rpx;
+	padding: 12rpx 6rpx 8rpx;
+	border-top: 3rpx solid var(--meng-border);
+	background: rgba(255, 252, 248, 0.96);
+	border-radius: 20rpx 20rpx 0 0;
 }
 
 .pinyin-quick-row {
 	display: flex;
 	flex-direction: row;
-	gap: 14rpx;
+	gap: 16rpx;
 }
 
 .pinyin-quick-btn {
@@ -1904,9 +1645,15 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 14rpx 8rpx;
-	border-radius: 22rpx;
-	box-shadow: 0 8rpx 20rpx rgba(44, 36, 25, 0.08);
+	min-height: 128rpx;
+	padding: 18rpx 12rpx 16rpx;
+	border-radius: 24rpx;
+	box-shadow: 0 10rpx 24rpx rgba(44, 36, 25, 0.1);
+}
+
+.pinyin-quick-btn:active {
+	transform: scale(0.98);
+	opacity: 0.92;
 }
 
 .pinyin-quick-btn--drill {
@@ -1931,16 +1678,37 @@ export default {
 }
 
 .pinyin-quick-emoji {
-	font-size: 32rpx;
-	line-height: 1.2;
+	font-size: 44rpx;
+	line-height: 1.15;
 }
 
 .pinyin-quick-label {
+	margin-top: 6rpx;
+	font-size: 30rpx;
+	font-weight: 800;
+	color: #fff;
+	text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.12);
+}
+
+.pinyin-quick-sub {
 	margin-top: 4rpx;
 	font-size: 22rpx;
-	font-weight: 700;
-	color: #fff;
-	text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.1);
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.92);
+	line-height: 1.25;
+	text-align: center;
+}
+
+.pinyin-parent-link {
+	margin-top: 12rpx;
+	padding: 10rpx 8rpx 4rpx;
+	text-align: center;
+}
+
+.pinyin-parent-link-text {
+	font-size: 22rpx;
+	color: #9a9088;
+	text-decoration: underline;
 }
 
 .pinyin-mascot-wrap {
@@ -1969,21 +1737,22 @@ export default {
 }
 
 .pinyin-mascot {
-	width: 88rpx;
-	height: 88rpx;
-	filter: drop-shadow(0 8rpx 16rpx rgba(196, 77, 106, 0.28));
+	width: 112rpx;
+	height: 112rpx;
+	filter: drop-shadow(0 10rpx 20rpx rgba(196, 77, 106, 0.32));
 }
 
 .pinyin-mascot-hint {
-	margin-top: 4rpx;
-	padding: 6rpx 14rpx;
-	font-size: 18rpx;
-	font-weight: 700;
+	margin-top: 6rpx;
+	padding: 10rpx 20rpx;
+	font-size: 24rpx;
+	font-weight: 800;
 	color: #fff;
-	background: rgba(196, 77, 106, 0.88);
+	background: rgba(196, 77, 106, 0.92);
 	border-radius: 999rpx;
 	line-height: 1.3;
 	white-space: nowrap;
+	box-shadow: 0 6rpx 14rpx rgba(196, 77, 106, 0.25);
 }
 
 .pinyin-mascot-hit:active .pinyin-mascot-hint {
@@ -2129,17 +1898,18 @@ export default {
 }
 .legend {
 	flex-shrink: 0;
-	margin-bottom: 12rpx;
-	padding: 12rpx 6rpx;
+	margin-bottom: 14rpx;
+	padding: 16rpx 12rpx;
 	background: var(--meng-banner-soft);
-	border-radius: 16rpx;
-	border: 2rpx solid var(--meng-border-warm);
+	border-radius: 20rpx;
+	border: 3rpx solid var(--meng-border-warm);
 }
 .legend-title {
 	display: block;
-	font-size: 22rpx;
+	font-size: 26rpx;
+	font-weight: 700;
 	color: #6b6560;
-	margin-bottom: 10rpx;
+	margin-bottom: 12rpx;
 }
 .legend-row {
 	display: flex;
@@ -2147,18 +1917,19 @@ export default {
 	flex-wrap: wrap;
 }
 .legend-chip {
-	margin-right: 10rpx;
-	margin-bottom: 8rpx;
-	padding: 6rpx 12rpx;
+	margin-right: 12rpx;
+	margin-bottom: 10rpx;
+	padding: 10rpx 16rpx;
 	border-radius: 999rpx;
-	border-width: 1rpx;
+	border-width: 2rpx;
 	border-style: solid;
 	box-sizing: border-box;
 }
 .legend-chip-text {
-	font-size: 20rpx;
+	font-size: 24rpx;
 	color: #3e3830;
-	line-height: 1.3;
+	line-height: 1.35;
+	font-weight: 600;
 }
 .drill-practice-bar {
 	display: flex;
@@ -2166,36 +1937,48 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16rpx;
-	margin-bottom: 16rpx;
-	padding: 14rpx 16rpx;
-	border-radius: 16rpx;
+	margin-bottom: 18rpx;
+	padding: 18rpx 18rpx;
+	border-radius: 20rpx;
 	background: var(--meng-banner-soft);
-	border: 2rpx solid var(--meng-border-warm);
+	border: 3rpx solid var(--meng-border-warm);
 	box-sizing: border-box;
 }
 
 .drill-practice-hint {
 	flex: 1;
 	min-width: 0;
-	font-size: 22rpx;
+	font-size: 26rpx;
+	font-weight: 600;
 	color: var(--meng-text-secondary, #6d5e52);
 	line-height: 1.45;
 }
 
 .drill-practice-shuffle {
 	flex-shrink: 0;
-	padding: 10rpx 22rpx;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	min-height: 72rpx;
+	padding: 14rpx 26rpx;
 	border-radius: 999rpx;
 	background: var(--meng-accent-solid);
+	box-shadow: 0 8rpx 18rpx rgba(255, 120, 160, 0.22);
 }
 
 .drill-practice-shuffle--busy {
 	opacity: 0.65;
 }
 
+.drill-practice-shuffle-emoji {
+	font-size: 28rpx;
+	line-height: 1;
+}
+
 .drill-practice-shuffle-text {
-	font-size: 24rpx;
-	font-weight: 600;
+	font-size: 28rpx;
+	font-weight: 700;
 	color: #fff;
 }
 
@@ -2231,20 +2014,20 @@ export default {
 }
 .vowel-block-title {
 	display: block;
-	font-size: 26rpx;
-	font-weight: 700;
+	font-size: 30rpx;
+	font-weight: 800;
 	color: var(--meng-text);
-	margin-bottom: 12rpx;
-	padding-left: 12rpx;
-	border-left: 6rpx solid var(--meng-accent-solid);
+	margin-bottom: 14rpx;
+	padding: 8rpx 0 8rpx 16rpx;
+	border-left: 8rpx solid var(--meng-accent-solid);
 }
 .whole-block-desc {
 	display: block;
-	font-size: 24rpx;
+	font-size: 26rpx;
 	line-height: 1.55;
 	color: #5c554c;
-	margin-bottom: 14rpx;
-	padding: 0 6rpx 0 18rpx;
+	margin-bottom: 16rpx;
+	padding: 0 8rpx 0 20rpx;
 }
 .tone-wrap {
 	margin-bottom: 0;
@@ -2265,10 +2048,10 @@ export default {
 	flex: 1;
 	min-width: 0;
 	text-align: center;
-	font-size: 22rpx;
-	font-weight: 600;
+	font-size: 26rpx;
+	font-weight: 700;
 	color: #6b6560;
-	padding: 8rpx 4rpx;
+	padding: 10rpx 4rpx;
 	box-sizing: border-box;
 	line-height: 1.25;
 }
@@ -2302,18 +2085,3 @@ export default {
 }
 
 </style>
-
-<!-- #ifdef APP-PLUS -->
-<script module="recorderModule" lang="renderjs">
-import 'recorder-core'
-import RecordApp from 'recorder-core/src/app-support/app'
-import '../../uni_modules/Recorder-UniCore/app-uni-support.js'
-import 'recorder-core/src/engine/pcm'
-
-export default {
-	mounted() {
-		RecordApp.UniRenderjsRegister(this)
-	}
-}
-</script>
-<!-- #endif -->

@@ -2,6 +2,7 @@
  * 萌萌语音提示（static/voice/mengmeng/{id}.opus）
  */
 import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
+import { safeInnerAudioPlay } from '@/utils/safe-inner-audio-play.js'
 
 let _ctx = null
 let _gen = 0
@@ -216,7 +217,7 @@ function playMengmengVoiceInner(id, opts = {}) {
 			_lastPlayId = voiceId
 			try {
 				ctx.src = src
-				ctx.play()
+				safeInnerAudioPlay(ctx)
 			} catch (e) {
 				console.warn('[mengmeng-voice] play throw', voiceId, e)
 				finish(false)

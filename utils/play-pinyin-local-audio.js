@@ -8,6 +8,7 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
+import { safeInnerAudioPlay } from '@/utils/safe-inner-audio-play.js'
 
 /** ü */
 const U_UML = '\u00fc'
@@ -32,7 +33,7 @@ function normTone(syll) {
  * 标调位置：a > o > e；iu→u；ui→i；否则最后一个 i/u/ü（与 PinYinSound 转换脚本一致）。
  * @returns {[number, string]|null} [index, vowelKey]
  */
-function vowelMarkIndex(syll) {
+export function vowelMarkIndex(syll) {
 	const s = normTone(syll)
 	if (!s) return null
 	for (let i = 0; i < s.length; i++) {
@@ -58,6 +59,25 @@ function vowelMarkIndex(syll) {
 	}
 	if (lastIdx >= 0) return [lastIdx, lastKey]
 	return null
+}
+
+/**
+ * 标调落在哪个字母（供声调乐园「标调魔法」等）
+ * @returns {{ bare: string, index: number, vowelKey: string, displayLetter: string, ruleKey: string }|null}
+ */
+export function getToneMarkVowelPosition(symbol) {
+	const raw = stripPinyinToneMarks(normTone(symbol))
+	const pos = vowelMarkIndex(raw)
+	if (!pos) return null
+	const [index, vowelKey] = pos
+	let ruleKey = 'last'
+	if (raw.includes('a')) ruleKey = 'a'
+	else if (raw.indexOf('o') >= 0 && vowelKey === 'o') ruleKey = 'o'
+	else if (raw.indexOf('e') >= 0 && vowelKey === 'e') ruleKey = 'e'
+	else if (raw.includes('iu') && vowelKey === 'u') ruleKey = 'iu'
+	else if (raw.includes('ui') && vowelKey === 'i') ruleKey = 'ui'
+	const displayLetter = vowelKey === '\u00fc' ? 'ü' : vowelKey
+	return { bare: raw, index, vowelKey, displayLetter, ruleKey }
 }
 
 /**
@@ -349,7 +369,7 @@ export function playPinyinLocalAudio(src, opts = {}) {
 			if (!settled) finish(() => reject(makePlayAbortedError()))
 		})
 		try {
-			inner.play()
+			safeInnerAudioPlay(inner)
 		} catch (e) {
 			finish(() => reject(e))
 		}
@@ -486,7 +506,7 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 				inner.onError(() => done(false))
 				inner.src = src
 				try {
-					inner.play()
+					safeInnerAudioPlay(inner)
 				} catch (_) {
 					done(false)
 				}

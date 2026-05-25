@@ -15,6 +15,160 @@
 			}
 		},
 		{
+			"path": "pages/pinyin/initial-lab/index",
+			"style": {
+				"navigationBarTitleText": "声母乐园",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/initial-lab/ear",
+			"style": {
+				"navigationBarTitleText": "声母耳朵",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/initial-lab/mouth",
+			"style": {
+				"navigationBarTitleText": "口型朋友",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/initial-lab/group",
+			"style": {
+				"navigationBarTitleText": "同组小能手",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/initial-lab/chart",
+			"style": {
+				"navigationBarTitleText": "声母表",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/whole-lab/index",
+			"style": {
+				"navigationBarTitleText": "整体认读乐园",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/whole-lab/ear",
+			"style": {
+				"navigationBarTitleText": "认读耳朵",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/whole-lab/tip",
+			"style": {
+				"navigationBarTitleText": "认读小贴士",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/whole-lab/group",
+			"style": {
+				"navigationBarTitleText": "同组小能手",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/whole-lab/chart",
+			"style": {
+				"navigationBarTitleText": "整体认读表",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/vowel-lab/index",
+			"style": {
+				"navigationBarTitleText": "韵母乐园",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/vowel-lab/ear",
+			"style": {
+				"navigationBarTitleText": "韵母耳朵",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/vowel-lab/mouth",
+			"style": {
+				"navigationBarTitleText": "发音小贴士",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/vowel-lab/group",
+			"style": {
+				"navigationBarTitleText": "同组小能手",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/vowel-lab/chart",
+			"style": {
+				"navigationBarTitleText": "韵母表",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/index",
+			"style": {
+				"navigationBarTitleText": "声调乐园",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/ear",
+			"style": {
+				"navigationBarTitleText": "四声耳朵",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/body",
+			"style": {
+				"navigationBarTitleText": "四声身体",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/match",
+			"style": {
+				"navigationBarTitleText": "调号朋友",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/mark",
+			"style": {
+				"navigationBarTitleText": "标调魔法",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/words",
+			"style": {
+				"navigationBarTitleText": "四声词语",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/pinyin/tone-lab/chart",
+			"style": {
+				"navigationBarTitleText": "四声词典",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/dictionary/index",
 			"style": {
 				"navigationBarTitleText": "查字",
@@ -95,13 +249,6 @@
 			"path": "pages/literacy/lesson-quiz",
 			"style": {
 				"navigationBarTitleText": "本课小测",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/lesson-follow",
-			"style": {
-				"navigationBarTitleText": "跟读",
 				"navigationStyle": "custom"
 			}
 		},
@@ -188,14 +335,6 @@
 				"navigationBarTitleText": "调试日志",
 				"navigationBarBackgroundColor": "#252526",
 				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/debug/record-test",
-			"style": {
-				"navigationBarTitleText": "录音测试",
-				"navigationBarBackgroundColor": "#F6F3EC",
-				"navigationBarTextStyle": "black"
 			}
 		}
 	],

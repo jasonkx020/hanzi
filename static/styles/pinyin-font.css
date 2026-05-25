@@ -5,20 +5,37 @@
  * 全项目拼音（四线三格、纯文本）统一用本字体；App/小程序另见 utils/pinyin-font-loader.js
  */
 @font-face {
-	font-family: 'Pinyin Regular';
-	src: url('/static/fonts/Pinyin-Regular.ttf') format('truetype');
+	font-family: 'pinyin-regular';
+	src: url('/static/fonts/pinyin-regular.ttf') format('truetype'),
+	url('/static/fonts/pinyin-regular.woff2') format('woff2');
 	font-weight: 100 900;
 	font-style: normal;
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'pinyin-step';
+	src: url('/static/fonts/pinyin-step.ttf') format('truetype'),
+	url('/static/fonts/pinyin-step.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+
 :root,
 page {
-	--meng-pinyin-font-family: 'Pinyin Regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+	--meng-pinyin-font-family: 'pinyin-regular', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
 }
 
 .font-pinyin {
 	font-family: var(--meng-pinyin-font-family);
+	font-weight: normal;
+	font-synthesis: none;
+}
+
+.font-pinyin-step {
+	font-family: 'pinyin-step', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
 	font-weight: normal;
 	font-synthesis: none;
 }

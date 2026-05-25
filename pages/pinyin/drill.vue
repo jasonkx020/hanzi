@@ -171,8 +171,12 @@ export default {
 			return '没关系，萌萌陪你多练几次～'
 		}
 	},
-	onLoad() {
+	onLoad(options) {
 		uni.setNavigationBarTitle({ title: '拼音大闯关' })
+		const cat = options?.category || options?.cat
+		if (cat && this.categories.some((c) => c.key === cat)) {
+			this.selectedCategory = cat
+		}
 		this.refreshStats()
 	},
 	onUnload() {

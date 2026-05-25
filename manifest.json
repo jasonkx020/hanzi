@@ -48,16 +48,12 @@
                     "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
                     "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
                     "<uses-feature android:name=\"android.hardware.camera\"/>",
-                    "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
                     "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
                 ]
             },
             /* ios打包配置 */
             "ios" : {
-                "dSYMs" : false,
-                "privacyDescription" : {
-                    "NSMicrophoneUsageDescription" : "用于拼音跟读练习，录制你的读音并给出鼓励反馈"
-                }
+                "dSYMs" : false
             },
             "sdkConfigs" : {}
         }

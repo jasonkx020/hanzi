@@ -2,7 +2,7 @@
  * uni-app 旧版 canvas API（uni.createCanvasContext）跨端封装。
  * App / 各端小程序 / H5 能力不一致，调用前应先 isLegacyCanvasApiAvailable()。
  */
-import { isAppPlus, isMpWeixin } from '@/utils/pinyin-follow-read-platform.js'
+import { isAppPlus, isMpWeixin } from '@/utils/uni-platform.js'
 
 /** 当前运行环境是否提供旧版 canvas 绘制 API */
 export function isLegacyCanvasApiAvailable() {
