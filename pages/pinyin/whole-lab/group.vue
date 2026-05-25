@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="同组小能手" subtitle="同一组音节，听音辨认" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">
@@ -17,13 +17,16 @@
 				</view>
 			</view>
 			<view class="symbol-grid symbol-grid--group">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="symbol-btn font-pinyin"
-					:class="{ 'symbol-btn--picked': pickedIndex === i, 'symbol-btn--long': (opt.symbol || '').length > 2 }"
+					class="symbol-grid-item"
+					:symbol="opt.symbol"
+					category-tab="整体认读"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>{{ opt.symbol }}</view>
+				/>
 			</view>
 			<view v-if="feedback" class="quiz-feedback" :class="'quiz-feedback--' + feedback">
 				<text>{{ feedback === 'ok' ? '辨对啦！' : '都是好朋友，再听清一点' }}</text>
@@ -34,6 +37,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { WHOLE_GROUP_QUIZ_PASS, WHOLE_GROUP_QUIZ_TOTAL } from '@/utils/pinyin-whole-lab/constants.js'
 import { buildWholeGroupQuestions } from '@/utils/pinyin-whole-lab/quiz.js'
 import {
@@ -45,7 +49,7 @@ import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell },
 	data() {
 		return {
 			questions: buildWholeGroupQuestions(WHOLE_GROUP_QUIZ_TOTAL),
@@ -182,7 +186,6 @@ export default {
 .quiz-play-btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 16rpx 32rpx;
 	border-radius: 999rpx;
 	background: #e8a020;
@@ -192,32 +195,14 @@ export default {
 	font-weight: 800;
 	color: #fff;
 }
-.symbol-grid--group .symbol-btn {
-	width: calc(33.33% - 11rpx);
-	min-height: 88rpx;
-	font-size: 40rpx;
-}
 .symbol-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
-.symbol-btn {
+.symbol-grid-item {
+	width: calc(33.33% - 11rpx);
 	box-sizing: border-box;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: 800;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-}
-.symbol-btn--long {
-	font-size: 32rpx;
-}
-.symbol-btn--picked {
-	border-color: #e8a020;
-	background: #fff8e8;
+	margin: 0 8rpx 10rpx 0;
 }
 .quiz-feedback {
 	margin-top: 20rpx;

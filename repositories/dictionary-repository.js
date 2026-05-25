@@ -10,9 +10,9 @@ import {
 } from '@/data/dictionary-detail.js'
 import { getCachedDictionaryDetail, setCachedDictionaryDetail } from '@/utils/dictionary-cache.js'
 import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
+import { loadHanziWriterCharData } from '@/utils/hanzi-writer-data-loader.js'
 
 const STROKE_CACHE = Object.create(null)
-const HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
 
 /** 拼音文案：折叠空白 trim */
 function trimPinyinText(s) {
@@ -171,25 +171,6 @@ function buildWordsFallback(hanzi, row, allRows) {
 	return words
 }
 
-function fetchJson(url) {
-	return new Promise((resolve, reject) => {
-		uni.request({
-			url,
-			method: 'GET',
-			success(res) {
-				if (res.statusCode >= 200 && res.statusCode < 300) {
-					resolve(res.data || {})
-					return
-				}
-				reject(new Error(`request failed: ${res.statusCode}`))
-			},
-			fail(err) {
-				reject(err)
-			}
-		})
-	})
-}
-
 async function inferStrokeCountNetwork(hanzi) {
 	if (!hanzi) return '待补充'
 	if (STROKE_CACHE[hanzi] !== undefined) return STROKE_CACHE[hanzi]
@@ -200,8 +181,7 @@ async function inferStrokeCountNetwork(hanzi) {
 		return n
 	}
 	try {
-		const url = `${HANZI_WRITER_DATA_BASE}/${encodeURIComponent(hanzi)}.json`
-		const data = await fetchJson(url)
+		const data = await loadHanziWriterCharData(hanzi)
 		const n = Array.isArray(data?.strokes) ? data.strokes.length : NaN
 		if (Number.isFinite(n) && n > 0) {
 			STROKE_CACHE[hanzi] = n

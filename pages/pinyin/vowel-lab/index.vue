@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="韵母乐园" subtitle="听一听，韵母就会啦" avatar-pose="happy" :overlap-body="true">
 		<view class="lab-map">
 			<view v-for="lv in levels" :key="lv.id" class="lab-map-node-wrap">

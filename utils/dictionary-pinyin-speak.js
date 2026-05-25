@@ -1,5 +1,5 @@
 /**
- * 查字页：汉字读音按完整拼音播本地 opus（失败则 TTS），不拆声母介母韵母；不使用 cnchar.voice。
+ * 查字页：汉字读音按完整拼音播本地 opus（失败不 TTS），不拆声母介母韵母；不使用 cnchar.voice。
  */
 import {
 	beginHanziDictionarySpeakDebug,

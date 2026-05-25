@@ -192,7 +192,6 @@ export default {
 	display: inline-flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 12rpx;
 	padding: 18rpx 36rpx;
 	border-radius: 999rpx;
 	background: var(--meng-accent-solid, #ff8aab);
@@ -222,7 +221,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
 
 .ear-cell {

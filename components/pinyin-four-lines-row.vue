@@ -12,8 +12,6 @@
 
 				'pflr--metric-shift': metricShift,
 
-				'pflr--reading-glow': highlightColumnIndex >= 0,
-
 				'pflr--auto-wrap': autoWrap
 
 			}
@@ -71,7 +69,6 @@
 						:style="cellFlexStyle(col, line)"
 
 						@tap.stop="onCellTap(col)"
-						@click.stop="onCellTap(col)"
 
 					>
 
@@ -179,7 +176,9 @@ export default {
 
 			unitOverrides: {},
 
-			_layoutPass: 0
+			_layoutPass: 0,
+
+			_lastCellTapAt: 0
 
 		}
 
@@ -559,6 +558,10 @@ export default {
 
 					if (row.width + pad > cell.width) {
 
+						const hi = this.highlightColumnIndex
+
+						if (hi >= 0 && idx === hi) continue
+
 						const ratio = (row.width + pad) / cell.width
 
 						const need = Math.max(next[idx] || 1, ratio * 1.08)
@@ -596,6 +599,12 @@ export default {
 			const syl = String(col.syl || '').trim()
 
 			if (!syl) return
+
+			const now = Date.now()
+
+			if (now - this._lastCellTapAt < 280) return
+
+			this._lastCellTapAt = now
 
 			this.$emit('cell-click', { index: col.index, syllable: syl })
 
@@ -865,6 +874,10 @@ export default {
 
 	z-index: 2;
 
+	background-color: rgba(255, 236, 246, 0.5);
+
+	box-shadow: inset 0 0 0 3rpx rgba(255, 138, 171, 0.65);
+
 }
 
 
@@ -877,17 +890,9 @@ export default {
 
 
 
-.pflr--reading-glow .pflr-sheet {
-
-	box-shadow: 0 0 0 4rpx rgba(255, 120, 150, 0.55), 0 8rpx 24rpx rgba(196, 77, 106, 0.28);
-
-}
-
-
-
 .pflr-cell--reading .pflr-glyphs-row {
 
-	transform: scale(1.12) translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
+	transform: translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
 
 }
 
@@ -897,17 +902,17 @@ export default {
 
 	color: #c44d6a;
 
-	font-weight: 600;
-
 }
 
 
 
 .pflr-glyph--tone {
 
-	font-size: 1em;
+	font-size: 1.08em;
 
 	line-height: 1;
+
+	font-weight: 700;
 
 }
 
@@ -915,9 +920,7 @@ export default {
 
 .pflr-cell--reading .pflr-glyph--tone {
 
-	font-size: 1.08em;
-
-	font-weight: 600;
+	color: #c44d6a;
 
 }
 
@@ -1073,6 +1076,8 @@ export default {
 
 	--pfl-cell-h: 116rpx;
 
+	--pfl-tone-mark-scale: 1.14;
+
 }
 
 
@@ -1080,6 +1085,8 @@ export default {
 .pflr--tone .pflr-sheet {
 
 	height: var(--pfl-cell-h);
+
+	border-radius: 12rpx;
 
 }
 
@@ -1089,7 +1096,15 @@ export default {
 
 .pflr--tone .pflr-glyph {
 
-	font-size: calc(var(--pfl-cell-h) * 46 / 58);
+	font-size: calc(var(--pfl-cell-h) * 48 / 58);
+
+}
+
+
+
+.pflr--tone .pflr-glyph--tone {
+
+	font-size: calc(var(--pfl-cell-h) * 48 / 58 * var(--pfl-tone-mark-scale));
 
 }
 
@@ -1097,15 +1112,7 @@ export default {
 
 .pflr--tone .pflr-cell--reading .pflr-glyphs-row {
 
-	transform: scale(1.16) translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
-
-}
-
-
-
-.pflr--tone .pflr-cell--reading .pflr-glyph--tone {
-
-	font-size: 1.12em;
+	transform: translateY(calc(var(--pfl-cell-h) * var(--pfl-baseline-shift)));
 
 }
 

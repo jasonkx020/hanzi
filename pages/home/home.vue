@@ -70,15 +70,15 @@
 							<text class="cta-sub">按课识字</text>
 						</view>
 					</view>
-					<view class="cta-btn cta-btn--pinyin" @click="goPinyin">
+					<!-- <view class="cta-btn cta-btn--pinyin" @click="goPinyin">
 						<view class="cta-icon-ring">
 							<image class="cta-icon-img" :src="assets.tab.learnActive" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col">
 							<text class="cta-label">拼音学习</text>
-							<text class="cta-sub">跟读与拼读</text>
+							<text class="cta-sub">{{ pinyinCtaSub }}</text>
 						</view>
-					</view>
+					</view> -->
 				</view>
 
 				<view class="quick-grid">
@@ -94,7 +94,7 @@
 						</view>
 						<text class="quick-label">气球营</text>
 					</view>
-					<view class="quick-tile" @click="goDictionary">
+<!-- 					<view class="quick-tile" @click="goDictionary">
 						<view class="quick-icon-ring quick-icon-ring--sky">
 							<image class="quick-icon" :src="assets.tab.catalogActive" mode="aspectFit" />
 						</view>
@@ -105,7 +105,7 @@
 							<image class="quick-icon" :src="assets.logoIcon" mode="aspectFit" />
 						</view>
 						<text class="quick-label">教材</text>
-					</view>
+					</view> -->
 				</view>
 
 				<meng-ad-banner placement="home_banner" mock-title="和萌萌一起，每天识字一点点" />
@@ -144,6 +144,7 @@ import {
 	playMengmengVoiceOnce,
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 
 const HERO_POSES = ['wave', 'book', 'happy']
 
@@ -169,6 +170,9 @@ export default {
 		}
 	},
 	computed: {
+		pinyinCtaSub() {
+			return isPinyinBlendTrainingEnabled() ? '跟读与拼读' : '声母韵母跟读'
+		},
 		heroMascotPose() {
 			if (this.mascotFallback) return 'book'
 			return HERO_POSES[this.heroDotIndex % HERO_POSES.length] || 'wave'

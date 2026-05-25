@@ -5,14 +5,14 @@
  * App / 小程序：用 uni.loadFontFace 注册本地 static 字体；失败时仍可由 CSS @font-face 兜底。
  */
 
-import { resolveAppStaticAbsoluteUrl, resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
+import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
 
 /** 与 .font-pinyin / @font-face 的 font-family 一致 */
 export const PINYIN_FONT_FAMILY = 'pinyin-regular'
 
-/** 优先小写路径（与 pinyin-font.css 一致），兼容旧文件名 */
+/** 与 static/fonts 实际文件名一致；App loadFontFace 优先 TTF */
 const PINYIN_FONT_WEB_PATHS = [
-	'/static/fonts/pinyin-regular.ttf',
+	'/static/fonts/Pinyin-Regular.ttf',
 	'/static/fonts/pinyin-regular.woff2'
 ]
 
@@ -30,7 +30,8 @@ let loadPromise = null
 let warnedOnce = false
 
 /**
- * 生成 loadFontFace 的 source 候选（App 优先本地绝对路径，避免 NetworkError）
+ * 生成 loadFontFace 的 source 候选。
+ * App 端官方推荐 url('/static/...') 或 url('_www/static/...')；勿用 storage 绝对路径（易 NetworkError）。
  * @returns {string[]}
  */
 function buildPinyinFontFaceSources() {
@@ -44,31 +45,16 @@ function buildPinyinFontFaceSources() {
 		out.push(v)
 	}
 
-	// #ifdef APP-PLUS
-	try {
-		if (typeof plus !== 'undefined' && plus.io?.convertLocalFileSystemURL) {
-			for (const web of PINYIN_FONT_WEB_PATHS) {
-				const logical = resolveAppStaticLogicalUrl(web)
-				if (!logical) continue
-				try {
-					const abs = plus.io.convertLocalFileSystemURL(logical)
-					if (abs) push(`url("${abs}")`)
-				} catch (_) {}
-			}
-		}
-	} catch (_) {}
-	for (const web of PINYIN_FONT_WEB_PATHS) {
-		const abs = resolveAppStaticAbsoluteUrl(web)
-		if (abs) {
-			const fileUrl = /^file:\/\//i.test(abs) ? abs : `file://${String(abs).replace(/^\//, '')}`
-			push(`url("${fileUrl}")`)
-		}
-	}
-	// #endif
-
 	for (const web of PINYIN_FONT_WEB_PATHS) {
 		push(`url("${web}")`)
 	}
+
+	// #ifdef APP-PLUS
+	for (const web of PINYIN_FONT_WEB_PATHS) {
+		const logical = resolveAppStaticLogicalUrl(web)
+		if (logical) push(`url("${logical}")`)
+	}
+	// #endif
 
 	return out
 }
@@ -85,7 +71,12 @@ function loadFontFaceOnce(source) {
 				source,
 				global: true,
 				success: () => resolve(true),
-				fail: () => resolve(false)
+				fail: (err) => {
+					if (!warnedOnce) {
+						console.warn('[pinyin-font] loadFontFace fail', source, err?.errMsg || err)
+					}
+					resolve(false)
+				}
 			})
 		} catch (_) {
 			resolve(false)

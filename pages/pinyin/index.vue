@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<view
 		class="page tab-page-shell tab-page-shell--edge tab-root-page pinyin-page"
 		:class="{ 'pinyin-page--letters': isLetterPinyinTab }"
@@ -171,16 +171,32 @@
 					</view>
 				</view>
 			</view>
-			<view v-if="mountedTabs['音调']" v-show="activeTab === '音调'" class="pinyin-tab-panel">
-				<view v-for="block in toneTabBlocksData" :key="block.key" class="vowel-block">
+			<view v-if="mountedTabs['音调']" v-show="activeTab === '音调'" class="pinyin-tab-panel pinyin-tab-panel--tone">
+				<view v-for="block in toneTabBlocksData" :key="block.key" class="vowel-block vowel-block--tone">
 					<text class="vowel-block-title">{{ block.title }}</text>
+					<view class="tone-kid-tip">
+						<text class="tone-kid-tip-emoji">🎼</text>
+						<text class="tone-kid-tip-text">左边是「没声调」的拼音；右边四格分别是平平、上扬、拐弯、下落，点格子听一听</text>
+					</view>
 					<view class="tone-wrap">
 						<view class="tone-header-row">
-							<text v-for="lab in toneColumnLabels" :key="block.key + '-' + lab" class="tone-head-cell">{{ lab }}</text>
+							<view class="tone-stem-head">
+								<text class="tone-stem-head-k">原形</text>
+							</view>
+							<view
+								v-for="meta in toneColumnMeta"
+								:key="block.key + '-th-' + meta.tone"
+								class="tone-head-cell"
+								:style="toneHeadCellStyle(meta)"
+							>
+								<text class="tone-head-symbol" :style="{ color: meta.color }">{{ meta.symbol }}</text>
+								<text class="tone-head-label">{{ meta.label }}</text>
+								<text class="tone-head-kid" :style="{ color: meta.color }">{{ meta.kidLabel }}</text>
+							</view>
 						</view>
 						<view
 							v-for="(row, rowIdx) in block.rows"
-							:key="block.key + '-row-' + row.bare"
+							:key="block.key + '-row-' + row.bareStem"
 							class="pinyin-chunk-anchor tone-data-row"
 							:class="{ 'tone-data-row--reading': autoReadToneRowActive(block.key, rowIdx) }"
 						>
@@ -192,18 +208,22 @@
 								:id="autoReadScrollIdForToneRow(block.key, rowIdx)"
 								class="tone-data-row-inner"
 							>
-							<view class="pinyin-homework-wrap">
-								<pinyin-four-lines-row
-									size="tone"
-									interactive
-									:sheet-bg="row.cat.bg"
-									:sheet-bd="row.cat.bd"
-									:highlight-column-index="autoReadToneHighlightCol(block.key, rowIdx)"
-									:syllables="toneRowDisplays(row)"
-									font-class="font-pinyin-step"
-									@cell-click="onToneHomeworkCell(row, $event)"
-								/>
-							</view>
+								<view
+									class="tone-stem-chip"
+									:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
+								>
+									<text class="tone-stem-chip-symbol font-pinyin">{{ row.stemLabel }}</text>
+								</view>
+								<view class="pinyin-homework-wrap tone-pflr-wrap">
+									<pinyin-four-lines-row
+										size="tone"
+										interactive
+										:highlight-column-index="autoReadToneHighlightCol(block.key, rowIdx)"
+										:syllables="toneRowDisplays(row)"
+										font-class="font-pinyin-step"
+										@cell-click="onToneHomeworkCell(row, $event)"
+									/>
+								</view>
 							</view>
 						</view>
 					</view>
@@ -259,7 +279,7 @@
 					>
 						<view class="pinyin-content">
 							<view
-								v-if="mountedTabs['拼读练习']"
+								v-if="blendTrainingEnabled && mountedTabs['拼读练习']"
 								v-show="activeTab === '拼读练习'"
 								class="pinyin-tab-panel pinyin-homework-strip"
 							>
@@ -304,7 +324,7 @@
 						</view>
 					</scroll-view>
 
-					<view class="pinyin-footer">
+					<view v-if="blendTrainingEnabled" class="pinyin-footer">
 						<view class="pinyin-quick-row">
 							<view class="pinyin-quick-btn pinyin-quick-btn--drill" @click="goDrill">
 								<text class="pinyin-quick-emoji">🎯</text>
@@ -393,14 +413,13 @@ const WHOLE_READING_SECTIONS = WHOLE_SECTIONS.map((s) => ({
 	symbols: s.symbols
 }))
 import {
-	applyToneToSyllableStem,
 	playLocalPinyinNeutralThenTone1,
 	playToneGridCell,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
-import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
+import { buildToneRows } from '@/utils/pinyin-tone-lab/tone-rows.js'
+import { TONE_META } from '@/utils/pinyin-tone-lab/constants.js'
 import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
-import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
@@ -408,6 +427,8 @@ import MengTabHero from '@/components/meng-tab-hero.vue'
 import tabMain from '@/mixins/tab-main-page.js'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import { MENG_VOICE, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
+import { measurePinyinScrollHeightPx } from '@/utils/pinyin-layout-compat.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 
 export default {
 	mixins: [tabMain],
@@ -422,7 +443,6 @@ export default {
 			mengMascotIp: MENG_ASSETS.ip.book,
 			// tabList: ['声母', '韵母', '整体认读', '音调', '拼读练习'],
 			tabList: ['声母', '韵母', '整体认读', '音调'],
-			toneColumnLabels: ['一声', '二声', '三声', '四声'],
 			activeTab: '声母',
 			symbolMap: {
 				声母: INITIAL_SECTIONS_VIEW.flatMap((s) => s.symbols),
@@ -484,12 +504,12 @@ export default {
 			{
 				key: 'final',
 				title: '韵母',
-				rows: this.buildToneRows(this.symbolMap['韵母'] || [], '韵母')
+				rows: buildToneRows(this.symbolMap['韵母'] || [], '韵母')
 			},
 			{
 				key: 'whole',
 				title: '整体认读',
-				rows: this.buildToneRows(this.symbolMap['整体认读'] || [], '整体认读')
+				rows: buildToneRows(this.symbolMap['整体认读'] || [], '整体认读')
 			}
 		]
 		this._slotsInitial = autoReadSlotsFromSectionViews(this.tabViewInitial)
@@ -499,9 +519,15 @@ export default {
 		this._slotsTone = autoReadSlotsFromToneBlocks(this.toneTabBlocksData)
 	},
 	computed: {
+		toneColumnMeta() {
+			return TONE_META
+		},
+		blendTrainingEnabled() {
+			return isPinyinBlendTrainingEnabled()
+		},
 		/** 声母 / 韵母 / 整体认读 / 音调：不用 scroll-view，走页面滚动 */
 		isLetterPinyinTab() {
-			return this.activeTab !== '拼读练习'
+			return !this.blendTrainingEnabled || this.activeTab !== '拼读练习'
 		},
 		pinyinScrollStyle() {
 			const h = this.scrollAreaHeightPx
@@ -575,7 +601,9 @@ export default {
 	onShow() {
 		this.setTabBarIndex(1)
 		this.narrator = getAudioNarrator()
-		this.refreshDrillPracticePool()
+		if (this.blendTrainingEnabled) {
+			this.refreshDrillPracticePool()
+		}
 		this.scheduleMeasureScrollHeight(80)
 		this.scheduleMeasureScrollHeight(320)
 		playMengmengVoiceOnce(MENG_VOICE.PINYIN_FOLLOW_START, 'meng_voice_pinyin_tab')
@@ -623,6 +651,7 @@ export default {
 			uni.navigateTo({ url: '/pages/pinyin/whole-lab/index' })
 		},
 		async refreshDrillPracticePool(userInitiated = false) {
+			if (!this.blendTrainingEnabled) return
 			if (this.drillPracticeLoading) return
 			if (userInitiated) {
 				const g = await gateAndPrompt(VIP_FEATURE.DRILL_UNLIMITED, {
@@ -658,6 +687,7 @@ export default {
 		onPickTab(tab) {
 			const next = String(tab || '')
 			if (!next) return
+			if (next === '拼读练习' && !this.blendTrainingEnabled) return
 			// if (next === '音调') {
 			// 	uni.navigateTo({ url: '/pages/pinyin/tone-lab/index' })
 			// 	return
@@ -1068,6 +1098,14 @@ export default {
 							if (next !== this.scrollAreaHeightPx) {
 								this.scrollAreaHeightPx = next
 							}
+						} else {
+							const fallback = measurePinyinScrollHeightPx(
+								wrap && wrap.top > 0 ? Math.round(wrap.top) : 280,
+								foot && foot.height ? Math.round(foot.height) : 72
+							)
+							if (fallback > 80 && fallback !== this.scrollAreaHeightPx) {
+								this.scrollAreaHeightPx = fallback
+							}
 						}
 					})
 				} catch (_) {}
@@ -1114,7 +1152,13 @@ export default {
 				}
 				return
 			}
-			this.speakSymbolOnce(text, opts, slot)
+			stopLocalPinyinAudio()
+			this.cancelAutoReadSpeech()
+			const speakId = (this._cellSpeakId = (this._cellSpeakId || 0) + 1)
+			this.speakSymbolOnce(text, opts, slot).catch((e) => {
+				if (speakId !== this._cellSpeakId) return
+				console.warn('[pinyin] cell speak', text, e)
+			})
 		},
 		buildPlaySlotFromClick(symbol, opts) {
 			const text = String(symbol || '').trim()
@@ -1128,21 +1172,12 @@ export default {
 				sectionTitle: ''
 			}
 		},
-		buildToneRows(symbols, categoryTab) {
-			return (symbols || []).map((sym) => {
-				const bare = stripPinyinToneMarks(String(sym).trim().toLowerCase())
-				const cat = getPinyinSymbolCategory(sym, categoryTab)
-				const cells = [1, 2, 3, 4].map((t) => {
-					const stem = applyToneToSyllableStem(bare, t)
-					return {
-						display: stem || '—',
-						play: stem,
-						asNeutral: false,
-						disabled: !stem
-					}
-				})
-				return { bare: sym, cat, cells }
-			})
+		toneHeadCellStyle(meta) {
+			const c = meta && meta.color ? meta.color : '#5b9bd5'
+			return {
+				borderColor: c + '55',
+				backgroundColor: c + '14'
+			}
 		},
 		entriesForSymbols(symbols) {
 			const tab = this.activeTab
@@ -1180,7 +1215,7 @@ export default {
 				if (this.activeTab === '整体认读') {
 					return playWholeLabSymbol(text)
 				}
-				const blend = this.activeTab === '拼读练习'
+				const blend = this.blendTrainingEnabled && this.activeTab === '拼读练习'
 				return speakBlendedPinyinSyllable(text, {
 					narrator,
 					useTone1Fb: false,
@@ -1198,13 +1233,16 @@ export default {
 		async speakSymbolOnce(symbol, opts, slotHint) {
 			const text = String(symbol || '').trim()
 			if (!text) return
+			const speakId = this._cellSpeakId
 			const slot = slotHint || this.findAutoReadSlot(text, opts?.asNeutral)
 			if (slot?.scrollId) {
 				this.setAutoReadHighlight(slot)
 			}
 			await this.playReferenceSymbol(text, opts)
+			if (speakId !== this._cellSpeakId) return
 			if (!this.autoReadRunning) {
 				await this.sleep(480)
+				if (speakId !== this._cellSpeakId) return
 				if (!this.autoReadRunning) {
 					this.setAutoReadHighlight(null)
 				}
@@ -1224,7 +1262,7 @@ export default {
 			}
 
 			const t0 = Date.now()
-			const blend = this.activeTab === '拼读练习'
+			const blend = this.blendTrainingEnabled && this.activeTab === '拼读练习'
 			const ok = await this.playReferenceSymbol(text, opts)
 			if (!this.autoReadRunning || runId !== this.autoReadRunId) return
 
@@ -1260,6 +1298,7 @@ export default {
 			}
 		},
 		goDrill() {
+			if (!this.blendTrainingEnabled) return
 			uni.navigateTo({ url: '/pages/pinyin/drill' })
 		},
 		goGuardian() {
@@ -1271,7 +1310,9 @@ export default {
 
 <style scoped>
 .pinyin-page {
+	min-height: 100%;
 	min-height: 100vh;
+	height: 100%;
 	height: 100vh;
 	max-height: 100vh;
 	display: flex;
@@ -1279,8 +1320,6 @@ export default {
 	box-sizing: border-box;
 	overflow: hidden;
 	width: 100%;
-	/* 为底部悬浮 tabBar 预留，避免玻璃面板下方露大段空白 */
-	padding-bottom: calc(108rpx + env(safe-area-inset-bottom));
 }
 
 /* 字母 Tab：整页自然滚动，不用内层 scroll-view */
@@ -1359,7 +1398,6 @@ export default {
 	display: inline-flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 8rpx;
 	min-height: 72rpx;
 	padding: 14rpx 28rpx;
 	margin-right: 14rpx;
@@ -1396,7 +1434,6 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	gap: 12rpx;
 	margin-bottom: 14rpx;
 	padding: 18rpx 20rpx;
 	border-radius: 20rpx;
@@ -1422,7 +1459,6 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	gap: 14rpx;
 	margin-bottom: 14rpx;
 	padding: 18rpx 22rpx;
 	border-radius: 20rpx;
@@ -1452,7 +1488,6 @@ export default {
 .pinyin-mode-bar {
 	display: flex;
 	flex-direction: column;
-	gap: 12rpx;
 	flex-shrink: 0;
 	margin-bottom: 14rpx;
 }
@@ -1465,7 +1500,6 @@ export default {
 .pinyin-lab-row {
 	display: inline-flex;
 	flex-direction: row;
-	gap: 12rpx;
 	padding: 4rpx 4rpx 8rpx;
 }
 
@@ -1476,7 +1510,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 10rpx;
 	padding: 16rpx 14rpx;
 	border-radius: 22rpx;
 	border: 3rpx solid var(--meng-border-warm);
@@ -1555,7 +1588,6 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
-	gap: 12rpx;
 	min-height: 80rpx;
 	padding: 16rpx 24rpx;
 	border-radius: 999rpx;
@@ -1621,7 +1653,7 @@ export default {
 }
 
 .pinyin-content :deep(.pflr--tone) {
-	--pfl-cell-h: 148rpx;
+	--pfl-cell-h: 156rpx;
 }
 
 .pinyin-footer {
@@ -1636,7 +1668,6 @@ export default {
 .pinyin-quick-row {
 	display: flex;
 	flex-direction: row;
-	gap: 16rpx;
 }
 
 .pinyin-quick-btn {
@@ -1815,7 +1846,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 10rpx;
 	flex: 1;
 	min-width: 0;
 }
@@ -1936,7 +1966,6 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16rpx;
 	margin-bottom: 18rpx;
 	padding: 18rpx 18rpx;
 	border-radius: 20rpx;
@@ -1959,7 +1988,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 8rpx;
 	min-height: 72rpx;
 	padding: 14rpx 26rpx;
 	border-radius: 999rpx;
@@ -1999,12 +2027,7 @@ export default {
 	width: 100%;
 }
 
-.clamp-2 {
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-	overflow: hidden;
-}
+/* 截断见全局 pinyin-layout-compat.css（含 Android 5 回退） */
 
 .vowel-block {
 	margin-bottom: 28rpx;
@@ -2029,9 +2052,38 @@ export default {
 	margin-bottom: 16rpx;
 	padding: 0 8rpx 0 20rpx;
 }
+.tone-kid-tip {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	margin-bottom: 16rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 20rpx;
+	background: linear-gradient(135deg, #fff8e8 0%, #fff3f8 100%);
+	border: 2rpx solid rgba(255, 180, 120, 0.35);
+	box-sizing: border-box;
+}
+
+.tone-kid-tip-emoji {
+	font-size: 34rpx;
+	line-height: 1.2;
+	margin-right: 10rpx;
+	flex-shrink: 0;
+}
+
+.tone-kid-tip-text {
+	flex: 1;
+	min-width: 0;
+	font-size: 24rpx;
+	line-height: 1.5;
+	color: #5c554c;
+	font-weight: 600;
+}
+
 .tone-wrap {
 	margin-bottom: 0;
 }
+
 .tone-header-row,
 .tone-data-row {
 	display: flex;
@@ -2040,26 +2092,144 @@ export default {
 	width: 100%;
 	box-sizing: border-box;
 }
+
 .tone-header-row {
-	margin-bottom: 10rpx;
+	margin-bottom: 12rpx;
 	padding: 0 2rpx;
 }
+
+.tone-stem-head,
+.tone-stem-chip {
+	flex-shrink: 0;
+	width: 108rpx;
+	box-sizing: border-box;
+}
+
+.tone-stem-head {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 8rpx 6rpx;
+}
+
+.tone-stem-head-k {
+	font-size: 22rpx;
+	font-weight: 800;
+	color: #8a8278;
+}
+
 .tone-head-cell {
 	flex: 1;
 	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 	text-align: center;
-	font-size: 26rpx;
-	font-weight: 700;
-	color: #6b6560;
-	padding: 10rpx 4rpx;
+	padding: 12rpx 6rpx;
+	margin-left: 8rpx;
+	border-radius: 18rpx;
+	border-width: 3rpx;
+	border-style: solid;
 	box-sizing: border-box;
-	line-height: 1.25;
 }
+
+.tone-head-symbol {
+	font-size: 36rpx;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.tone-head-label {
+	margin-top: 4rpx;
+	font-size: 24rpx;
+	font-weight: 800;
+	color: #3d3832;
+	line-height: 1.2;
+}
+
+.tone-head-kid {
+	margin-top: 2rpx;
+	font-size: 20rpx;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
 .tone-data-row {
-	margin-bottom: 12rpx;
+	margin-bottom: 14rpx;
 }
+
 .tone-data-row:last-child {
 	margin-bottom: 0;
+}
+
+.tone-stem-chip {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 156rpx;
+	margin-right: 8rpx;
+	padding: 10rpx 8rpx;
+	border-radius: 18rpx;
+	border-width: 3rpx;
+	border-style: solid;
+	box-shadow: 0 6rpx 14rpx rgba(44, 36, 25, 0.06);
+}
+
+.tone-stem-chip-symbol {
+	font-size: 40rpx;
+	font-weight: 700;
+	color: #2c4a5c;
+	line-height: 1.1;
+}
+
+.tone-pflr-wrap {
+	flex: 1;
+	min-width: 0;
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(1) .pflr-sheet) {
+	background: rgba(91, 155, 213, 0.1);
+	border-color: rgba(91, 155, 213, 0.38);
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(2) .pflr-sheet) {
+	background: rgba(112, 173, 71, 0.1);
+	border-color: rgba(112, 173, 71, 0.38);
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(3) .pflr-sheet) {
+	background: rgba(255, 192, 0, 0.12);
+	border-color: rgba(255, 192, 0, 0.45);
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(4) .pflr-sheet) {
+	background: rgba(237, 125, 49, 0.1);
+	border-color: rgba(237, 125, 49, 0.38);
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(1) .pflr-glyph--tone) {
+	color: #4a8bc4;
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(2) .pflr-glyph--tone) {
+	color: #5a9a42;
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(3) .pflr-glyph--tone) {
+	color: #c99200;
+}
+
+.tone-pflr-wrap :deep(.pflr-cols .pflr-cell:nth-child(4) .pflr-glyph--tone) {
+	color: #d06828;
+}
+
+.tone-data-row--reading .tone-stem-chip {
+	box-shadow: 0 0 0 4rpx rgba(255, 138, 171, 0.35);
+}
+
+.tone-data-row--reading .tone-pflr-wrap :deep(.pflr-cell--reading .pflr-sheet) {
+	box-shadow: inset 0 0 0 3rpx rgba(196, 77, 106, 0.35);
 }
 /* 作业本式：整块共用一行四线三格 */
 .pinyin-homework-strip {

@@ -1,6 +1,7 @@
 /**
  * 拼音闯关题库（与人教版拼音页分类一致）
  */
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 
 const INITIAL_SYMBOLS = [
 	'b',
@@ -76,13 +77,23 @@ const WHOLE_SYMBOLS = [
 
 const BLEND_SYMBOLS = ['ba', 'bo', 'ma', 'de', 'du', 'ge', 'hua', 'xue', 'qiu', 'zhan', 'cheng', 'shi']
 
-export const PINYIN_DRILL_CATEGORIES = [
+const PINYIN_DRILL_CATEGORIES_ALL = [
 	{ key: 'initial', label: '声母', emoji: '🔤', desc: '听音选出正确的声母' },
 	{ key: 'vowel', label: '韵母', emoji: '🎵', desc: '听音选出正确的韵母' },
 	{ key: 'whole', label: '整体认读', emoji: '⭐', desc: '听音选出整体认读音节' },
 	{ key: 'blend', label: '拼读', emoji: '🧩', desc: '听拼读，选出完整音节（优先当前教材识字表）' },
 	{ key: 'mix', label: '综合', emoji: '🌈', desc: '声母、韵母、拼读混合挑战' }
 ]
+
+/** 闯关大厅展示的分类（拼读训练关闭时不含「拼读」） */
+export const PINYIN_DRILL_CATEGORIES = (isPinyinBlendTrainingEnabled()
+	? PINYIN_DRILL_CATEGORIES_ALL
+	: PINYIN_DRILL_CATEGORIES_ALL.filter((c) => c.key !== 'blend')
+).map((c) =>
+	c.key === 'mix' && !isPinyinBlendTrainingEnabled()
+		? { ...c, desc: '声母、韵母、整体认读混合挑战' }
+		: c
+)
 
 const POOLS = {
 	initial: INITIAL_SYMBOLS,
@@ -104,8 +115,12 @@ export const PINYIN_DRILL_OPTION_COUNT = 3
 export function getDrillPool(categoryKey) {
 	const key = String(categoryKey || 'mix')
 	if (key === 'mix') {
-		const merged = [...INITIAL_SYMBOLS, ...VOWEL_SYMBOLS.slice(0, 12), ...BLEND_SYMBOLS]
+		const merged = [...INITIAL_SYMBOLS, ...VOWEL_SYMBOLS.slice(0, 12)]
+		if (isPinyinBlendTrainingEnabled()) merged.push(...BLEND_SYMBOLS)
 		return [...new Set(merged)]
+	}
+	if (key === 'blend' && !isPinyinBlendTrainingEnabled()) {
+		return []
 	}
 	return (POOLS[key] || []).slice()
 }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="口型朋友" subtitle="看口型，听声音，选声母" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">
@@ -20,13 +20,16 @@
 			</view>
 			<text class="quiz-question">口型像上面这样，是哪个声母？</text>
 			<view class="letter-grid">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="letter-btn font-pinyin"
-					:class="{ 'letter-btn--picked': pickedIndex === i }"
+					class="letter-grid-item"
+					:symbol="opt.symbol"
+					category-tab="声母"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>{{ opt.symbol }}</view>
+				/>
 			</view>
 			<view v-if="feedback" class="quiz-feedback" :class="'quiz-feedback--' + feedback">
 				<text>{{ feedback === 'ok' ? '口型对啦！' : '再看看口型提示' }}</text>
@@ -37,6 +40,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import InitialMouthCard from '@/components/initial-mouth-card.vue'
 import { INITIAL_MOUTH_QUIZ_PASS } from '@/utils/pinyin-initial-lab/constants.js'
 import { buildInitialMouthQuestions } from '@/utils/pinyin-initial-lab/quiz.js'
@@ -53,7 +57,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage, InitialMouthCard },
+	components: { MengSubPage, InitialMouthCard, PinyinLabCell },
 	data() {
 		return {
 			questions: buildInitialMouthQuestions(),
@@ -170,7 +174,6 @@ export default {
 .quiz-play-btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 16rpx 32rpx;
 	border-radius: 999rpx;
 	background: #6eb5ff;
@@ -190,24 +193,11 @@ export default {
 .letter-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
-.letter-btn {
+.letter-grid-item {
 	width: calc(50% - 8rpx);
 	box-sizing: border-box;
-	min-height: 96rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 48rpx;
-	font-weight: 800;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-}
-.letter-btn--picked {
-	border-color: #6eb5ff;
-	background: #f0f8ff;
+	margin: 0 8rpx 10rpx 0;
 }
 .quiz-feedback {
 	margin-top: 20rpx;

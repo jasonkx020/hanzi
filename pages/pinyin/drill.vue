@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="拼音大闯关" subtitle="听音选拼音，集小星星">
 		<!-- 大厅 -->
 		<view v-if="phase === 'lobby'" class="lobby">
@@ -107,6 +107,7 @@ import {
 	playDrillSymbol,
 	stopDrillAudio
 } from '@/services/pinyin-drill-service.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 
 export default {
 	components: {
@@ -174,7 +175,9 @@ export default {
 	onLoad(options) {
 		uni.setNavigationBarTitle({ title: '拼音大闯关' })
 		const cat = options?.category || options?.cat
-		if (cat && this.categories.some((c) => c.key === cat)) {
+		if (cat === 'blend' && !isPinyinBlendTrainingEnabled()) {
+			this.selectedCategory = 'initial'
+		} else if (cat && this.categories.some((c) => c.key === cat)) {
 			this.selectedCategory = cat
 		}
 		this.refreshStats()
@@ -197,7 +200,7 @@ export default {
 			}
 		},
 		isBlendCategory() {
-			return this.selectedCategory === 'blend'
+			return isPinyinBlendTrainingEnabled() && this.selectedCategory === 'blend'
 		},
 		async startRound() {
 			if (this.starting) return
@@ -471,7 +474,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 16rpx;
 	margin-bottom: 16rpx;
 }
 
@@ -502,7 +504,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	justify-content: center;
-	gap: 12rpx;
 	margin-bottom: 20rpx;
 }
 
@@ -563,7 +564,6 @@ export default {
 	flex-direction: row;
 	flex-wrap: wrap;
 	justify-content: center;
-	gap: 16rpx;
 	margin-bottom: 24rpx;
 }
 

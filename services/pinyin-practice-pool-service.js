@@ -14,6 +14,7 @@ import {
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { getDrillPool } from '@/data/pinyin-drill-pools.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 
 /** 与拼音页原硬编码一致，识字表不足时兜底 */
 export const FALLBACK_BLEND_SYLLABLES = [
@@ -228,6 +229,7 @@ export async function describePinyinPracticeSource(options = {}) {
 export async function getDrillPoolFromCurriculum(categoryKey) {
 	const key = String(categoryKey || 'mix')
 	if (key === 'blend') {
+		if (!isPinyinBlendTrainingEnabled()) return getDrillPool('whole')
 		const fromBook = await pickRandomPinyinPracticeSyllables(32)
 		return fromBook.length >= 3 ? fromBook : getDrillPool('blend')
 	}

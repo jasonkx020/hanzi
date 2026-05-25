@@ -1,0 +1,248 @@
+/**
+ * 拼音页 / 乐园子页布局兼容（Android 5+ WebView，Chrome 37 系）
+ * - 不用 flex gap（旧版无效）
+ * - safe-area 使用 constant() 回退
+ * - 不用 inset 简写
+ * - vh 辅以 px 最小高度
+ */
+
+/* ---------- 拼音 Tab 主页面 ---------- */
+.pinyin-page {
+	min-height: 100%;
+	padding-bottom: calc(108rpx + constant(safe-area-inset-bottom));
+	padding-bottom: calc(108rpx + env(safe-area-inset-bottom, 0px));
+}
+
+.pinyin-page {
+	height: 100%;
+	min-height: 100vh;
+	max-height: 100vh;
+}
+
+.pinyin-page--letters {
+	height: auto;
+	max-height: none;
+}
+
+.pinyin-tab-chip > .pinyin-tab-chip-text {
+	margin-left: 8rpx;
+}
+
+.pinyin-tap-guide > .pinyin-tap-guide-text {
+	margin-left: 12rpx;
+}
+
+.pinyin-reading-banner > .pinyin-reading-banner-symbol {
+	margin-left: 14rpx;
+}
+
+.pinyin-mode-bar > .pinyin-lab-scroll {
+	margin-top: 12rpx;
+}
+
+.pinyin-lab-row > .pinyin-lab-entry + .pinyin-lab-entry {
+	margin-left: 12rpx;
+}
+
+.pinyin-lab-entry > .pinyin-lab-entry-texts {
+	margin-left: 10rpx;
+}
+
+.pinyin-lab-entry > .pinyin-lab-entry-arrow {
+	margin-left: 10rpx;
+}
+
+.pinyin-auto-pill > .pinyin-auto-pill-text {
+	margin-left: 12rpx;
+}
+
+.pinyin-quick-row > .pinyin-quick-btn + .pinyin-quick-btn {
+	margin-left: 16rpx;
+}
+
+.follow-read-check > .follow-read-label {
+	margin-left: 10rpx;
+}
+
+.drill-practice-bar > .drill-practice-shuffle {
+	margin-left: 16rpx;
+}
+
+.drill-practice-shuffle > .drill-practice-shuffle-text {
+	margin-left: 8rpx;
+}
+
+/* ---------- 乐园测验 / 表（共用 class 名，仅拼音目录使用） ---------- */
+.quiz-play-btn > .quiz-play-label {
+	margin-left: 12rpx;
+}
+
+.quiz-play-btn > text + text,
+.quiz-play-btn > .quiz-play-label {
+	margin-left: 12rpx;
+}
+
+.chart-sec-head > .chart-sec-texts {
+	margin-left: 12rpx;
+}
+
+.letter-grid,
+.symbol-grid,
+.ear-grid,
+.body-grid,
+.mark-letter-grid {
+	margin-right: -16rpx;
+	margin-bottom: -16rpx;
+}
+
+.letter-grid > .letter-btn,
+.symbol-grid > .symbol-btn,
+.ear-grid > .ear-cell,
+.body-grid > .body-cell,
+.mark-letter-grid > .mark-letter-btn {
+	margin-right: 16rpx;
+	margin-bottom: 16rpx;
+}
+
+.letter-grid > .letter-btn,
+.symbol-grid > .symbol-btn {
+	box-sizing: border-box;
+}
+
+.chart-cells {
+	margin-right: -12rpx;
+	margin-bottom: -12rpx;
+}
+
+.chart-cells > .chart-cell {
+	margin-right: 12rpx;
+	margin-bottom: 12rpx;
+}
+
+.chart-page {
+	min-height: 480px;
+	min-height: 60vh;
+}
+
+.chart-scroll {
+	height: 520px;
+	height: 65vh;
+}
+
+.tone-chart-page {
+	min-height: 480px;
+	min-height: 60vh;
+}
+
+.tone-chart-scroll {
+	max-height: 520px;
+	max-height: 62vh;
+}
+
+/* drill 闯关 */
+.play-head > .play-head-text {
+	margin-left: 16rpx;
+}
+
+.track-row > .track-dot + .track-dot {
+	margin-left: 12rpx;
+}
+
+.opts {
+	margin-right: -16rpx;
+	margin-bottom: -16rpx;
+}
+
+.opts > .opt-card {
+	margin-right: 16rpx;
+	margin-bottom: 16rpx;
+}
+
+.words-comic-row > .words-comic-card + .words-comic-card {
+	margin-left: 12rpx;
+}
+
+.match-pair-row > .match-pair-card + .match-pair-card {
+	margin-left: 14rpx;
+}
+
+.mark-tone-row > .mark-tone-btn + .mark-tone-btn {
+	margin-left: 4rpx;
+}
+
+.mark-pick-row > .mark-pick-btn + .mark-pick-btn {
+	margin-left: 12rpx;
+}
+
+.mark-rules-row > .mark-rule-card + .mark-rule-card {
+	margin-left: 12rpx;
+}
+
+.mark-syllable > .mark-ch + .mark-ch {
+	margin-left: 4rpx;
+}
+
+.chart-tabs > .chart-tab + .chart-tab {
+	margin-left: 12rpx;
+}
+
+.chart-row-cells > .chart-cell + .chart-cell {
+	margin-left: 6rpx;
+}
+
+.match-options > .match-opt + .match-opt {
+	margin-top: 14rpx;
+}
+
+.words-comic-row > .words-comic-cell + .words-comic-cell {
+	margin-left: 10rpx;
+}
+
+.ear-play-btn > .ear-play-emoji + .ear-play-label,
+.ear-play-btn > .ear-play-label {
+	margin-left: 12rpx;
+}
+
+.words-options {
+	margin-right: -12rpx;
+	margin-bottom: -12rpx;
+}
+
+.words-options > .words-opt {
+	margin-right: 12rpx;
+	margin-bottom: 12rpx;
+	width: calc(50% - 12rpx);
+	box-sizing: border-box;
+}
+
+.symbol-grid--group {
+	margin-right: -12rpx;
+	margin-bottom: -12rpx;
+}
+
+.symbol-grid--group > .symbol-btn {
+	margin-right: 12rpx;
+	margin-bottom: 12rpx;
+}
+
+.letter-grid--group {
+	margin-right: -12rpx;
+	margin-bottom: -12rpx;
+}
+
+/* 文本截断：旧 WebView 保留 -webkit-box */
+.clamp-2 {
+	display: block;
+	max-height: 2.8em;
+	line-height: 1.4em;
+	overflow: hidden;
+}
+
+@supports (-webkit-line-clamp: 2) {
+	.clamp-2 {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		max-height: none;
+	}
+}

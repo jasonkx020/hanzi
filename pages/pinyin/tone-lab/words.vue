@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="四声词语" subtitle="同一个音，意思不一样" avatar-pose="book" :overlap-body="true">
 		<view class="words-page">
 			<view class="ear-progress">
@@ -7,7 +7,14 @@
 			</view>
 
 			<view v-if="comicSet" class="words-comic">
-				<text class="words-comic-title font-pinyin">{{ comicSet.title }}</text>
+				<pinyin-lab-cell
+					v-if="comicSet"
+					class="words-comic-title-cell"
+					:symbol="comicSet.title"
+					category-tab="韵母"
+					size="grid"
+					:interactive="false"
+				/>
 				<view class="words-comic-row">
 					<view
 						v-for="it in comicSet.items"
@@ -54,6 +61,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { WORDS_QUIZ_PASS } from '@/utils/pinyin-tone-lab/constants.js'
 import { buildWordsQuizQuestions } from '@/utils/pinyin-tone-lab/quiz.js'
 import { TONE_WORD_COMIC_SETS } from '@/utils/pinyin-tone-lab/words-data.js'
@@ -70,7 +78,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell },
 	data() {
 		return {
 			questions: buildWordsQuizQuestions(),
@@ -212,19 +220,15 @@ export default {
 	border: 3rpx solid var(--meng-border-warm);
 }
 
-.words-comic-title {
+.words-comic-title-cell {
 	display: block;
-	text-align: center;
-	font-size: 30rpx;
-	font-weight: 800;
-	color: #6d5e52;
-	margin-bottom: 12rpx;
+	margin: 0 auto 12rpx;
+	max-width: 420rpx;
 }
 
 .words-comic-row {
 	display: flex;
 	flex-direction: row;
-	gap: 10rpx;
 }
 
 .words-comic-cell {
@@ -284,7 +288,6 @@ export default {
 	display: inline-flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 12rpx;
 	padding: 16rpx 32rpx;
 	border-radius: 999rpx;
 	background: var(--meng-accent-solid, #ff8aab);
@@ -304,7 +307,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 12rpx;
 }
 
 .words-opt {

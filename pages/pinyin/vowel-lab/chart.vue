@@ -11,16 +11,16 @@
 						</view>
 					</view>
 					<view class="chart-cells">
-						<view
+						<pinyin-lab-cell
 							v-for="sym in sec.symbols"
 							:key="sym"
-							class="chart-cell"
-							:class="{ 'chart-cell--on': playingKey === sec.sectionKey + sym }"
-							:style="{ backgroundColor: cellColor(sym).bg, borderColor: cellColor(sym).bd }"
+							class="chart-cells-item"
+							:symbol="sym"
+							category-tab="韵母"
+							size="compact"
+							:active="playingKey === sec.sectionKey + sym"
 							@click="onPlay(sym, sec.sectionKey)"
-						>
-							<text class="chart-cell-text font-pinyin">{{ sym }}</text>
-						</view>
+						/>
 					</view>
 				</view>
 			</scroll-view>
@@ -31,13 +31,13 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { VOWEL_SECTIONS } from '@/utils/pinyin-vowel-lab/sections.js'
-import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
 import { playVowelLabSymbol } from '@/utils/pinyin-vowel-lab/play.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell },
 	data() {
 		return {
 			sections: VOWEL_SECTIONS,
@@ -53,9 +53,6 @@ export default {
 		stopLocalPinyinAudio()
 	},
 	methods: {
-		cellColor(sym) {
-			return getPinyinSymbolCategory(sym, '韵母')
-		},
 		async onPlay(sym, sectionKey) {
 			if (this.busy) return
 			this.busy = true
@@ -80,7 +77,7 @@ export default {
 }
 .chart-scroll {
 	flex: 1;
-	height: 65vh;
+	height: 85vh;
 }
 .chart-sec {
 	margin-bottom: 24rpx;
@@ -93,7 +90,6 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: flex-start;
-	gap: 12rpx;
 	margin-bottom: 14rpx;
 }
 .chart-sec-emoji {
@@ -119,30 +115,15 @@ export default {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 12rpx;
 }
-.chart-cell {
-	min-width: 88rpx;
-	padding: 18rpx 20rpx;
-	border-radius: 18rpx;
-	border-width: 3rpx;
-	border-style: solid;
-	text-align: center;
-}
-.chart-cell--on {
-	transform: scale(1.05);
-	box-shadow: 0 8rpx 16rpx rgba(44, 36, 25, 0.12);
-}
-.chart-cell-text {
-	font-size: 40rpx;
-	font-weight: 800;
-	color: #2c2419;
+.chart-cells-item {
+	margin: 0 10rpx 10rpx 0;
 }
 .chart-foot {
 	display: block;
 	margin-top: 12rpx;
 	text-align: center;
 	font-size: 24rpx;
-	color: #9a9088;
+	color: #009a9088;
 }
 </style>

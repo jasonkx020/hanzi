@@ -1,3 +1,8 @@
+import {
+	loadHanziWriterCharData,
+	setHanziWriterDataPrimaryBase
+} from '@/utils/hanzi-writer-data-loader.js'
+
 const TYPE = {
 	NORMAL: 'normal',
 	ANIMATION: 'animation',
@@ -65,10 +70,8 @@ function parseCanvasId(el) {
 	return el.replace(/^#/, '') || 'cnchar-draw-native'
 }
 
-const CHAR_DATA_CACHE = Object.create(null)
 const SVG_PATH_CACHE = Object.create(null)
 const WORD_NOT_FOUND_CALLBACKS = []
-let HANZI_WRITER_DATA_BASE = 'https://unpkg.com/hanzi-writer-data@latest'
 
 function mergeOption(type, input = {}) {
 	const style = input.style || {}
@@ -102,31 +105,8 @@ function triggerWordNotFound(word) {
 	})
 }
 
-function requestJSON(url) {
-	return new Promise((resolve, reject) => {
-		uni.request({
-			url,
-			method: 'GET',
-			success(res) {
-				if (res.statusCode >= 200 && res.statusCode < 300) {
-					resolve(res.data)
-					return
-				}
-				reject(new Error(`request failed: ${res.statusCode}`))
-			},
-			fail(err) {
-				reject(err)
-			}
-		})
-	})
-}
-
 async function loadCharData(char) {
-	if (CHAR_DATA_CACHE[char]) return CHAR_DATA_CACHE[char]
-	const url = `${HANZI_WRITER_DATA_BASE}/${encodeURIComponent(char)}.json`
-	const data = await requestJSON(url)
-	CHAR_DATA_CACHE[char] = data
-	return data
+	return loadHanziWriterCharData(char)
 }
 
 function tokenizePath(path) {
@@ -1535,7 +1515,7 @@ drawNative.TYPE = TYPE
 drawNative.TEST_STATUS = TEST_STATUS
 drawNative.setResourceBase = (url) => {
 	if (typeof url === 'string' && url.trim()) {
-		HANZI_WRITER_DATA_BASE = url.replace(/\/$/, '')
+		setHanziWriterDataPrimaryBase(url)
 	}
 }
 drawNative.onWordNotFound = (callback) => {

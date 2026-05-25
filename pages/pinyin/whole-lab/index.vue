@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="整体认读乐园" subtitle="整音节记住，不用拼" avatar-pose="happy" :overlap-body="true">
 		<view class="lab-map">
 			<view v-for="lv in levels" :key="lv.id" class="lab-map-node-wrap">

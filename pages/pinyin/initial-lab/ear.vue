@@ -14,13 +14,16 @@
 			</view>
 			<text class="quiz-question">你听到的是哪个声母？</text>
 			<view class="letter-grid">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="letter-btn font-pinyin"
-					:class="{ 'letter-btn--picked': pickedIndex === i }"
+					class="letter-grid-item"
+					:symbol="opt.symbol"
+					category-tab="声母"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>{{ opt.symbol }}</view>
+				/>
 			</view>
 			<view v-if="feedback" class="quiz-feedback" :class="'quiz-feedback--' + feedback">
 				<text>{{ feedback === 'ok' ? '太棒啦！' : '再听一遍' }}</text>
@@ -31,6 +34,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { INITIAL_EAR_QUIZ_PASS } from '@/utils/pinyin-initial-lab/constants.js'
 import { buildInitialEarQuestions } from '@/utils/pinyin-initial-lab/quiz.js'
 import {
@@ -45,7 +49,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell },
 	data() {
 		return {
 			questions: buildInitialEarQuestions(),
@@ -166,7 +170,6 @@ export default {
 	margin-top: 16rpx;
 	display: inline-flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 18rpx 36rpx;
 	border-radius: 999rpx;
 	background: #6eb5ff;
@@ -186,24 +189,11 @@ export default {
 .letter-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
-.letter-btn {
+.letter-grid-item {
 	width: calc(50% - 8rpx);
 	box-sizing: border-box;
-	min-height: 100rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 52rpx;
-	font-weight: 800;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-}
-.letter-btn--picked {
-	border-color: #6eb5ff;
-	background: #f0f8ff;
+	margin: 0 8rpx 10rpx 0;
 }
 .quiz-feedback {
 	margin-top: 20rpx;

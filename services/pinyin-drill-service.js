@@ -6,8 +6,8 @@ import {
 	playLocalPinyinNeutralThenTone1,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
-import { speakPinyinSymbolAsync } from '@/utils/speak-pinyin-symbol.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 import { starsForDrillScore } from '@/data/pinyin-drill-pools.js'
 import { recordPinyinPractice } from '@/utils/achievement-stats-storage.js'
 
@@ -76,7 +76,7 @@ export async function playDrillSymbol(symbol, opts = {}) {
 	if (!text) return false
 	stopLocalPinyinAudio()
 	const narrator = getAudioNarrator()
-	if (opts.blend) {
+	if (opts.blend && isPinyinBlendTrainingEnabled()) {
 		return speakBlendedPinyinSyllable(text, {
 			narrator,
 			useTone1Fb: true,
@@ -84,9 +84,7 @@ export async function playDrillSymbol(symbol, opts = {}) {
 			showFailToast: false
 		})
 	}
-	const local = await playLocalPinyinNeutralThenTone1(text, true)
-	if (local) return true
-	return speakPinyinSymbolAsync(text, narrator)
+	return playLocalPinyinNeutralThenTone1(text, true)
 }
 
 export function stopDrillAudio() {

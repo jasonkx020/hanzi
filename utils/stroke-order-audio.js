@@ -172,14 +172,14 @@ export async function playStrokeGuidanceAudio(strokeIndexZeroBased, label, optio
 
 	if (aborted()) return false
 
-	let ok = false
-	if (prefix.length) {
-		ok = (await playStrokeSyllableSequence(prefix, seqBase)) || ok
-	}
-	if (aborted()) return ok
-	if (!strokeSyl.length) return ok
-	if (!(await sleepUnlessCancelled(pauseMs, aborted))) return ok
-	if (aborted()) return ok
+	// let ok = false
+	// if (prefix.length) {
+	// 	ok = (await playStrokeSyllableSequence(prefix, seqBase)) || ok
+	// }
+	// if (aborted()) return ok
+	// if (!strokeSyl.length) return ok
+	// if (!(await sleepUnlessCancelled(pauseMs, aborted))) return ok
+	// if (aborted()) return ok
 	const okStroke = await playStrokeSyllableSequence(strokeSyl, {
 		...seqBase,
 		gapMs: options.strokeGapMs != null ? options.strokeGapMs : gapMs,

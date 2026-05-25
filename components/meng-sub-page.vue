@@ -333,7 +333,13 @@ export default {
 
 	position: absolute;
 
-	inset: 0;
+	left: 0;
+
+	top: 0;
+
+	right: 0;
+
+	bottom: 0;
 
 	z-index: 1;
 
@@ -357,7 +363,11 @@ export default {
 
 	align-items: center;
 
-	gap: 16rpx;
+}
+
+.meng-sub-page__hero-inner > .meng-sub-page__text {
+
+	margin-left: 16rpx;
 
 }
 
@@ -435,7 +445,9 @@ export default {
 
 .meng-sub-page__body--pad {
 
-	padding: 0 28rpx calc(32rpx + env(safe-area-inset-bottom));
+	padding: 0 28rpx calc(32rpx + constant(safe-area-inset-bottom));
+
+	padding: 0 28rpx calc(32rpx + env(safe-area-inset-bottom, 0px));
 
 }
 
@@ -451,7 +463,9 @@ export default {
 
 	flex-direction: column;
 
-	padding-bottom: env(safe-area-inset-bottom);
+	padding-bottom: constant(safe-area-inset-bottom);
+
+	padding-bottom: env(safe-area-inset-bottom, 0px);
 
 }
 

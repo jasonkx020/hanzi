@@ -2,6 +2,23 @@ import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { applyToneToSyllableStem } from '@/utils/play-pinyin-local-audio.js'
 import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
 
+/** 儿童界面展示无声调原形（v → ü） */
+export function formatBareStemDisplay(bare) {
+	return String(bare || '')
+		.trim()
+		.replace(/v/g, 'ü')
+}
+
+function normalizeTonedSyllable(stem) {
+	const s = String(stem || '').trim()
+	if (!s) return ''
+	try {
+		return s.normalize('NFC')
+	} catch (_) {
+		return s
+	}
+}
+
 /**
  * @param {string[]} symbols
  * @param {string} categoryTab
@@ -12,15 +29,22 @@ export function buildToneRows(symbols, categoryTab) {
 		const cat = getPinyinSymbolCategory(sym, categoryTab)
 		const cells = [1, 2, 3, 4].map((t) => {
 			const stem = applyToneToSyllableStem(bare, t)
+			const toned = normalizeTonedSyllable(stem)
 			return {
-				display: stem || '—',
-				play: stem,
+				display: toned || '—',
+				play: toned,
 				tone: t,
 				asNeutral: false,
-				disabled: !stem
+				disabled: !toned
 			}
 		})
-		return { bare: sym, bareStem: bare, cat, cells }
+		return {
+			bare: sym,
+			bareStem: bare,
+			stemLabel: formatBareStemDisplay(bare),
+			cat,
+			cells
+		}
 	})
 }
 

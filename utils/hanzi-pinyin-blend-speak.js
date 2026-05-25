@@ -1,5 +1,5 @@
 /**
- * 汉字 → cnchar/字库拼音 → 按完整音节查找本地 opus 播放（失败则 TTS）。
+ * 汉字 → cnchar/字库拼音 → 按完整音节查找本地 opus 播放（失败不 TTS）。
  * 默认不拆声母/介母/韵母；仅 opts.blend===true 时走拼读拆分（如拼音页「拼读练习」）。
  * 不使用 cnchar.voice。
  */
@@ -7,9 +7,10 @@ import { listSpellReadingsForHanzi, parsePinyinDisplayToReadings } from '@/utils
 import { splitPinyinBlendParts } from '@/utils/pinyin-blend-parts.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
-import { getAudioNarrator, getAudioNarratorLabel } from '@/utils/audio-settings.js'
+import { getAudioNarrator } from '@/utils/audio-settings.js'
+import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 import { playLocalPinyinNeutralThenTone1, sleep } from '@/utils/play-pinyin-local-audio.js'
-import { speakPinyinSymbolAsync, waitForSpeechSynthesisIdle } from '@/utils/speak-pinyin-symbol.js'
+import { waitForSpeechSynthesisIdle } from '@/utils/speak-pinyin-symbol.js'
 
 /** 与拼音页「拼读练习」一致的间隔 */
 export const PINYIN_BLEND_TIMING = {
@@ -60,7 +61,7 @@ export function resolveHanziPinyinReadings(hanzi, fallbackPinyinDisplay) {
  * @param {boolean} [opts.blend=false] true 时先拆段拼读再播整音节
  * @param {number} [opts.betweenParts]
  * @param {number} [opts.beforeWhole]
- * @param {boolean} [opts.showFailToast=false] TTS 也失败时是否 Toast
+ * @param {boolean} [opts.showFailToast=false] 本地音频也失败时是否 Toast
  */
 export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 	const text = String(tonedSyllable || '').trim()
@@ -68,7 +69,7 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 
 	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const useTone1Fb = opts.useTone1Fb !== false
-	const blend = opts.blend === true
+	const blend = isPinyinBlendTrainingEnabled() && opts.blend === true
 	const betweenParts = opts.betweenParts != null ? opts.betweenParts : PINYIN_BLEND_TIMING.betweenParts
 	const beforeWhole = opts.beforeWhole != null ? opts.beforeWhole : PINYIN_BLEND_TIMING.beforeWhole
 	const showFailToast = opts.showFailToast === true
@@ -83,14 +84,11 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 			logHanziSpeak('syllable.local_ok', { symbol: sym })
 			return true
 		}
-		logHanziSpeak('syllable.local_failed_try_tts', { symbol: sym, narrator })
-		const sp = await speakPinyinSymbolAsync(sym, narrator)
-		if (sp) anyOk = true
-		logHanziSpeak(sp ? 'syllable.tts_ok' : 'syllable.tts_fail', { symbol: sym })
-		if (!sp && showFailToast) {
-			uni.showToast({ title: `${getAudioNarratorLabel(narrator)}：${sym}`, icon: 'none' })
+		logHanziSpeak('syllable.local_failed', { symbol: sym, narrator })
+		if (showFailToast) {
+			uni.showToast({ title: '暂无该拼音读音', icon: 'none' })
 		}
-		return sp
+		return false
 	}
 
 	if (!blend) {
@@ -151,7 +149,7 @@ export async function speakHanziViaPinyinBlend(opts = {}) {
 
 	const narrator = opts.narrator != null ? opts.narrator : getAudioNarrator()
 	const useTone1Fb = opts.useTone1Fb !== false
-	const blend = opts.blend === true
+	const blend = isPinyinBlendTrainingEnabled() && opts.blend === true
 	const readingGapMs =
 		opts.readingGapMs != null
 			? opts.readingGapMs

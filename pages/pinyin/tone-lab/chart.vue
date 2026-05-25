@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="四声词典" subtitle="点一行，听四声连读" avatar-pose="book" :overlap-body="true">
 		<view class="chart-page">
 			<view class="chart-tabs">
@@ -26,17 +26,24 @@
 					:class="{ 'chart-row--playing': playingRow === ri }"
 					@click="onRowTap(row, ri)"
 				>
-					<text class="chart-row-bare font-pinyin">{{ row.bareStem || row.bare }}</text>
-					<view class="chart-row-cells">
-						<view
-							v-for="(cell, ci) in row.cells"
-							:key="ci"
-							class="chart-cell"
-							:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
-							@click.stop="onCellTap(cell)"
-						>
-							<text class="chart-cell-text font-pinyin">{{ cell.display }}</text>
-						</view>
+					<pinyin-lab-cell
+						class="chart-row-stem"
+						:symbol="row.stemLabel || row.bareStem || row.bare"
+						:sheet-bg="row.cat.bg"
+						:sheet-bd="row.cat.bd"
+						size="compact"
+						:interactive="false"
+					/>
+					<view class="chart-row-pflr" @click.stop>
+						<pinyin-four-lines-row
+							size="tone"
+							interactive
+							:sheet-bg="row.cat.bg"
+							:sheet-bd="row.cat.bd"
+							:syllables="toneRowDisplays(row)"
+							font-class="font-pinyin-step"
+							@cell-click="(p) => onToneCellClick(row, p)"
+						/>
 					</view>
 					<text class="chart-row-chain-hint">▶ 四声</text>
 				</view>
@@ -49,6 +56,8 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { TONE_COLUMN_LABELS } from '@/utils/pinyin-tone-lab/constants.js'
 import { getToneChartBlocks } from '@/utils/pinyin-tone-lab/chart-data.js'
 import { loadToneLabProgress } from '@/utils/pinyin-tone-lab/progress.js'
@@ -60,7 +69,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell, PinyinFourLinesRow },
 	data() {
 		const progress = loadToneLabProgress()
 		return {
@@ -89,6 +98,14 @@ export default {
 		stopLocalPinyinAudio()
 	},
 	methods: {
+		toneRowDisplays(row) {
+			return (row && row.cells ? row.cells : []).map((c) => c.display)
+		},
+		onToneCellClick(row, payload) {
+			const idx = payload && typeof payload.index === 'number' ? payload.index : -1
+			const cell = row && row.cells && idx >= 0 ? row.cells[idx] : null
+			if (cell) this.onCellTap(cell)
+		},
 		async onCellTap(cell) {
 			if (!cell?.play || cell.disabled || this.busy) return
 			this.busy = true
@@ -124,7 +141,6 @@ export default {
 .chart-tabs {
 	display: flex;
 	flex-direction: row;
-	gap: 12rpx;
 	margin-bottom: 12rpx;
 }
 
@@ -189,35 +205,15 @@ export default {
 	background: #f0fff4;
 }
 
-.chart-row-bare {
-	width: 72rpx;
+.chart-row-stem {
+	width: 108rpx;
 	flex-shrink: 0;
-	font-size: 28rpx;
-	font-weight: 700;
-	color: #6d5e52;
+	margin-right: 8rpx;
 }
 
-.chart-row-cells {
+.chart-row-pflr {
 	flex: 1;
-	display: flex;
-	flex-direction: row;
-	gap: 6rpx;
-}
-
-.chart-cell {
-	flex: 1;
-	min-height: 72rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 12rpx;
-	border-width: 2rpx;
-	border-style: solid;
-}
-
-.chart-cell-text {
-	font-size: 32rpx;
-	font-weight: 800;
+	min-width: 0;
 }
 
 .chart-row-chain-hint {

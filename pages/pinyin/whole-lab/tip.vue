@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="认读小贴士" subtitle="看提示，听声音，选音节" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">
@@ -20,13 +20,16 @@
 			</view>
 			<text class="quiz-question">是哪一组里的整体认读？</text>
 			<view class="symbol-grid">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="symbol-btn font-pinyin"
-					:class="{ 'symbol-btn--picked': pickedIndex === i, 'symbol-btn--long': (opt.symbol || '').length > 2 }"
+					class="symbol-grid-item"
+					:symbol="opt.symbol"
+					category-tab="整体认读"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>{{ opt.symbol }}</view>
+				/>
 			</view>
 			<view v-if="feedback" class="quiz-feedback" :class="'quiz-feedback--' + feedback">
 				<text>{{ feedback === 'ok' ? '选对啦！' : '再看看小贴士' }}</text>
@@ -37,6 +40,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import InitialMouthCard from '@/components/initial-mouth-card.vue'
 import { WHOLE_TIP_QUIZ_PASS, WHOLE_TIP_QUIZ_TOTAL } from '@/utils/pinyin-whole-lab/constants.js'
 import { buildWholeTipQuestions } from '@/utils/pinyin-whole-lab/quiz.js'
@@ -49,7 +53,7 @@ import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage, InitialMouthCard },
+	components: { MengSubPage, InitialMouthCard, PinyinLabCell },
 	data() {
 		return {
 			questions: buildWholeTipQuestions(WHOLE_TIP_QUIZ_TOTAL),
@@ -161,7 +165,6 @@ export default {
 .quiz-play-btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 16rpx 32rpx;
 	border-radius: 999rpx;
 	background: #e8a020;
@@ -181,27 +184,11 @@ export default {
 .symbol-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
-.symbol-btn {
+.symbol-grid-item {
 	width: calc(50% - 8rpx);
 	box-sizing: border-box;
-	min-height: 96rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 44rpx;
-	font-weight: 800;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-}
-.symbol-btn--long {
-	font-size: 36rpx;
-}
-.symbol-btn--picked {
-	border-color: #e8a020;
-	background: #fff8e8;
+	margin: 0 8rpx 10rpx 0;
 }
 .quiz-feedback {
 	margin-top: 20rpx;

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<meng-sub-page title="韵母耳朵" subtitle="听萌萌读，点对的韵母" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">
@@ -14,13 +14,16 @@
 			</view>
 			<text class="quiz-question">你听到的是哪个韵母？</text>
 			<view class="symbol-grid">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="symbol-btn font-pinyin"
-					:class="{ 'symbol-btn--picked': pickedIndex === i, 'symbol-btn--long': (opt.symbol || '').length > 1 }"
+					class="symbol-grid-item"
+					:symbol="opt.symbol"
+					category-tab="韵母"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>{{ opt.symbol }}</view>
+				/>
 			</view>
 			<view v-if="feedback" class="quiz-feedback" :class="'quiz-feedback--' + feedback">
 				<text>{{ feedback === 'ok' ? '太棒啦！' : '再听一遍' }}</text>
@@ -31,6 +34,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { VOWEL_EAR_QUIZ_PASS, VOWEL_EAR_QUIZ_TOTAL } from '@/utils/pinyin-vowel-lab/constants.js'
 import { buildVowelEarQuestions } from '@/utils/pinyin-vowel-lab/quiz.js'
 import {
@@ -42,7 +46,7 @@ import { playVowelLabSymbol } from '@/utils/pinyin-vowel-lab/play.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, PinyinLabCell },
 	data() {
 		return {
 			questions: buildVowelEarQuestions(VOWEL_EAR_QUIZ_TOTAL),
@@ -163,7 +167,6 @@ export default {
 	margin-top: 16rpx;
 	display: inline-flex;
 	align-items: center;
-	gap: 12rpx;
 	padding: 18rpx 36rpx;
 	border-radius: 999rpx;
 	background: #c97aff;
@@ -183,27 +186,11 @@ export default {
 .symbol-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16rpx;
 }
-.symbol-btn {
+.symbol-grid-item {
 	width: calc(50% - 8rpx);
 	box-sizing: border-box;
-	min-height: 100rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 52rpx;
-	font-weight: 800;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-}
-.symbol-btn--long {
-	font-size: 44rpx;
-}
-.symbol-btn--picked {
-	border-color: #c97aff;
-	background: #faf0ff;
+	margin: 0 8rpx 10rpx 0;
 }
 .quiz-feedback {
 	margin-top: 20rpx;

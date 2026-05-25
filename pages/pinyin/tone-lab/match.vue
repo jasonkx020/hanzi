@@ -7,7 +7,13 @@
 			</view>
 
 			<view v-if="currentQ" class="match-target">
-				<text class="match-bare font-pinyin">{{ currentQ.bare }}</text>
+				<pinyin-lab-cell
+					class="match-bare-cell"
+					:symbol="currentQ.bare"
+					category-tab="韵母"
+					size="md"
+					:interactive="false"
+				/>
 				<text class="match-hint">左边是第几声？右边点对应的拼音</text>
 				<tone-contour-card :tone="currentQ.tone" :show-label="true" :show-symbol="false" />
 			</view>
@@ -20,7 +26,14 @@
 					:class="{ 'match-opt--picked': pickedIndex === i }"
 					@click="onPick(i, opt)"
 				>
-					<text class="match-opt-text font-pinyin">{{ opt.display }}</text>
+					<pinyin-lab-cell
+						class="match-opt-pflr"
+						:symbol="opt.display"
+						category-tab="韵母"
+						size="grid"
+						:picked="pickedIndex === i"
+						:interactive="false"
+					/>
 					<view class="match-opt-play" @click.stop="playStem(opt.display)">
 						<text>🔊</text>
 					</view>
@@ -36,6 +49,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import ToneContourCard from '@/components/tone-contour-card.vue'
 import { MATCH_QUIZ_PASS } from '@/utils/pinyin-tone-lab/constants.js'
 import { buildMatchQuizQuestions } from '@/utils/pinyin-tone-lab/quiz.js'
@@ -51,7 +65,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage, ToneContourCard },
+	components: { MengSubPage, PinyinLabCell, ToneContourCard },
 	data() {
 		return {
 			questions: buildMatchQuizQuestions(),
@@ -169,10 +183,9 @@ export default {
 	margin-bottom: 20rpx;
 }
 
-.match-bare {
-	font-size: 40rpx;
-	font-weight: 800;
-	color: #9a9088;
+.match-bare-cell {
+	margin: 0 auto 12rpx;
+	max-width: 280rpx;
 }
 
 .match-hint {
@@ -185,7 +198,6 @@ export default {
 .match-options {
 	display: flex;
 	flex-direction: column;
-	gap: 14rpx;
 }
 
 .match-opt {
@@ -205,10 +217,9 @@ export default {
 	background: #fff8fc;
 }
 
-.match-opt-text {
-	font-size: 44rpx;
-	font-weight: 800;
-	color: #2c2419;
+.match-opt-pflr {
+	flex: 1;
+	min-width: 0;
 }
 
 .match-opt-play {

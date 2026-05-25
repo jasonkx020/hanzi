@@ -18,15 +18,14 @@
 
 			<view v-if="currentQ" class="mark-target">
 				<tone-contour-card :tone="currentQ.tone" :compact="true" :show-label="true" />
-				<view class="mark-syllable">
-					<text
-						v-for="(ch, ci) in syllableChars"
-						:key="ci"
-						class="mark-ch font-pinyin"
-						:class="{ 'mark-ch--vowel': isVowelChar(ch), 'mark-ch--hit': picked && ch === currentQ.correctLetter }"
-					>{{ ch }}</text>
-				</view>
-				<text class="mark-bare-hint">没有声调的拼音：{{ currentQ.bare }}</text>
+				<pinyin-lab-cell
+					class="mark-syllable-cell"
+					:symbol="currentQ.bare"
+					category-tab="韵母"
+					size="grid"
+					:interactive="false"
+				/>
+				<text class="mark-bare-hint">没有声调的拼音（四线格书写）</text>
 				<text class="mark-question">第 {{ toneLabel }}，调号标在哪个字母上？</text>
 			</view>
 
@@ -38,15 +37,17 @@
 			</view>
 
 			<view class="mark-letter-grid">
-				<view
+				<pinyin-lab-cell
 					v-for="(opt, i) in currentOptions"
 					:key="i"
-					class="mark-letter-btn font-pinyin"
-					:class="{ 'mark-letter-btn--picked': pickedIndex === i }"
+					class="mark-letter-item"
+					:symbol="opt.letter"
+					category-tab="韵母"
+					size="compact"
+					:picked="pickedIndex === i"
+					block
 					@click="onPick(i, opt)"
-				>
-					<text>{{ opt.letter }}</text>
-				</view>
+				/>
 			</view>
 
 			<text v-if="currentQ && showHint" class="mark-tip">{{ currentQ.ruleHint }}</text>
@@ -60,6 +61,7 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import ToneContourCard from '@/components/tone-contour-card.vue'
 import { TONE_META, MARK_QUIZ_PASS, MARK_QUIZ_TOTAL } from '@/utils/pinyin-tone-lab/constants.js'
 import {
@@ -78,7 +80,7 @@ import {
 } from '@/utils/play-pinyin-local-audio.js'
 
 export default {
-	components: { MengSubPage, ToneContourCard },
+	components: { MengSubPage, PinyinLabCell, ToneContourCard },
 	data() {
 		return {
 			ruleCards: TONE_MARK_RULE_CARDS,
@@ -100,9 +102,6 @@ export default {
 		currentOptions() {
 			return this.currentQ?.options || []
 		},
-		syllableChars() {
-			return (this.currentQ?.bare || '').split('')
-		},
 		toneLabel() {
 			const t = this.currentQ?.tone
 			return TONE_META.find((m) => m.tone === t)?.label || ''
@@ -123,9 +122,6 @@ export default {
 		stopLocalPinyinAudio()
 	},
 	methods: {
-		isVowelChar(ch) {
-			return 'aoeiuü'.includes(String(ch || '').toLowerCase())
-		},
 		async playCurrent() {
 			const q = this.currentQ
 			if (!q || this.playing) return
@@ -212,7 +208,6 @@ export default {
 .mark-rules-row {
 	display: inline-flex;
 	flex-direction: row;
-	gap: 12rpx;
 	padding: 4rpx 4rpx 8rpx;
 }
 
@@ -270,32 +265,9 @@ export default {
 	margin-bottom: 12rpx;
 }
 
-.mark-syllable {
-	margin: 12rpx 0;
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-	align-items: center;
-	gap: 4rpx;
-}
-
-.mark-ch {
-	font-size: 56rpx;
-	font-weight: 800;
-	color: #9a9088;
-	padding: 4rpx 8rpx;
-	border-radius: 12rpx;
-}
-
-.mark-ch--vowel {
-	color: #4a6a9a;
-	background: rgba(91, 155, 213, 0.12);
-}
-
-.mark-ch--hit {
-	color: #c44d6a;
-	background: rgba(255, 138, 171, 0.2);
-	border: 3rpx solid #ff8aab;
+.mark-syllable-cell {
+	margin: 12rpx auto;
+	max-width: 360rpx;
 }
 
 .mark-bare-hint {
@@ -321,7 +293,6 @@ export default {
 	display: inline-flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 12rpx;
 	padding: 14rpx 32rpx;
 	border-radius: 999rpx;
 	background: var(--meng-accent-solid, #ff8aab);
@@ -341,25 +312,12 @@ export default {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 16rpx;
 	justify-content: center;
 }
 
-.mark-letter-btn {
+.mark-letter-item {
 	min-width: 120rpx;
-	padding: 22rpx 28rpx;
-	border-radius: 22rpx;
-	background: #fff;
-	border: 4rpx solid var(--meng-border-warm);
-	text-align: center;
-	font-size: 48rpx;
-	font-weight: 800;
-	color: #2c2419;
-}
-
-.mark-letter-btn--picked {
-	border-color: #ff8aab;
-	background: #fff8fc;
+	margin: 0 10rpx 10rpx 0;
 }
 
 .mark-tip {
