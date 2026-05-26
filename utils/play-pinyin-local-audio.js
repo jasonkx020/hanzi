@@ -232,12 +232,16 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 		return false
 	}
 	for (const src of tryUrls) {
+		if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
 		try {
 			await playPinyinLocalAudio(src)
 			logHanziSpeak('local.play_ok', { symbol, src })
 			return true
 		} catch (e) {
-			if (isPinyinPlayAborted(e)) return false
+			if (isPinyinPlayAborted(e)) {
+				if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
+				return false
+			}
 			const err = e || {}
 			logHanziSpeak('local.play_err', {
 				symbol,
@@ -261,8 +265,9 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 export async function playToneGridCell(symbol, opts = {}) {
 	const sym = String(symbol || '').trim()
 	if (!sym) return false
+	if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
 	if (opts.asNeutral) {
-		return playLocalPinyinNeutralThenTone1(sym, true)
+		return playLocalPinyinNeutralThenTone1(sym, true, { isCancelled: opts.isCancelled })
 	}
 	const path = getLocalPinyinAudioPath(sym)
 	if (!path) {
@@ -298,6 +303,7 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
 		const sym = String(tokens[i] || '').trim()
 		if (!sym) continue
+		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
 		let played = false
 		const path = getLocalPinyinAudioPath(sym)
 		try {
@@ -305,19 +311,22 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 			played = true
 			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path })
 		} catch (e) {
-			if (isPinyinPlayAborted(e) && typeof isCancelled === 'function' && isCancelled()) {
-				return anyOk
-			}
-			if (!isPinyinPlayAborted(e)) {
-				logHanziSpeak('lesson.display_pinyin.exact_fail', {
-					sym,
-					path,
-					err: e && (e.errMsg || e.message || String(e))
-				})
+			if (isPinyinPlayAborted(e)) {
+				if (typeof isCancelled === 'function' && isCancelled()) return anyOk
+			} else {
+			logHanziSpeak('lesson.display_pinyin.exact_fail', {
+				sym,
+				path,
+				err: e && (e.errMsg || e.message || String(e))
+			})
 			}
 		}
 		if (!played) {
-			played = await playLocalPinyinNeutralThenTone1(sym, true, { skipTonedExact: true })
+			if (typeof isCancelled === 'function' && isCancelled()) return anyOk
+			played = await playLocalPinyinNeutralThenTone1(sym, true, {
+				skipTonedExact: true,
+				isCancelled
+			})
 			if (played) logHanziSpeak('lesson.display_pinyin.fallback_neutral_ok', { sym })
 		}
 		if (!played) {

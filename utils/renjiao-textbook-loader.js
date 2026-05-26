@@ -1,5 +1,6 @@
 import { renjiaoTextbookJsonFile } from '@/constants/renjiao-textbook-filenames.js'
 import { readAppStaticText } from '@/utils/read-app-static-text.js'
+import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
 
 const STATIC_BOOKTEXT_ROOT = '/static/booktext/renjiaoban/'
 
@@ -46,12 +47,8 @@ function parseTextbookJsonArray(payload) {
 	return JSON.parse(trimmed)
 }
 
-function requestText(url) {
+function requestTextByUrl(url) {
 	return new Promise((resolve, reject) => {
-		if (typeof plus !== 'undefined' && plus.io && typeof url === 'string' && url.startsWith('/static/')) {
-			readAppStaticText(url).then(resolve).catch(reject)
-			return
-		}
 		uni.request({
 			url,
 			method: 'GET',
@@ -59,7 +56,6 @@ function requestText(url) {
 			dataType: 'text',
 			success: (res) => {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
-					// H5 等端可能对 .json 自动解析为对象，不可 String(object)
 					if (Array.isArray(res.data)) {
 						resolve(res.data)
 						return
@@ -72,6 +68,37 @@ function requestText(url) {
 			fail: reject
 		})
 	})
+}
+
+/** App / H5 / 小程序：多路径尝试读取 static 下课文 JSON */
+async function requestText(webPath) {
+	const url = String(webPath || '').trim()
+	if (!url) throw new Error('empty url')
+
+	const attempts = []
+	if (url.startsWith('/static/')) {
+		if (typeof plus !== 'undefined' && plus.io) {
+			attempts.push(() => readAppStaticText(url))
+			const logical = resolveAppStaticLogicalUrl(url)
+			if (logical && logical !== url) {
+				attempts.push(() => requestTextByUrl(logical))
+			}
+		}
+		attempts.push(() => requestTextByUrl(url))
+	} else {
+		attempts.push(() => requestTextByUrl(url))
+	}
+
+	let lastError = null
+	for (const run of attempts) {
+		try {
+			const data = await run()
+			if (data !== '' && data != null) return data
+		} catch (e) {
+			lastError = e
+		}
+	}
+	throw lastError || new Error('textbook json read failed')
 }
 
 /**

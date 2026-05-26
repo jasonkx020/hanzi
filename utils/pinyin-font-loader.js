@@ -12,7 +12,7 @@ export const PINYIN_FONT_FAMILY = 'pinyin-regular'
 
 /** 与 static/fonts 实际文件名一致；App loadFontFace 优先 TTF */
 const PINYIN_FONT_WEB_PATHS = [
-	'/static/fonts/Pinyin-Regular.ttf',
+	'/static/fonts/pinyin-regular.ttf',
 	'/static/fonts/pinyin-regular.woff2'
 ]
 

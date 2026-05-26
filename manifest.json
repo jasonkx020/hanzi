@@ -1,7 +1,7 @@
 {
     "name" : "萌萌识字",
     "appid" : "__UNI__1F18C37",
-    "description" : "",
+    "description" : "应用主要功能是识别汉字助手，提供写字和汉语拼音读音示范功能",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,
@@ -55,7 +55,19 @@
             "ios" : {
                 "dSYMs" : false
             },
-            "sdkConfigs" : {}
+            "sdkConfigs" : {},
+            "splashscreen" : {
+                "androidStyle" : "common",
+                "useOriginalMsgbox" : true
+            },
+            "icons" : {
+                "android" : {
+                    "hdpi" : "unpackage/resources/__UNI__1F18C37/www/static/mengmeng/state/success.png",
+                    "xhdpi" : "unpackage/resources/__UNI__1F18C37/www/static/mengmeng/state/success.png",
+                    "xxhdpi" : "unpackage/resources/__UNI__1F18C37/www/static/mengmeng/state/success.png",
+                    "xxxhdpi" : "unpackage/resources/__UNI__1F18C37/www/static/mengmeng/state/success.png"
+                }
+            }
         }
     },
     /* 快应用特有相关 */

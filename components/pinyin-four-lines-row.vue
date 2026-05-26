@@ -12,7 +12,11 @@
 
 				'pflr--metric-shift': metricShift,
 
-				'pflr--auto-wrap': autoWrap
+				'pflr--reading-glow': highlightColumnIndex >= 0,
+
+				'pflr--auto-wrap': autoWrap,
+
+				'pflr--interactive-mode': interactive
 
 			}
 
@@ -64,11 +68,11 @@
 
 						}"
 
-						:data-pflr-ci="col.empty ? '' : String(col.index)"
+						:id="cellDomId(col)"
 
 						:style="cellFlexStyle(col, line)"
 
-						@tap.stop="onCellTap(col)"
+						@tap="onCellTap($event, col)"
 
 					>
 
@@ -272,6 +276,16 @@ export default {
 
 			default: 6
 
+		},
+
+		/** 与外层锚点 id 一致，供连读定位格子（如 pyar-initial-0-0） */
+
+		scrollAnchorId: {
+
+			type: String,
+
+			default: ''
+
 		}
 
 	},
@@ -474,6 +488,18 @@ export default {
 
 	methods: {
 
+		cellDomId(col) {
+
+			if (!col || col.empty) return ''
+
+			const base = String(this.scrollAnchorId || '').trim()
+
+			if (!base) return ''
+
+			return `${base}-ci-${col.index}`
+
+		},
+
 		cellFlexStyle(col, line) {
 
 			if (!this.autoWrap) {
@@ -592,7 +618,7 @@ export default {
 
 		},
 
-		onCellTap(col) {
+		onCellTap(ev, col) {
 
 			if (!this.interactive || !col || col.empty) return
 
@@ -607,6 +633,8 @@ export default {
 			this._lastCellTapAt = now
 
 			this.$emit('cell-click', { index: col.index, syllable: syl })
+
+			if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation()
 
 		}
 
@@ -633,6 +661,14 @@ export default {
 	box-sizing: border-box;
 
 	min-width: 0;
+
+}
+
+/* 课次字卡等：由外层 cell-py-row 点读，四线格不拦截触摸 */
+
+.pflr:not(.pflr--interactive-mode) {
+
+	pointer-events: none;
 
 }
 

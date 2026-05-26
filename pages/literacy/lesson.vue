@@ -43,16 +43,15 @@
 				class="cell"
 				:class="cellClassList(row)"
 			>
-				<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
-					<text class="cell-char">{{ row.hanzi }}</text>
+				<view v-if="isLearned(row.hanzi)" class="cell-learned-badge" aria-label="已学">
+					<text class="cell-learned-badge-icon">✓</text>
 				</view>
-				<text
-					v-if="isLearned(row.hanzi)"
-					class="cell-status-line cell-status-line--learned"
-				>已学</text>
 				<view class="cell-py-row" @tap.stop="onCellPyTap(row)">
 					<text class="cell-py-hint">拼音 · 点读</text>
 					<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
+				</view>
+				<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
+					<text class="cell-char">{{ row.hanzi }}</text>
 				</view>
 			</view>
 		</view>
@@ -86,7 +85,10 @@ import {
 } from '@/utils/lesson-mode-session.js'
 import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-progress-storage.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
-import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
+import {
+	playOpusForDisplayPinyin,
+	stopLocalPinyinAudio
+} from '@/utils/play-pinyin-local-audio.js'
 import { speakChinese } from '@/utils/speak-hanzi.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
@@ -115,7 +117,9 @@ export default {
 			/** 人教 JSON 该篇 content */
 			rjContent: '',
 			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
-			quizPassedForLesson: false
+			quizPassedForLesson: false,
+			/** 拼音点读世代：快速换字时取消在途播放，避免旧会话 stop 掉新音频 */
+			pyPlayGen: 0
 		}
 	},
 	computed: {
@@ -292,7 +296,12 @@ export default {
 				uni.showToast({ title: '暂无拼音', icon: 'none' })
 				return
 			}
-			const ok = await playOpusForDisplayPinyin(py)
+			const gen = ++this.pyPlayGen
+			const cancelled = () => gen !== this.pyPlayGen
+			stopLocalPinyinAudio()
+			if (cancelled()) return
+			const ok = await playOpusForDisplayPinyin(py, { isCancelled: cancelled })
+			if (cancelled()) return
 			logHanziSpeak('lesson.py_row.play_done', { py, ok })
 		},
 		onDictation() {
@@ -553,9 +562,33 @@ export default {
 	box-shadow: 0 6rpx 16rpx rgba(90, 160, 110, 0.12);
 }
 
+.cell-learned-badge {
+	position: absolute;
+	top: 6rpx;
+	right: 6rpx;
+	z-index: 3;
+	width: 36rpx;
+	height: 36rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: linear-gradient(145deg, #8ee4a8 0%, #5cb87a 100%);
+	border: 2rpx solid #fff;
+	box-shadow: 0 4rpx 10rpx rgba(46, 125, 50, 0.28);
+	pointer-events: none;
+}
+
+.cell-learned-badge-icon {
+	font-size: 22rpx;
+	font-weight: 800;
+	color: #fff;
+	line-height: 1;
+}
+
 .cell-char-hit {
 	position: relative;
-	padding: 4rpx 0 0;
+	padding: 6rpx 0 0;
 	min-height: 0;
 }
 
@@ -568,24 +601,10 @@ export default {
 	-webkit-font-smoothing: antialiased;
 }
 
-.cell-status-line {
-	display: block;
-	text-align: center;
-	font-size: 22rpx;
-	font-weight: 700;
-	line-height: 1.3;
-	margin: 4rpx 0 8rpx;
-	padding: 0 4rpx;
-}
-
-.cell-status-line--learned {
-	color: #2e7d32;
-}
-
 .cell-py-row {
 	width: 100%;
 	min-width: 0;
-	margin-top: 6rpx;
+	margin: 0 0 8rpx;
 	padding: 8rpx 4rpx 6rpx;
 	min-height: 96rpx;
 	box-sizing: border-box;

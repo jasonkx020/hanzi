@@ -43,10 +43,16 @@
 				>●</text>
 			</view>
 
-			<view v-if="hearPinyinShow" class="play-hear-pinyin" :class="{ 'play-hear-pinyin--reading': hearLocked }">
+			<view
+				v-if="hearPinyinShow"
+				id="play-hear-pflr-anchor"
+				class="play-hear-pinyin"
+				:class="{ 'play-hear-pinyin--reading': hearLocked }"
+			>
 				<text class="play-hear-pinyin-label">正在读的拼音</text>
 				<pinyin-four-lines-row
 					class="play-hear-pflr"
+					scroll-anchor-id="play-hear-pflr-anchor"
 					:syllables="hearPinyinTokens"
 					size="lg"
 					:highlight-column-index="hearHighlightCol"

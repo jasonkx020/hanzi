@@ -77,8 +77,11 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 	let anyOk = false
 
 	const playOne = async (sym) => {
+		if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
 		logHanziSpeak('syllable.try_local', { symbol: sym, useTone1Fb, narrator })
-		const played = await playLocalPinyinNeutralThenTone1(sym, useTone1Fb)
+		const played = await playLocalPinyinNeutralThenTone1(sym, useTone1Fb, {
+			isCancelled: opts.isCancelled
+		})
 		if (played) {
 			anyOk = true
 			logHanziSpeak('syllable.local_ok', { symbol: sym })
@@ -101,9 +104,11 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 
 	if (parts.length >= 2) {
 		for (let i = 0; i < parts.length; i++) {
+			if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return anyOk
 			await playOne(parts[i])
 			if (i < parts.length - 1) await sleep(betweenParts)
 		}
+		if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return anyOk
 		await sleep(beforeWhole)
 		await playOne(text)
 		return anyOk

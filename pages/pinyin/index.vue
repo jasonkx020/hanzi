@@ -124,6 +124,7 @@
 								<pinyin-four-lines-row
 									size="grid"
 									interactive
+									:scroll-anchor-id="row.scrollId"
 									:sheet-bg="row.sheetBg"
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('initial', sec.si, row.ri, row.chunk)"
@@ -159,6 +160,7 @@
 								<pinyin-four-lines-row
 									size="grid"
 									interactive
+									:scroll-anchor-id="row.scrollId"
 									:sheet-bg="row.sheetBg"
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('vowel', sec.si, row.ri, row.chunk)"
@@ -218,6 +220,7 @@
 									<pinyin-four-lines-row
 										size="tone"
 										interactive
+										:scroll-anchor-id="autoReadScrollIdForToneRow(block.key, rowIdx)"
 										:highlight-column-index="autoReadToneHighlightCol(block.key, rowIdx)"
 										:syllables="toneRowDisplays(row)"
 										font-class="font-pinyin-step"
@@ -253,6 +256,7 @@
 								<pinyin-four-lines-row
 									size="grid"
 									interactive
+									:scroll-anchor-id="row.scrollId"
 									:sheet-bg="row.sheetBg"
 									:sheet-bd="row.sheetBd"
 									:highlight-column-index="autoReadHighlightCol('whole', sec.si, row.ri, row.chunk)"
@@ -312,6 +316,7 @@
 										<pinyin-four-lines-row
 											size="tone"
 											interactive
+											:scroll-anchor-id="row.scrollId"
 											:sheet-bg="row.sheetBg"
 											:sheet-bd="row.sheetBd"
 											:highlight-column-index="autoReadHighlightCol('drill', 0, row.ri, row.chunk)"
@@ -965,20 +970,33 @@ export default {
 			const anchorId = slot.scrollId || ''
 			if (!anchorId) return
 			const colIndex = typeof slot.ci === 'number' ? slot.ci : -1
+			const cellId = colIndex >= 0 && anchorId ? `${anchorId}-ci-${colIndex}` : ''
 			const query = uni.createSelectorQuery().in(this)
-			if (colIndex >= 0) {
-				query.select(`#${anchorId} .pflr-cell[data-pflr-ci="${colIndex}"]`).boundingClientRect()
+			if (cellId) {
+				query.select(`#${cellId}`).boundingClientRect()
 			}
+			query.selectAll(`#${anchorId} .pflr-cell:not(.pflr-cell--empty)`).boundingClientRect()
 			query.select(`#${anchorId} .pflr-cell--reading`).boundingClientRect()
 			query.select(`#${anchorId}`).boundingClientRect()
 			query.exec((res) => {
 				if (!this.autoReadRunning) return
 				let ri = 0
 				let cell = null
-				if (colIndex >= 0) {
-					const byCi = res && res[ri]
+				if (cellId) {
+					const byId = res && res[ri]
 					ri += 1
-					if (byCi && byCi.width > 0) cell = byCi
+					if (byId && byId.width > 0) cell = byId
+				}
+				const cellRects = res && res[ri]
+				ri += 1
+				if (
+					!cell &&
+					Array.isArray(cellRects) &&
+					colIndex >= 0 &&
+					colIndex < cellRects.length
+				) {
+					const byOrder = cellRects[colIndex]
+					if (byOrder && byOrder.width > 0) cell = byOrder
 				}
 				const readingCell = res && res[ri]
 				ri += 1
@@ -1208,23 +1226,29 @@ export default {
 			if (!text) return false
 			const narrator = this.narrator
 			const asNeutral = !!(opts && opts.asNeutral)
+			const isCancelled = opts.isCancelled
 			const playTask = async () => {
+				if (typeof isCancelled === 'function' && isCancelled()) return false
 				if (this.activeTab === '音调') {
-					return playToneGridCell(text, { asNeutral, narrator })
+					return playToneGridCell(text, { asNeutral, narrator, isCancelled })
 				}
 				if (this.activeTab === '整体认读') {
-					return playWholeLabSymbol(text)
+					return playWholeLabSymbol(text, { isCancelled })
 				}
 				const blend = this.blendTrainingEnabled && this.activeTab === '拼读练习'
-				return speakBlendedPinyinSyllable(text, {
+				const useTone1Fb = this.activeTab === '声母' || this.activeTab === '韵母'
+				const ok = await speakBlendedPinyinSyllable(text, {
 					narrator,
-					useTone1Fb: false,
+					useTone1Fb,
 					blend,
-					showFailToast: !this.autoReadRunning
+					showFailToast: !this.autoReadRunning,
+					isCancelled
 				})
+				if (ok || blend) return ok
+				return speakPinyinSymbolAsync(text, narrator)
 			}
 			const ok = await this.withPlayTimeout(playTask(), 7500)
-			if (!ok) {
+			if (!ok && !(typeof isCancelled === 'function' && isCancelled())) {
 				stopLocalPinyinAudio()
 				this.cancelAutoReadSpeech()
 			}
@@ -1234,11 +1258,12 @@ export default {
 			const text = String(symbol || '').trim()
 			if (!text) return
 			const speakId = this._cellSpeakId
+			const cancelled = () => speakId !== this._cellSpeakId
 			const slot = slotHint || this.findAutoReadSlot(text, opts?.asNeutral)
 			if (slot?.scrollId) {
 				this.setAutoReadHighlight(slot)
 			}
-			await this.playReferenceSymbol(text, opts)
+			await this.playReferenceSymbol(text, { ...opts, isCancelled: cancelled })
 			if (speakId !== this._cellSpeakId) return
 			if (!this.autoReadRunning) {
 				await this.sleep(480)
