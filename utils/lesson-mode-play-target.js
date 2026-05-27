@@ -2,7 +2,6 @@
  * 课次模式页（小测 / 听写 / 跟读）统一读音：与课次字卡 `pyShow` 一致，
  * 优先按上页传入的拼音串播本地音节，避免多音字被 TTS 读成非课内读音。
  */
-import { speakHanzi } from '@/utils/speak-hanzi.js'
 import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 
@@ -25,9 +24,6 @@ export async function playLessonTargetReading(hanzi, displayPinyin, opts = {}) {
 	const py = normLessonPayloadPinyin(displayPinyin)
 	if (py && py !== '-') {
 		const ok = await playOpusForDisplayPinyin(py, opts)
-		logHanziSpeak('lesson_mode.read', { hanzi: ch, py, via: ok ? 'pinyin' : 'hanzi_fallback' })
-		if (ok || cancelled()) return
+		logHanziSpeak('lesson_mode.read', { hanzi: ch, py, via: ok ? 'pinyin' : 'none' })
 	}
-	if (cancelled()) return
-	speakHanzi(ch)
 }

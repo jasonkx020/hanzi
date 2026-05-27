@@ -43,7 +43,7 @@ import {
 	loadWholeLabProgress
 } from '@/utils/pinyin-whole-lab/progress.js'
 import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
-import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { playLabPinyinAudio, cancelPinyinPlay } from '@/utils/pinyin-lab-play.js'
 
 export default {
 	components: { MengSubPage, PinyinLabCell },
@@ -69,22 +69,20 @@ export default {
 	onLoad() {
 		this.$nextTick(() => this.playCurrent())
 	},
-	onHide() {
-		stopLocalPinyinAudio()
-	},
-	onUnload() {
-		stopLocalPinyinAudio()
-	},
+	onHide() { cancelPinyinPlay() },
+	onUnload() { cancelPinyinPlay() },
 	methods: {
 		async playCurrent() {
 			const q = this.currentQ
-			if (!q || this.playing) return
+			if (!q) return
 			this.playing = true
-			stopLocalPinyinAudio()
 			try {
-				await playWholeLabSymbol(q.play)
-			} catch (_) {}
-			this.playing = false
+				await playLabPinyinAudio(async ({ isCancelled }) => {
+					return await playWholeLabSymbol(q.play, { isCancelled })
+				})
+			} finally {
+				this.playing = false
+			}
 		},
 		async onPick(index, opt) {
 			if (this.busy || !opt) return

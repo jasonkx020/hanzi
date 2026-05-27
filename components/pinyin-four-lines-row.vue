@@ -182,7 +182,6 @@ export default {
 
 			_layoutPass: 0,
 
-			_lastCellTapAt: 0
 
 		}
 
@@ -625,12 +624,6 @@ export default {
 			const syl = String(col.syl || '').trim()
 
 			if (!syl) return
-
-			const now = Date.now()
-
-			if (now - this._lastCellTapAt < 280) return
-
-			this._lastCellTapAt = now
 
 			this.$emit('cell-click', { index: col.index, syllable: syl })
 

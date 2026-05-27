@@ -85,10 +85,8 @@ import {
 } from '@/utils/lesson-mode-session.js'
 import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-progress-storage.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
-import {
-	playOpusForDisplayPinyin,
-	stopLocalPinyinAudio
-} from '@/utils/play-pinyin-local-audio.js'
+import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 import { speakChinese } from '@/utils/speak-hanzi.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
@@ -99,6 +97,8 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { MENG_VOICE, playMengmengVoiceOnce } from '@/utils/mengmeng-voice.js'
 
 export default {
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.LESSON_CARD,
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
@@ -117,9 +117,7 @@ export default {
 			/** 人教 JSON 该篇 content */
 			rjContent: '',
 			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
-			quizPassedForLesson: false,
-			/** 拼音点读世代：快速换字时取消在途播放，避免旧会话 stop 掉新音频 */
-			pyPlayGen: 0
+			quizPassedForLesson: false
 		}
 	},
 	computed: {
@@ -296,12 +294,9 @@ export default {
 				uni.showToast({ title: '暂无拼音', icon: 'none' })
 				return
 			}
-			const gen = ++this.pyPlayGen
-			const cancelled = () => gen !== this.pyPlayGen
-			stopLocalPinyinAudio()
-			if (cancelled()) return
-			const ok = await playOpusForDisplayPinyin(py, { isCancelled: cancelled })
-			if (cancelled()) return
+			const ok = await this._pyPlay.run(({ isCancelled }) =>
+				playOpusForDisplayPinyin(py, { isCancelled })
+			)
 			logHanziSpeak('lesson.py_row.play_done', { py, ok })
 		},
 		onDictation() {

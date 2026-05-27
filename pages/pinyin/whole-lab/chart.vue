@@ -34,7 +34,7 @@ import MengSubPage from '@/components/meng-sub-page.vue'
 import PinyinLabCell from '@/components/pinyin-lab-cell.vue'
 import { WHOLE_SECTIONS } from '@/utils/pinyin-whole-lab/sections.js'
 import { playWholeLabSymbol } from '@/utils/pinyin-whole-lab/play.js'
-import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { playLabPinyinAudio, cancelPinyinPlay } from '@/utils/pinyin-lab-play.js'
 
 export default {
 	components: { MengSubPage, PinyinLabCell },
@@ -46,23 +46,25 @@ export default {
 		}
 	},
 	onHide() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 		this.playingKey = ''
 	},
 	onUnload() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 	},
 	methods: {
 		async onPlay(sym, sectionKey) {
-			if (this.busy) return
+			const key = sectionKey + sym
 			this.busy = true
-			this.playingKey = sectionKey + sym
-			stopLocalPinyinAudio()
+			this.playingKey = key
 			try {
-				await playWholeLabSymbol(sym)
-			} catch (_) {}
-			this.playingKey = ''
-			this.busy = false
+				await playLabPinyinAudio(async ({ isCancelled }) => {
+					return playWholeLabSymbol(sym, { isCancelled })
+				})
+			} finally {
+				if (this.playingKey === key) this.playingKey = ''
+				this.busy = false
+			}
 		}
 	}
 }

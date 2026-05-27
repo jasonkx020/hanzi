@@ -2,11 +2,12 @@
  * 拼音闯关：播放、本地统计
  */
 import { getAudioNarrator } from '@/utils/audio-settings.js'
-import {
-	playLocalPinyinNeutralThenTone1,
-	stopLocalPinyinAudio
-} from '@/utils/play-pinyin-local-audio.js'
+import { playLocalPinyinNeutralThenTone1 } from '@/utils/play-pinyin-local-audio.js'
 import { speakBlendedPinyinSyllable } from '@/utils/hanzi-pinyin-blend-speak.js'
+import {
+	runPinyinPlaySession,
+	cancelPinyinPlay
+} from '@/utils/pinyin-play-session.js'
 import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
 import { starsForDrillScore } from '@/data/pinyin-drill-pools.js'
 import { recordPinyinPractice } from '@/utils/achievement-stats-storage.js'
@@ -74,24 +75,22 @@ export function getCategoryBestStars(categoryKey) {
 export async function playDrillSymbol(symbol, opts = {}) {
 	const text = String(symbol || '').trim()
 	if (!text) return false
-	stopLocalPinyinAudio()
-	const narrator = getAudioNarrator()
-	if (opts.blend && isPinyinBlendTrainingEnabled()) {
-		return speakBlendedPinyinSyllable(text, {
-			narrator,
-			useTone1Fb: true,
-			blend: true,
-			showFailToast: false
-		})
-	}
-	return playLocalPinyinNeutralThenTone1(text, true)
+	return runPinyinPlaySession(async ({ isCancelled }) => {
+		if (isCancelled()) return false
+		const narrator = getAudioNarrator()
+		if (opts.blend && isPinyinBlendTrainingEnabled()) {
+			return speakBlendedPinyinSyllable(text, {
+				narrator,
+				useTone1Fb: true,
+				blend: true,
+				showFailToast: false,
+				isCancelled
+			})
+		}
+		return playLocalPinyinNeutralThenTone1(text, true, { isCancelled })
+	})
 }
 
 export function stopDrillAudio() {
-	stopLocalPinyinAudio()
-	try {
-		const synth =
-			typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null
-		if (synth && typeof synth.cancel === 'function') synth.cancel()
-	} catch (_) {}
+	cancelPinyinPlay()
 }

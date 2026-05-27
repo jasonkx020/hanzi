@@ -164,7 +164,7 @@ import {
 	sleepUnlessCancelled,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
-import { speakHanzi, stopHanziSpeech } from '@/utils/speak-hanzi.js'
+import { stopHanziSpeech } from '@/utils/speak-hanzi.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
@@ -526,9 +526,6 @@ export default {
 				if (cancelled()) return
 				return
 			}
-			if (cancelled()) return
-			speakHanzi(this.displayChar)
-			await sleepUnlessCancelled(850, cancelled)
 		},
 		async beginStrokeGuidance(strokeIndex, introGen) {
 			const gen = introGen != null ? introGen : this.introGen

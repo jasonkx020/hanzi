@@ -64,9 +64,9 @@ import { loadToneLabProgress } from '@/utils/pinyin-tone-lab/progress.js'
 import { playToneChainForBare } from '@/utils/pinyin-tone-lab/play-tone-chain.js'
 import {
 	getLocalPinyinAudioPath,
-	playPinyinLocalAudio,
-	stopLocalPinyinAudio
+	playPinyinLocalAudio
 } from '@/utils/play-pinyin-local-audio.js'
+import { playLabPinyinAudio, cancelPinyinPlay } from '@/utils/pinyin-lab-play.js'
 
 export default {
 	components: { MengSubPage, PinyinLabCell, PinyinFourLinesRow },
@@ -91,11 +91,11 @@ export default {
 		this.blocks = getToneChartBlocks({ includeWhole: !!progress.level3Done })
 	},
 	onHide() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 		this.playingRow = -1
 	},
 	onUnload() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 	},
 	methods: {
 		toneRowDisplays(row) {
@@ -107,24 +107,37 @@ export default {
 			if (cell) this.onCellTap(cell)
 		},
 		async onCellTap(cell) {
-			if (!cell?.play || cell.disabled || this.busy) return
+			if (!cell?.play || cell.disabled) return
 			this.busy = true
-			stopLocalPinyinAudio()
 			try {
-				await playPinyinLocalAudio(getLocalPinyinAudioPath(cell.play), { timeoutMs: 3200 })
-			} catch (_) {}
-			this.busy = false
+				await playLabPinyinAudio(async ({ isCancelled }) => {
+					if (isCancelled()) return false
+					try {
+						await playPinyinLocalAudio(getLocalPinyinAudioPath(cell.play), {
+							timeoutMs: 3200
+						})
+						return !isCancelled()
+					} catch (_) {
+						return false
+					}
+				})
+			} finally {
+				this.busy = false
+			}
 		},
 		async onRowTap(row, ri) {
-			if (this.busy) return
 			const bare = row.bareStem || row.bare
 			if (!bare) return
 			this.busy = true
 			this.playingRow = ri
-			stopLocalPinyinAudio()
-			await playToneChainForBare(bare, { gapMs: 480 })
-			this.playingRow = -1
-			this.busy = false
+			try {
+				await playLabPinyinAudio(async ({ isCancelled }) => {
+					return playToneChainForBare(bare, { gapMs: 480, isCancelled })
+				})
+			} finally {
+				this.playingRow = -1
+				this.busy = false
+			}
 		}
 	}
 }

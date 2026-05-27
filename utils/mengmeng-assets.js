@@ -2,8 +2,8 @@
  * 萌萌识字 · 品牌美术资源路径（与 static/mengmeng、static/tab 目录一致）
  */
 import {
-	resolveAppStaticAbsoluteUrl,
-	resolveAppStaticLogicalUrl
+	resolveAppStaticImageUrl,
+	buildAppStaticImageSrcCandidates
 } from '@/utils/resolve-app-static-url.js'
 
 export const MENG_ASSETS = {
@@ -59,22 +59,10 @@ export function mengIp(pose) {
  * @param {string} webPath 如 /static/mengmeng/laba.png
  */
 export function resolveMengAssetUrl(webPath) {
-	const p = String(webPath || '').trim()
-	if (!p) return ''
-	const abs = resolveAppStaticAbsoluteUrl(p)
-	return abs || p
+	return resolveAppStaticImageUrl(webPath)
 }
 
-/** 听读音喇叭图：按优先级返回多种 src，供 @error 逐级重试 */
+/** 本地图：web → _www → file，云打包与基座均可用 @error 回退 */
 export function buildMengAssetSrcCandidates(webPath) {
-	const p = String(webPath || '').trim()
-	if (!p) return []
-	const out = []
-	const abs = resolveAppStaticAbsoluteUrl(p)
-	const logical = resolveAppStaticLogicalUrl(p)
-	if (abs) out.push(abs)
-	if (logical && logical !== abs) out.push(logical)
-	if (p.startsWith('/')) out.push(p)
-	else out.push('/' + p)
-	return [...new Set(out)]
+	return buildAppStaticImageSrcCandidates(webPath)
 }

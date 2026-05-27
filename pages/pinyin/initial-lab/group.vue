@@ -45,11 +45,8 @@ import {
 	saveInitialLabProgress,
 	loadInitialLabProgress
 } from '@/utils/pinyin-initial-lab/progress.js'
-import {
-	getLocalPinyinAudioPath,
-	playPinyinLocalAudio,
-	stopLocalPinyinAudio
-} from '@/utils/play-pinyin-local-audio.js'
+import { getLocalPinyinAudioPath, playPinyinLocalAudio } from '@/utils/play-pinyin-local-audio.js'
+import { playLabPinyinAudio, cancelPinyinPlay } from '@/utils/pinyin-lab-play.js'
 
 export default {
 	components: { MengSubPage, PinyinLabCell },
@@ -75,22 +72,26 @@ export default {
 	onLoad() {
 		this.$nextTick(() => this.playCurrent())
 	},
-	onHide() {
-		stopLocalPinyinAudio()
-	},
-	onUnload() {
-		stopLocalPinyinAudio()
-	},
+	onHide() { cancelPinyinPlay() },
+	onUnload() { cancelPinyinPlay() },
 	methods: {
 		async playCurrent() {
 			const q = this.currentQ
-			if (!q || this.playing) return
+			if (!q) return
 			this.playing = true
-			stopLocalPinyinAudio()
 			try {
-				await playPinyinLocalAudio(getLocalPinyinAudioPath(q.play), { timeoutMs: 3500 })
-			} catch (_) {}
-			this.playing = false
+				await playLabPinyinAudio(async ({ isCancelled }) => {
+					if (isCancelled()) return false
+					try {
+						await playPinyinLocalAudio(getLocalPinyinAudioPath(q.play), { timeoutMs: 3500 })
+						return !isCancelled()
+					} catch (_) {
+						return false
+					}
+				})
+			} finally {
+				this.playing = false
+			}
 		},
 		async onPick(index, opt) {
 			if (this.busy || !opt) return

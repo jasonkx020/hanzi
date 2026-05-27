@@ -182,6 +182,10 @@ export default {
 		}
 		this.refreshStats()
 	},
+	onHide() {
+		this.clearAutoHear()
+		stopDrillAudio()
+	},
 	onUnload() {
 		this.clearAutoHear()
 		stopDrillAudio()

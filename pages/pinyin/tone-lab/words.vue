@@ -73,9 +73,9 @@ import {
 import { applyToneToSyllableStem } from '@/utils/play-pinyin-local-audio.js'
 import {
 	getLocalPinyinAudioPath,
-	playPinyinLocalAudio,
-	stopLocalPinyinAudio
+	playPinyinLocalAudio
 } from '@/utils/play-pinyin-local-audio.js'
+import { playLabPinyinAudio, cancelPinyinPlay } from '@/utils/pinyin-lab-play.js'
 
 export default {
 	components: { MengSubPage, PinyinLabCell },
@@ -111,19 +111,24 @@ export default {
 		this.$nextTick(() => this.playCurrent())
 	},
 	onHide() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 	},
 	onUnload() {
-		stopLocalPinyinAudio()
+		cancelPinyinPlay()
 	},
 	methods: {
 		async playStem(bare, tone) {
 			const stem = applyToneToSyllableStem(bare, tone)
 			if (!stem) return
-			stopLocalPinyinAudio()
-			try {
-				await playPinyinLocalAudio(getLocalPinyinAudioPath(stem), { timeoutMs: 3200 })
-			} catch (_) {}
+			await playLabPinyinAudio(async ({ isCancelled }) => {
+				if (isCancelled()) return false
+				try {
+					await playPinyinLocalAudio(getLocalPinyinAudioPath(stem), { timeoutMs: 3200 })
+					return !isCancelled()
+				} catch (_) {
+					return false
+				}
+			})
 		},
 		playItem(it) {
 			if (!this.comicSet || !it) return
@@ -131,10 +136,13 @@ export default {
 		},
 		async playCurrent() {
 			const q = this.currentQ
-			if (!q || this.playing) return
+			if (!q) return
 			this.playing = true
-			await this.playStem(q.bare, q.tone)
-			this.playing = false
+			try {
+				await this.playStem(q.bare, q.tone)
+			} finally {
+				this.playing = false
+			}
 		},
 		async onPick(index, opt) {
 			if (this.busy || !opt) return

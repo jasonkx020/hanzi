@@ -434,9 +434,11 @@ import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import { MENG_VOICE, playMengmengVoiceOnce, stopMengmengVoice } from '@/utils/mengmeng-voice.js'
 import { measurePinyinScrollHeightPx } from '@/utils/pinyin-layout-compat.js'
 import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 
 export default {
-	mixins: [tabMain],
+	mixins: [tabMain, pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.PINYIN_INDEX,
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
@@ -622,6 +624,7 @@ export default {
 	onHide() {
 		stopMengmengVoice()
 		this.stopAutoReadChain()
+		this._pyPlay?.cancel()
 	},
 	methods: {
 		tabEmoji(tab) {
@@ -1162,7 +1165,6 @@ export default {
 				this.findAutoReadSlot(text, opts.asNeutral) ||
 				this.buildPlaySlotFromClick(text, opts)
 			if (this.autoReadRunning) {
-				stopLocalPinyinAudio()
 				this.autoReadRunId += 1
 				const runId = this.autoReadRunId
 				if (slot) {
@@ -1170,13 +1172,15 @@ export default {
 				}
 				return
 			}
-			stopLocalPinyinAudio()
 			this.cancelAutoReadSpeech()
-			const speakId = (this._cellSpeakId = (this._cellSpeakId || 0) + 1)
-			this.speakSymbolOnce(text, opts, slot).catch((e) => {
-				if (speakId !== this._cellSpeakId) return
-				console.warn('[pinyin] cell speak', text, e)
-			})
+			void this._pyPlay
+				.run(async ({ isCancelled }) => {
+					await this.speakSymbolOnce(text, opts, slot, isCancelled)
+					return true
+				})
+				.catch((e) => {
+					console.warn('[pinyin] cell speak', text, e)
+				})
 		},
 		buildPlaySlotFromClick(symbol, opts) {
 			const text = String(symbol || '').trim()
@@ -1245,7 +1249,8 @@ export default {
 					isCancelled
 				})
 				if (ok || blend) return ok
-				return speakPinyinSymbolAsync(text, narrator)
+				if (typeof isCancelled === 'function' && isCancelled()) return false
+				return playLocalPinyinNeutralThenTone1(text, useTone1Fb, { isCancelled })
 			}
 			const ok = await this.withPlayTimeout(playTask(), 7500)
 			if (!ok && !(typeof isCancelled === 'function' && isCancelled())) {
@@ -1254,20 +1259,20 @@ export default {
 			}
 			return !!ok
 		},
-		async speakSymbolOnce(symbol, opts, slotHint) {
+		async speakSymbolOnce(symbol, opts, slotHint, isCancelled) {
 			const text = String(symbol || '').trim()
 			if (!text) return
-			const speakId = this._cellSpeakId
-			const cancelled = () => speakId !== this._cellSpeakId
+			const cancelled =
+				typeof isCancelled === 'function' ? isCancelled : () => false
 			const slot = slotHint || this.findAutoReadSlot(text, opts?.asNeutral)
 			if (slot?.scrollId) {
 				this.setAutoReadHighlight(slot)
 			}
 			await this.playReferenceSymbol(text, { ...opts, isCancelled: cancelled })
-			if (speakId !== this._cellSpeakId) return
+			if (cancelled()) return
 			if (!this.autoReadRunning) {
 				await this.sleep(480)
-				if (speakId !== this._cellSpeakId) return
+				if (cancelled()) return
 				if (!this.autoReadRunning) {
 					this.setAutoReadHighlight(null)
 				}
@@ -1288,7 +1293,11 @@ export default {
 
 			const t0 = Date.now()
 			const blend = this.blendTrainingEnabled && this.activeTab === '拼读练习'
-			const ok = await this.playReferenceSymbol(text, opts)
+			const ok = await this._pyPlay.run(
+				({ isCancelled }) =>
+					this.playReferenceSymbol(text, { ...opts, isCancelled }),
+				{ when: () => !this.autoReadRunning || runId !== this.autoReadRunId }
+			)
 			if (!this.autoReadRunning || runId !== this.autoReadRunId) return
 
 			let delayMs = 380

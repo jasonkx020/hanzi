@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.mjs",
+    "test:pinyin": "node --test tests/pinyin-play-session.test.mjs",
     "db:build": "node scripts/build-db.mjs",
     "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
     "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
@@ -15,6 +16,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "imports": {
+    "@/*": "./*"
+  },
   "dependencies": {
     "cnchar": "^3.2.6",
     "cnchar-code": "^3.2.6",

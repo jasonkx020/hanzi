@@ -76,3 +76,34 @@ export function resolveAppStaticAbsoluteUrl(src) {
 	return web
 	// #endif
 }
+
+/**
+ * `<image>` 用：云打包 release 下优先站点路径 `/static/…`（与基座行为一致）；
+ * 失败时由 buildAppStaticImageSrcCandidates 逐级回退 _www / 绝对路径。
+ * @param {string} src
+ */
+export function resolveAppStaticImageUrl(src) {
+	const list = buildAppStaticImageSrcCandidates(src)
+	return list[0] || normalizeStaticWebPath(src) || String(src || '')
+}
+
+/**
+ * 图片 src 候选（顺序：web → _www → file），供 @error 重试。
+ * @param {string} src
+ * @returns {string[]}
+ */
+export function buildAppStaticImageSrcCandidates(src) {
+	const web = normalizeStaticWebPath(src)
+	if (!web) return []
+	const out = []
+	const push = (s) => {
+		const v = String(s || '').trim()
+		if (v && out.indexOf(v) < 0) out.push(v)
+	}
+	push(web)
+	// #ifdef APP-PLUS
+	push(resolveAppStaticLogicalUrl(web))
+	push(resolveAppStaticAbsoluteUrl(web))
+	// #endif
+	return out
+}

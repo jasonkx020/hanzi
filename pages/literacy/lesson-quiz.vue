@@ -149,6 +149,7 @@ import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { buildStoredLessonKey, recordLessonQuizAttempt } from '@/utils/user-lesson-progress-storage.js'
 import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import {
 	orderedUniqueRows,
@@ -171,6 +172,8 @@ function filterValidPlan(plan, pool) {
 }
 
 export default {
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.LESSON_QUIZ,
 	components: { MengSubPage },
 	data() {
 		return {
@@ -221,9 +224,6 @@ export default {
 	onUnload() {
 		this.clearAutoHear()
 		this.clearAdvanceTimer()
-		stopLocalPinyinAudio()
-	},
-	onHide() {
 		stopLocalPinyinAudio()
 	},
 	onLoad() {
@@ -321,6 +321,8 @@ export default {
 			})
 		},
 		loadQuestion(idx) {
+			this._pyPlay.cancel()
+			stopLocalPinyinAudio()
 			const item = this.plan[idx]
 			if (!item) {
 				this.finalizeQuizSession()
@@ -374,7 +376,13 @@ export default {
 		},
 		async onHearAgain() {
 			if (this.phase !== 'quiz' || this.qType !== 'hear_pick' || !this.targetHanzi) return
-			await playLessonTargetReading(this.targetHanzi, this.targetPinyin)
+			await this._pyPlay.run(
+				({ isCancelled }) =>
+					playLessonTargetReading(this.targetHanzi, this.targetPinyin, {
+						isCancelled
+					}),
+				{ when: () => this.phase !== 'quiz' || this.qType !== 'hear_pick' }
+			)
 		},
 		onPickHanzi(c) {
 			if (

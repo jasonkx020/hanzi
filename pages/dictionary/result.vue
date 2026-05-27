@@ -173,6 +173,7 @@ import {
 	DICTIONARY_LOCAL_PINYIN_OPTS
 } from '@/utils/dictionary-pinyin-speak.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
@@ -189,6 +190,8 @@ import {
 } from '@/utils/mengmeng-assets.js'
 
 export default {
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.DICT_RESULT,
 	components: {
 		PinyinFourLinesRow,
 		HanziStrokePlayer,
@@ -303,11 +306,9 @@ export default {
 		this.narrator = getAudioNarrator()
 	},
 	onHide() {
-		stopLocalPinyinAudio()
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	onUnload() {
-		stopLocalPinyinAudio()
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	methods: {
@@ -421,17 +422,20 @@ export default {
 			} catch (_) {}
 		},
 		async speakCurrentPinyin() {
-			if (!this.hanzi || this.hanzi === '—' || this.dictPinyinPlaying) return
+			if (!this.hanzi || this.hanzi === '—') return
 			this.dictPinyinPlaying = true
 			try {
-				const ok = await speakDictionaryEntryPinyin({
-					hanzi: this.hanzi,
-					fallbackPinyin: this.pinyin,
-					narrator: this.narrator,
-					...DICTIONARY_LOCAL_PINYIN_OPTS
-				})
+				const ok = await this._pyPlay.run(({ isCancelled }) =>
+					speakDictionaryEntryPinyin({
+						hanzi: this.hanzi,
+						fallbackPinyin: this.pinyin,
+						narrator: this.narrator,
+						...DICTIONARY_LOCAL_PINYIN_OPTS,
+						isCancelled
+					})
+				)
 				if (!ok) {
-					uni.showToast({ title: '未播放成功，请检查静音或重试', icon: 'none' })
+					uni.showToast({ title: '暂无本地读音', icon: 'none' })
 				}
 			} finally {
 				this.dictPinyinPlaying = false
@@ -462,6 +466,7 @@ export default {
 			if (prev) {
 				recordCharLearned(prev, getCurriculumPrefs())
 			}
+			this._pyPlay.cancel()
 			stopLocalPinyinAudio()
 			if (c === prev) {
 				uni.showToast({ title: '已标为已学', icon: 'success', duration: 1000 })

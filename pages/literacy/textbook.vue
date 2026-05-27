@@ -1,7 +1,12 @@
 <template>
 	<view class="page tb-page">
 		<view class="tb-hero">
-			<image class="meng-hero-bg-layer" src="/static/mengmeng/hero-bg.png" mode="aspectFill" />
+			<image
+				class="meng-hero-bg-layer"
+				:src="staticImg('hero-bg', '/static/mengmeng/hero-bg.png')"
+				mode="aspectFill"
+				@error="onStaticImgError('hero-bg', '/static/mengmeng/hero-bg.png')"
+			/>
 			<view class="meng-hero-sky-layer" />
 			<view class="tb-hero-sky" />
 			<meng-status-bar-spacer :height-px="statusBarPx" />
@@ -17,9 +22,10 @@
 					<view class="tb-cover-wrap" @click="openCurriculumPicker">
 						<image
 							class="tb-cover-img"
-							:src="heroBookCoverSrc"
+							:src="staticImg(heroCoverRawPath, heroCoverRawPath)"
 							mode="aspectFit"
 							:lazy-load="false"
+							@error="onStaticImgError(heroCoverRawPath, heroCoverRawPath)"
 						/>
 						<text class="tb-cover-tag">换教材</text>
 					</view>
@@ -85,7 +91,12 @@
 		</view>
 
 		<view class="foot-tip">
-			<image class="foot-icon-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
+			<image
+				class="foot-icon-img"
+				:src="staticImg('foot-logo', '/static/mengmeng/logo-icon.png')"
+				mode="aspectFit"
+				@error="onStaticImgError('foot-logo', '/static/mengmeng/logo-icon.png')"
+			/>
 			<text class="foot-msg">点一课进入字卡听读音；点封面可换年级册别。</text>
 		</view>
 		</view>
@@ -119,7 +130,12 @@
 						:class="{ 'version-chip-on': modalVersion === v.value }"
 						@click="chooseVersion(v.value)"
 					>
-						<image class="version-icon" :src="resolveAppStaticImg(v.icon)" mode="aspectFill" />
+						<image
+							class="version-icon"
+							:src="staticImg(v.icon, v.icon)"
+							mode="aspectFill"
+							@error="onStaticImgError(v.icon, v.icon)"
+						/>
 						<text class="version-label">{{ v.label }}</text>
 					</view>
 				</view>
@@ -143,9 +159,10 @@
 							<view class="book-cover-wrap">
 								<image
 									class="book-cover"
-									:src="book.cover"
+									:src="staticImg(book.coverRaw, book.coverRaw)"
 									mode="aspectFit"
 									:lazy-load="false"
+									@error="onStaticImgError(book.coverRaw, book.coverRaw)"
 								/>
 							</view>
 							<text class="book-label">{{ book.label }}</text>
@@ -173,7 +190,10 @@ import {
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
-import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
+import {
+	buildAppStaticImageSrcCandidates,
+	resolveAppStaticImageUrl
+} from '@/utils/resolve-app-static-url.js'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
@@ -203,7 +223,7 @@ const VERSION_OPTIONS = [
 	// { label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
 ]
 
-/** 与当前教材偏好对应的静态封面路径（再经 resolveAppStaticImg） */
+/** 与当前教材偏好对应的静态封面 web 路径 */
 function rawCoverPathForPrefs(prefs) {
 	const p = prefs || {}
 	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
@@ -233,11 +253,14 @@ export default {
 			curriculumPickerRequired: false,
 			modalVersion: '统编(人教版)',
 			versionOptions: VERSION_OPTIONS,
-			/** 顶部「换教材」按钮：当前册封面（完整显示，aspectFit） */
-			heroBookCoverSrc: ''
+			/** 静态图 @error 回退：key → 候选下标（云打包优先 /static/） */
+			staticImgTryIndex: {}
 		}
 	},
 	computed: {
+		heroCoverRawPath() {
+			return rawCoverPathForPrefs(getCurriculumPrefs())
+		},
 		currentBookRows() {
 			if (this.modalVersion === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
 				const book = {
@@ -245,7 +268,7 @@ export default {
 					semester: '上',
 					key: `${this.modalVersion}-0-上`,
 					label: '课标300基本字',
-					cover: this.resolveAppStaticImg('/static/images/yuwen_youxiao.jpg')
+					coverRaw: '/static/images/yuwen_youxiao.jpg'
 				}
 				return [{ grade: 0, up: book, down: null }]
 			}
@@ -253,7 +276,7 @@ export default {
 			COVER_BOOKS.forEach((b) => {
 				const book = {
 					...b,
-					cover: this.resolveAppStaticImg(b.cover),
+					coverRaw: b.cover,
 					key: `${this.modalVersion}-${b.grade}-${b.semester}`,
 					label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
 				}
@@ -277,19 +300,21 @@ export default {
 	},
 	created() {
 		this.statusBarPx = getMengNavMetrics().statusBarPx
-		this.syncHeroBookCover()
 	},
 	methods: {
-		/**
-		 * App 端：低版本 WebView 对「/static/…」解析不稳，转为 5+ 运行时本地路径（适配 Android 5+）。
-		 * H5/小程序等无 plus 时原样返回。
-		 */
-		resolveAppStaticImg(src) {
-			return resolveAppStaticAbsoluteUrl(src)
+		staticImg(key, webPath) {
+			const list = buildAppStaticImageSrcCandidates(webPath)
+			const i = Math.min(this.staticImgTryIndex[key] || 0, Math.max(0, list.length - 1))
+			return list[i] || resolveAppStaticImageUrl(webPath) || webPath
 		},
-		syncHeroBookCover() {
-			const prefs = getCurriculumPrefs()
-			this.heroBookCoverSrc = this.resolveAppStaticImg(rawCoverPathForPrefs(prefs))
+		onStaticImgError(key, webPath) {
+			const list = buildAppStaticImageSrcCandidates(webPath)
+			const next = (this.staticImgTryIndex[key] || 0) + 1
+			if (next < list.length) {
+				this.$set(this.staticImgTryIndex, key, next)
+			} else {
+				console.warn('[textbook] image load failed', key, webPath, list)
+			}
 		},
 		async reload() {
 			if (!hasUserCurriculumPrefsSaved()) {
@@ -300,7 +325,6 @@ export default {
 			this.loading = true
 			try {
 				const prefs = getCurriculumPrefs()
-				this.syncHeroBookCover()
 				this.summary = formatCurriculumSummary(prefs)
 				this.textbookTexts = []
 				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {

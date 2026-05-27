@@ -173,6 +173,7 @@ import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
 import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { recordGameLevelClear } from '@/utils/achievement-stats-storage.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
@@ -213,6 +214,8 @@ function uniquePoolRows(rows) {
 }
 
 export default {
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.GAME_HEAR,
 	components: {
 		MengSubPage,
 		PinyinFourLinesRow
@@ -243,7 +246,6 @@ export default {
 			autoHearTimer: null,
 			retryHearTimer: null,
 			/** 递增以取消在途读音，避免快速点选叠音 */
-			hearPlayGen: 0,
 			/** 混合闯关：{ type: 'hear'|'pair', n?: number } */
 			segmentPlan: [],
 			segmentIdx: 0,
@@ -330,7 +332,7 @@ export default {
 		},
 		/** 停止自动听音、本地拼音与 TTS，并作废在途播放 */
 		stopGameAudio() {
-			this.hearPlayGen++
+			this._pyPlay.cancel()
 			this.hearHighlightCol = -1
 			this.clearAutoHear()
 			this.clearRetryHear()
@@ -650,10 +652,12 @@ export default {
 				}
 			}, 400)
 		},
-		async playTargetHearReading(hanzi, py, gen) {
-			const cancelled = () => gen !== this.hearPlayGen || this.phase !== 'play'
+		async playTargetHearReading(hanzi, py, isCancelled) {
+			const cancelled =
+				typeof isCancelled === 'function'
+					? isCancelled
+					: () => this.phase !== 'play'
 			const tokens = this.pinyinTokensFromDisplay(py)
-			stopLocalPinyinAudio()
 			stopHanziSpeech()
 			if (cancelled()) return
 			if (tokens.length > 1) {
@@ -676,19 +680,25 @@ export default {
 		},
 		async playTargetSound() {
 			if (this.phase !== 'play' || !this.targetHanzi) return
-			const gen = ++this.hearPlayGen
 			const hanzi = this.targetHanzi
 			const py = this.targetPinyin
 			this.hearLocked = true
 			this.hearHighlightCol = -1
+			let sessionGen = 0
 			try {
-				if (gen !== this.hearPlayGen) return
-				await this.playTargetHearReading(hanzi, py, gen)
+				await this._pyPlay.run(
+					async ({ gen, isCancelled }) => {
+						sessionGen = gen
+						await this.playTargetHearReading(hanzi, py, isCancelled)
+						return true
+					},
+					{ when: () => this.phase !== 'play' }
+				)
 			} catch (e) {
 				console.warn('[game] playTargetSound', e)
 			} finally {
 				this.hearHighlightCol = -1
-				if (this.phase !== 'play' || gen !== this.hearPlayGen) {
+				if (this.phase !== 'play' || this._pyPlay.isStale(sessionGen)) {
 					stopLocalPinyinAudio()
 					stopHanziSpeech()
 				} else {
