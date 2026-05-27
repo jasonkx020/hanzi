@@ -1,0 +1,22 @@
+---
+description: 萌萌识字 MM-5L 开发与著作权工程规范（架构、分层、数据、音频）
+alwaysApply: true
+---
+
+# 萌萌识字开发规范（摘要）
+
+完整规范见 `docs/萌萌识字-软件开发规范.md`；命名见 `docs/命名规格.md`。
+
+**MM-5L 分层**：L1 pages/components → L2 modules/usecases → L3 services → L4 repositories/store → L5 utils/config/static。禁止下层 import 上层；页面禁止直接 setStorage 与支付 API。
+
+**Store**：仅 app/curriculum/learning/user 四类；页面只读，写入经 repository 后 refresh。
+
+**数据**：schema 以 `constants/curriculum-schema.js` 为准；持久化 snake_case；进度布尔 0/1；Storage 键 `{name}_vN`。
+
+**拼音播放**：必须经 `pinyin-play-session` + `PINYIN_PLAY_SCOPES`；页面用 mixin `_pyPlay`；禁止页面内裸 InnerAudioContext。
+
+**Lab**：仅 initial/vowel/tone/whole-lab；子页用 index/ear/mouth/group/chart 等固定短名。
+
+**新文件**：`.js`/`.vue` 首部加 @file @layer @software @copyright 注释块（见规范 §4）。
+
+**VIP/配额**：经 vip-*-service 与 consumeQuota()；广告 ID 仅 constants/ad-placements.js。

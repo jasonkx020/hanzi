@@ -1,0 +1,18 @@
+---
+description: hanzi 项目命名规格（目录、文件、变量、Storage、静态资源）
+alwaysApply: true
+---
+
+# 命名规格（摘要）
+
+工程总规范见 `docs/萌萌识字-软件开发规范.md`；命名细则见 `docs/命名规格.md`。新增或重命名代码时遵守：
+
+- **文件/目录**：`kebab-case`；页面 `pages/{域}/{功能}/index.vue`；工具 `utils/`，服务 `*-service.js`，仓储 `*-repository.js`，用例 `modules/{域}/usecases/{verb}-{noun}.js`
+- **组件**：`meng-*`（品牌壳）、`pinyin-*`（拼音 UI）、其余语义化 `kebab-case.vue`
+- **JS 标识符**：函数/变量 `camelCase`；导出常量 `UPPER_SNAKE_CASE`
+- **持久化字段与 Storage 键**：`snake_case`，键名带版本后缀 `_v1`；集中定义在 `constants/curriculum-schema.js` 的 `STORAGE_KEYS`
+- **课本文案 JSON**：仅通过 `renjiaoTextbookJsonFile()` 生成名，模式 `grade{n}-{up|down}[-literacy|writing|words].json`
+- **CSS 类**：`kebab-case`，域前缀 `meng-` / `pinyin-`
+- **禁止**：camelCase 文件名、笼统名 `helper.js`/`getData`、中文路径的课文 JSON、在 `pages/` 堆业务 `.js`
+
+领域词：`literacy`（识字）、`hanzi`（字）、`pinyin`、`lesson`/`textbook`、`dictionary`、`vip`、`meng`/`mengmeng`（IP）
