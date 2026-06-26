@@ -1,3 +1,10 @@
+<!--
+  @file stroke.vue
+  @layer L1 表现层
+  @description 路由页面源文件：stroke.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="笔顺实验室" subtitle="看笔顺、分步写、练一练" :overlap-body="false">
 		<template #hero>

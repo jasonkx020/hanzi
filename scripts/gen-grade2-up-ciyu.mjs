@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade2-up-ciyu.mjs
+ * @module scripts
+ * @description 源文件：gen-grade2-up-ciyu.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 二年级上册「词语表」→ static/booktext/renjiaoban/二年级上册-词语表.json
  * 词条来自教材附录附图；课次从第17课直接接第19课（古诗二首不占单独词语表课号）。
  * 拼音：cnchar 逐字拼读后用空格连接。

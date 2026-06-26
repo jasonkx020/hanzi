@@ -1,3 +1,10 @@
+/**
+ * @file learning-repository.js
+ * @module repositories
+ * @description 数据仓储源文件：learning-repository.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import {
 	addCharWrongCount,
 	markCharLearned,

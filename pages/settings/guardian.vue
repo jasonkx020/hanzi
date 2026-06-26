@@ -1,3 +1,10 @@
+<!--
+  @file guardian.vue
+  @layer L1 表现层
+  @description 路由页面源文件：guardian.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="家长管理" subtitle="朗读人、缓存与护眼设置">
 		<view class="card">

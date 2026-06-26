@@ -1,4 +1,11 @@
 /**
+ * @file lesson-mode-session.js
+ * @module utils
+ * @description 基础设施工具：lesson-mode-session.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 课次模式页一次性传参（避免 URL 过长）。
  * 写入后由小测/跟读等页读取并立即清除。
  */

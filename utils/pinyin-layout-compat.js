@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-layout-compat.js
+ * @module utils
+ * @description 基础设施工具：pinyin-layout-compat.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音页布局：低版本 Android WebView 检测与 scroll 区域高度兜底。
  */
 

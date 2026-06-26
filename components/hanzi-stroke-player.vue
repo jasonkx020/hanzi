@@ -1,3 +1,10 @@
+<!--
+  @file hanzi-stroke-player.vue
+  @layer L1 表现层
+  @description UI 组件源文件：hanzi-stroke-player.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<view class="hanzi-stroke-player" :class="{ 'hanzi-stroke-player--fallback': animFallback }">
 		<view class="tianzi-shell" :style="wrapStyle" @click="onCanvasClick">

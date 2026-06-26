@@ -1,4 +1,11 @@
 /**
+ * @file medals.js
+ * @module data
+ * @description 领域数据：medals.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 勋章定义（12 枚）· 解锁条件由 services/medal-service.js 根据快照判定
  * 图片：static/mengmeng/medals/{id}.png（可后续替换 AI 生成资源）
  */

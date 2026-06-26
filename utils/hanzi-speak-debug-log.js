@@ -1,4 +1,11 @@
 /**
+ * @file hanzi-speak-debug-log.js
+ * @module utils
+ * @description 基础设施工具：hanzi-speak-debug-log.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 查字「点汉字 → 播读音」调试日志：写入 console + 调试页环形缓冲（appendDebugLog）。
  * 仅在 speakDictionaryEntryPinyin 会话内输出，避免拼音格子等其它调用刷屏。
  */

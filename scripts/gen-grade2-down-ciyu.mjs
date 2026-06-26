@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade2-down-ciyu.mjs
+ * @module scripts
+ * @description 源文件：gen-grade2-down-ciyu.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 二年级下册「词语表」→ static/booktext/renjiaoban/二年级下册-词语表.json
  * 词条来自教材附录附图；第16课后续词条（指点…积雪）并入同一课。
  * 拼音：cnchar（与 gen-grade2-up-ciyu.mjs 相同规则）

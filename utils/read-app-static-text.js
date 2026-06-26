@@ -1,4 +1,11 @@
 /**
+ * @file read-app-static-text.js
+ * @module utils
+ * @description 基础设施工具：read-app-static-text.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * App 端读取打包在 static 下的文本（JSON 等）。
  * plus.io 不能解析裸 /static/...，须用 _www/static/... 或 convertLocalFileSystemURL 结果。
  */

@@ -1,3 +1,10 @@
+/**
+ * @file constants.js
+ * @module utils
+ * @description 基础设施工具：constants.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 export const WHOLE_LEVELS = [
 	{ id: 1, key: 'ear', title: '认读耳朵', emoji: '👂', subtitle: '听一听，点对的音节' },
 	{ id: 2, key: 'tip', title: '认读小贴士', emoji: '💡', subtitle: '看提示，选出整体音节' },

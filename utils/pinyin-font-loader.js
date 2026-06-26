@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-font-loader.js
+ * @module utils
+ * @description 基础设施工具：pinyin-font-loader.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音展示字体（与 static/styles/pinyin-font.css 中 font-family: pinyin-regular 一致）。
  *
  * H5：依赖全局 @font-face，不调用 loadFontFace。

@@ -1,4 +1,11 @@
 /**
+ * @file vip-pay-service.js
+ * @module services
+ * @description 领域服务源文件：vip-pay-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员购买流程编排：家长验证 → 下单 → 调起支付 → 查单 → 写入权益
  */
 

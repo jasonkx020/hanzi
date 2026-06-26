@@ -1,4 +1,11 @@
 /**
+ * @file user-lesson-progress-storage.js
+ * @module utils
+ * @description 基础设施工具：user-lesson-progress-storage.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 课级学习进度（与字级 USER_CHAR_PROGRESS 分离，见 docs 课次字卡-学习进度与小测设计 §1.4）
  */
 

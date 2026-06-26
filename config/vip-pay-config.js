@@ -1,4 +1,11 @@
 /**
+ * @file vip-pay-config.js
+ * @module config
+ * @description 配置模块：vip-pay-config.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员支付配置（P1）
  * - 配置 apiBaseUrl 后走服务端下单/查单；留空则使用本地演示支付（开发与小程未配商户时）
  * - 小程序：createOrder 可传 wxLoginCode，由服务端换 openId 后调微信统一下单

@@ -1,4 +1,11 @@
 /**
+ * @file debug-console-hook.js
+ * @module utils
+ * @description 基础设施工具：debug-console-hook.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拦截 console，环形缓冲最近若干条，供「调试日志」页查看（真机不便连电脑时用的简易控制台）。
  * 部分小程序/App 运行时 console 方法不可改写，需配合 appendDebugLog 或直接读 diagnostics。
  */

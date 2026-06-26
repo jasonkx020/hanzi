@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade2-up-writing.mjs
+ * @module scripts
+ * @description 源文件：gen-grade2-up-writing.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 二年级上册写字表 → static/booktext/renjiaoban/二年级上册-写字表.json
  * 运行：node scripts/gen-grade2-up-writing.mjs
  */

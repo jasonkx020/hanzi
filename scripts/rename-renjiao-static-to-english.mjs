@@ -1,4 +1,11 @@
 /**
+ * @file rename-renjiao-static-to-english.mjs
+ * @module scripts
+ * @description 源文件：rename-renjiao-static-to-english.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将 static/booktext/renjiaoban 下中文文件名改为英文（一次性迁移）
  * 运行：node scripts/rename-renjiao-static-to-english.mjs
  */

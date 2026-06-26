@@ -1,3 +1,10 @@
+<!--
+  @file index.vue
+  @layer L1 表现层
+  @description 源文件：index.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<view class="tab-outer">
 		<view class="tab-wrap">

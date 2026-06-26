@@ -1,3 +1,10 @@
+<!--
+  @file match.vue
+  @layer L1 表现层
+  @description 路由页面源文件：match.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="调号朋友" subtitle="形状和带调拼音配一对" avatar-pose="happy" :overlap-body="true">
 		<view class="match-page">

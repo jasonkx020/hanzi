@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-play-session-scopes.js
+ * @module utils
+ * @description 基础设施工具：pinyin-play-session-scopes.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音播放世代计数（纯逻辑，无 uni / 音频依赖，可供 Node 单测）。
  */
 

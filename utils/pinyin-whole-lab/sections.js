@@ -1,4 +1,11 @@
 /**
+ * @file sections.js
+ * @module utils
+ * @description 基础设施工具：sections.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 整体认读分块（与人教版拼音页、闯关题库一致）
  */
 export const WHOLE_SECTIONS = [

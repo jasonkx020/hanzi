@@ -1,3 +1,10 @@
+/**
+ * @file dictionary-cache.js
+ * @module utils
+ * @description 基础设施工具：dictionary-cache.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 const STORAGE_KEY = 'dictionary_detail_cache_v2'
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 

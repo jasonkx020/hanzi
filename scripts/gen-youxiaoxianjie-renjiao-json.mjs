@@ -1,4 +1,11 @@
 /**
+ * @file gen-youxiaoxianjie-renjiao-json.mjs
+ * @module scripts
+ * @description 源文件：gen-youxiaoxianjie-renjiao-json.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 生成 static/booktext/renjiaoban/preschool-bridge.json
  * 课标附录4「识字写字教学基本字表」300字，按 cnchar.stroke 笔画数分组（1画一类、2画一类…）
  * 运行：node scripts/gen-youxiaoxianjie-renjiao-json.mjs

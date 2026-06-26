@@ -1,4 +1,11 @@
 /**
+ * @file export-pinyin-pcm-sidecar.mjs
+ * @module scripts
+ * @description 源文件：export-pinyin-pcm-sidecar.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将 static/pinyin/*.opus 导出为 _pcm/{stem}.s16le（48kHz mono s16le），供 App MFCC 自检等。
  * 运行：npm run pinyin:export-pcm-sidecar
  * 单符号：node scripts/export-pinyin-pcm-sidecar.mjs m

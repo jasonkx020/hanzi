@@ -11,7 +11,10 @@
     "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
     "assets:resize-mengmeng": "python scripts/resize-mengmeng-assets.py",
     "assets:remove-watermark": "python scripts/remove-doubao-watermark.py",
-    "assets:mengmeng": "python scripts/resize-mengmeng-assets.py && python scripts/remove-doubao-watermark.py"
+    "assets:mengmeng": "python scripts/resize-mengmeng-assets.py && python scripts/remove-doubao-watermark.py",
+    "copyright:list": "node scripts/generate-soft-copyright-list.mjs",
+    "copyright:apply": "node scripts/apply-copyright-headers.mjs --write",
+    "copyright:preview": "node scripts/apply-copyright-headers.mjs"
   },
   "keywords": [],
   "author": "",

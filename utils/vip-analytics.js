@@ -1,4 +1,11 @@
 /**
+ * @file vip-analytics.js
+ * @module utils
+ * @description 基础设施工具：vip-analytics.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员/支付埋点（可对接 uni统计 / 自建上报）
  */
 

@@ -1,4 +1,11 @@
 /**
+ * @file renjiao-textbook-filenames.js
+ * @module constants
+ * @description 常量定义：renjiao-textbook-filenames.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 人教课文 / 附录表 JSON 文件名（英文，便于跨平台与工具链）
  * 与 static/booktext/renjiaoban/ 下实际文件一致。
  */

@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-index-tab-views.js
+ * @module utils
+ * @description 基础设施工具：pinyin-index-tab-views.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音页 Tab 视图预计算（避免切换时重复 chunk / 分类计算）
  */
 import { chunkHomeworkSymbols } from '@/utils/pinyin-homework-chunk.js'

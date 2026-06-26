@@ -1,4 +1,11 @@
 /**
+ * @file stroke-name-pinyin.js
+ * @module data
+ * @description 领域数据：stroke-name-pinyin.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 笔画名称 → 带调拼音音节列表（与 static/pinyin/{音节}.opus 文件名一致）。
  * 用于笔顺播报：优先整词映射，避免 cnchar 多音字在笔画语境下读错（如 折 zhé、钩 gōu）。
  * 复合笔画按音节与笔顺动画拐点对齐：首音节在笔起时播，后续音节在拐点/收尾时分段播。

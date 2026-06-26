@@ -1,4 +1,11 @@
 /**
+ * @file vip-entitlements.js
+ * @module utils
+ * @description 基础设施工具：vip-entitlements.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员扩展权益：家庭年卡、年级永久解锁、复习包（P4）
  */
 

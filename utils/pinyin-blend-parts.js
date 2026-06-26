@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-blend-parts.js
+ * @module utils
+ * @description 基础设施工具：pinyin-blend-parts.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼读练习：按拼音规则拆成「声母 → 介母 → 韵母」顺序（用于分步播放）。
  * - 整体认读音节：不拆分，整段播放（与「整体认读」表一致，含 zhi…shi、yue、yun 等）。
  * - 否则：两拼 / 三拼；j/q/x 后写的 ue → 韵母 üe；j/q/x + un → ün（与 lun/gun 等真 un 区分）。

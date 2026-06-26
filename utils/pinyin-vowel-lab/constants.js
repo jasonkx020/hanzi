@@ -1,3 +1,10 @@
+/**
+ * @file constants.js
+ * @module utils
+ * @description 基础设施工具：constants.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 export const VOWEL_LEVELS = [
 	{ id: 1, key: 'ear', title: '韵母耳朵', emoji: '👂', subtitle: '听一听，点对的韵母' },
 	{ id: 2, key: 'mouth', title: '发音小贴士', emoji: '💡', subtitle: '看提示，选出韵母' },

@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file index.vue
+  @layer L1 表现层
+  @description 路由页面源文件：index.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="韵母乐园" subtitle="听一听，韵母就会啦" avatar-pose="happy" :overlap-body="true">
 		<view class="lab-map">
 			<view v-for="lv in levels" :key="lv.id" class="lab-map-node-wrap">

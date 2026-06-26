@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file mouth.vue
+  @layer L1 表现层
+  @description 路由页面源文件：mouth.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="口型朋友" subtitle="看口型，听声音，选声母" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">

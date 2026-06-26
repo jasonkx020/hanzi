@@ -1,4 +1,11 @@
 /**
+ * @file curriculum-storage.js
+ * @module utils
+ * @description 基础设施工具：curriculum-storage.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 本地 curriculum 偏好存储（uni.storage）
  * 字段名与 constants/curriculum-schema.js、生字 seed 字段对齐。
  */

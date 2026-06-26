@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-drill-pools.js
+ * @module data
+ * @description 领域数据：pinyin-drill-pools.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音闯关题库（与人教版拼音页分类一致）
  */
 import { isPinyinBlendTrainingEnabled } from '@/config/feature-flags.js'

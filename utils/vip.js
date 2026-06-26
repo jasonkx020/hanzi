@@ -1,4 +1,11 @@
 /**
+ * @file vip.js
+ * @module utils
+ * @description 基础设施工具：vip.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员状态（本地持久化）。正式上线请与服务端订单结果同步写入 expireAt。
  * 付费入口须面向家长，避免对儿童施加心理压力。
  */

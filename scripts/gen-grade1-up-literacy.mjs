@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade1-up-literacy.mjs
+ * @module scripts
+ * @description 源文件：gen-grade1-up-literacy.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 一年级上册识字表 → JSON + seed-curriculum.json（替换原一年级上·识字表种子）
  * 运行：node scripts/gen-grade1-up-literacy.mjs
  */

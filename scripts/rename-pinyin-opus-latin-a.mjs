@@ -1,4 +1,11 @@
 /**
+ * @file rename-pinyin-opus-latin-a.mjs
+ * @module scripts
+ * @description 源文件：rename-pinyin-opus-latin-a.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将 static/pinyin 下文件名中的 ɑ（U+0251）及 ɑ+组合调号 改为拉丁 a / ā á ǎ à。
  * 两阶段重命名，避免互相覆盖。
  *

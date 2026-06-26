@@ -1,4 +1,11 @@
 /**
+ * @file lesson-quiz-plan.js
+ * @module utils
+ * @description 基础设施工具：lesson-quiz-plan.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 本课小测题单：覆盖课内全部生字（听音选字 + 可选看字选音）。
  */
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'

@@ -1,3 +1,10 @@
+<!--
+  @file medals.vue
+  @layer L1 表现层
+  @description 路由页面源文件：medals.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="勋章墙" subtitle="学习越多，点亮越多">
 		<view class="growth-card">

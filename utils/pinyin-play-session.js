@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-play-session.js
+ * @module utils
+ * @description 基础设施工具：pinyin-play-session.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音本地播放会话（统一 API）
  *
  * - `PINYIN_PLAY_SCOPES.GLOBAL`：乐园 / 闯关等共用单例音频

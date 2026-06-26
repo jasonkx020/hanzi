@@ -1,4 +1,11 @@
 /**
+ * @file mengmeng-voice.js
+ * @module utils
+ * @description 基础设施工具：mengmeng-voice.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 萌萌语音提示（static/voice/mengmeng/{id}.opus）
  */
 import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'

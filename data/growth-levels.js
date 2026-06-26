@@ -1,4 +1,11 @@
 /**
+ * @file growth-levels.js
+ * @module data
+ * @description 领域数据：growth-levels.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 成长等级 Lv0～6（与付费解耦，见 docs/会员与变现设计.md §五）
  */
 

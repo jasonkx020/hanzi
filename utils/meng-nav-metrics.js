@@ -1,3 +1,10 @@
+/**
+ * @file meng-nav-metrics.js
+ * @module utils
+ * @description 基础设施工具：meng-nav-metrics.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 /** 自定义顶栏：状态栏 + 导航内容区高度（px） */
 export const MENG_NAV_CONTENT_PX = 44
 

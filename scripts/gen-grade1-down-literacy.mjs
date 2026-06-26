@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade1-down-literacy.mjs
+ * @module scripts
+ * @description 源文件：gen-grade1-down-literacy.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 生成一年级下册识字表 JSON + 追加 seed-curriculum.json
  * 数据依据教材识字表书页顺序（拼音含多音字读本课标注）
  * 运行：node scripts/gen-grade1-down-literacy.mjs

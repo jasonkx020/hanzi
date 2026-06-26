@@ -1,4 +1,11 @@
 /**
+ * @file safe-inner-audio-play.js
+ * @module utils
+ * @description 基础设施工具：safe-inner-audio-play.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * InnerAudioContext.play() 在 H5 返回 Promise；被 stop/destroy/pause 打断时会 reject AbortError，属正常情况。
  */
 

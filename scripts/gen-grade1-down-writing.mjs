@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade1-down-writing.mjs
+ * @module scripts
+ * @description 源文件：gen-grade1-down-writing.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 一年级下册写字表 → JSON + seed-curriculum.json
  * 运行：node scripts/gen-grade1-down-writing.mjs
  */

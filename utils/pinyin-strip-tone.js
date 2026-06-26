@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-strip-tone.js
+ * @module utils
+ * @description 基础设施工具：pinyin-strip-tone.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 去掉拼音音节上的声调：仅用预组合字符映射 + 删除四声组合调号，
  * 不使用 Unicode NFC/NFD，避免带调字母与组合调号处理异常。
  * ü 的分音符（U+0308）会保留。

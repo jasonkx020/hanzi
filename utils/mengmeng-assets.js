@@ -1,4 +1,11 @@
 /**
+ * @file mengmeng-assets.js
+ * @module utils
+ * @description 基础设施工具：mengmeng-assets.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 萌萌识字 · 品牌美术资源路径（与 static/mengmeng、static/tab 目录一致）
  */
 import {

@@ -1,4 +1,11 @@
 /**
+ * @file learning-profile-storage.js
+ * @module utils
+ * @description 基础设施工具：learning-profile-storage.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 学习档案（家庭年卡最多 2 位孩子，进度按档案分桶存储）
  */
 

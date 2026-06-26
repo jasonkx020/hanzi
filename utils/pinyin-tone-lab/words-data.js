@@ -1,4 +1,11 @@
 /**
+ * @file words-data.js
+ * @module utils
+ * @description 基础设施工具：words-data.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 关 5：同音节四声词语（儿童漫画卡）
  * playStem 由 applyToneToSyllableStem(bare, tone) 生成
  */

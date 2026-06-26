@@ -1,3 +1,10 @@
+/**
+ * @file learning-store.js
+ * @module store
+ * @description 状态存储源文件：learning-store.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
 
 const learningState = {

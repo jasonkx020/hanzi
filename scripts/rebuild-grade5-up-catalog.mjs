@@ -1,4 +1,11 @@
 /**
+ * @file rebuild-grade5-up-catalog.mjs
+ * @module scripts
+ * @description 源文件：rebuild-grade5-up-catalog.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 按 grade5-up-catalog.json（units + children 子目录）重建 grade5-up.json。
  * 课文主文件仍为扁平数组：组课父篇 + 子篇（子篇带 parentTitle）。
  *

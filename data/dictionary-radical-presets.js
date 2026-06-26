@@ -1,4 +1,11 @@
 /**
+ * @file dictionary-radical-presets.js
+ * @module data
+ * @description 领域数据：dictionary-radical-presets.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 查字页部首 chip 预设：教材常用左右旁 + 常见部首（固定展示，与字库动态部首合并）。
  */
 

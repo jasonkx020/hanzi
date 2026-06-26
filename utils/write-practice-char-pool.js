@@ -1,4 +1,11 @@
 /**
+ * @file write-practice-char-pool.js
+ * @module utils
+ * @description 基础设施工具：write-practice-char-pool.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 写字练习：换字池。已选教材 → 当前课本生字；未选教材 → 全库识字表。
  */
 import { queryCurriculumChars, queryAllShiziCurriculumChars } from '@/utils/curriculum-db.js'

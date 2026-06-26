@@ -1,4 +1,11 @@
 /**
+ * @file lesson-mode-audio.js
+ * @module utils
+ * @description 基础设施工具：lesson-mode-audio.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 课次模式（听写 / 小测 / 气球营）音频编排：
  * 萌萌提示音与生字读音串行，避免固定 delay 截断提示或叠播。
  */

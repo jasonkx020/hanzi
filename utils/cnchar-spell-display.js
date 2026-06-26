@@ -1,4 +1,11 @@
 /**
+ * @file cnchar-spell-display.js
+ * @module utils
+ * @description 基础设施工具：cnchar-spell-display.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将 cnchar 拼音结果格式化为界面展示用法。
  *
  * - 典型调用：`spellDisplayString('萌', 'tone', 'poly', 'low')` → 带调、多音字括号形式、「小写」（API 语义由 cnchar 决定）。

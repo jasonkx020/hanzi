@@ -1,3 +1,10 @@
+<!--
+  @file write-practice.vue
+  @layer L1 表现层
+  @description 路由页面源文件：write-practice.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<view v-if="compact" class="write-compact-root">
 		<!-- 每日一练内嵌：仅田字格 + 极简辅助 -->

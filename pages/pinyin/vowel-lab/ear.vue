@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file ear.vue
+  @layer L1 表现层
+  @description 路由页面源文件：ear.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="韵母耳朵" subtitle="听萌萌读，点对的韵母" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">

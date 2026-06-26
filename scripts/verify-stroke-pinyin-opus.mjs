@@ -1,4 +1,11 @@
 /**
+ * @file verify-stroke-pinyin-opus.mjs
+ * @module scripts
+ * @description 源文件：verify-stroke-pinyin-opus.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 检查笔画映射所需带调音节是否均有 static/pinyin/*.opus
  * 运行：node scripts/verify-stroke-pinyin-opus.mjs
  */

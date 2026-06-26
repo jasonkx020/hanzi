@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-drill-service.js
+ * @module services
+ * @description 领域服务源文件：pinyin-drill-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音闯关：播放、本地统计
  */
 import { getAudioNarrator } from '@/utils/audio-settings.js'

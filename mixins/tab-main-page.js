@@ -1,3 +1,10 @@
+/**
+ * @file tab-main-page.js
+ * @module mixins
+ * @description Vue mixin：tab-main-page.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 
 /**

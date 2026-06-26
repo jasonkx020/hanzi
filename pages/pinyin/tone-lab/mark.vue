@@ -1,3 +1,10 @@
+<!--
+  @file mark.vue
+  @layer L1 表现层
+  @description 路由页面源文件：mark.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="标调魔法" subtitle="调号要标在韵母上" avatar-pose="happy" :overlap-body="true">
 		<view class="mark-page">

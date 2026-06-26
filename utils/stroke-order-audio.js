@@ -1,4 +1,11 @@
 /**
+ * @file stroke-order-audio.js
+ * @module utils
+ * @description 基础设施工具：stroke-order-audio.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 笔顺动画：笔画读音与绘制并行；同一笔内按拐点分段入队。
  * 拐点仅触发分段读音（与绘制并行）；每一笔收尾后 await getStrokeAudioQueueTail() 再进下一笔。
  */

@@ -1,4 +1,11 @@
 /**
+ * @file medal-service.js
+ * @module services
+ * @description 领域服务源文件：medal-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 勋章解锁判定与成长等级计算
  */
 

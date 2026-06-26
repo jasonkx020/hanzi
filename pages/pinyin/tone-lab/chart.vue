@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file chart.vue
+  @layer L1 表现层
+  @description 路由页面源文件：chart.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="四声词典" subtitle="点一行，听四声连读" avatar-pose="book" :overlap-body="true">
 		<view class="chart-page">
 			<view class="chart-tabs">

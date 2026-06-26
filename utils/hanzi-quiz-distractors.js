@@ -1,4 +1,11 @@
 /**
+ * @file hanzi-quiz-distractors.js
+ * @module utils
+ * @description 基础设施工具：hanzi-quiz-distractors.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 听音选字：从课内字池中挑「形近、读音不同」的干扰项。
  */
 import cnchar from '@/utils/cnchar-setup.js'

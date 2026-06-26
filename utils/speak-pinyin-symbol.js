@@ -1,4 +1,11 @@
 /**
+ * @file speak-pinyin-symbol.js
+ * @module utils
+ * @description 基础设施工具：speak-pinyin-symbol.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音符号点读（TTS）。
  *
  * 深度说明（为何常「没声音」）：

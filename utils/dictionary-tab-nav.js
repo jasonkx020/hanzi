@@ -1,3 +1,10 @@
+/**
+ * @file dictionary-tab-nav.js
+ * @module utils
+ * @description 基础设施工具：dictionary-tab-nav.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 /** switchTab 进入查字页时携带的待查汉字（Tab 路由不支持 query） */
 const STORAGE_KEY = 'meng_dict_pending_hanzi'
 

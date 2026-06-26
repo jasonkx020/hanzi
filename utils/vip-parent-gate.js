@@ -1,4 +1,11 @@
 /**
+ * @file vip-parent-gate.js
+ * @module utils
+ * @description 基础设施工具：vip-parent-gate.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 支付前家长简单验证（算术题），降低儿童误触付费概率
  */
 

@@ -1,4 +1,11 @@
 /**
+ * @file build-db.mjs
+ * @module scripts
+ * @description 源文件：build-db.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 从 scripts/seed-curriculum.json 生成 constants/hanzi_curriculum_seed.json（供运行时本地内存加载）
  * 课标附录4「识字写字教学基本字表」300字不在此文件重复：运行时由 utils/curriculum-db.js 从
  * static/booktext/renjiaoban/preschool-bridge.json 展开（与人教课文 JSON 同源衔接）。

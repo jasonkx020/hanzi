@@ -1,3 +1,10 @@
+/**
+ * @file progress.js
+ * @module utils
+ * @description 基础设施工具：progress.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { STORAGE_KEY_INITIAL_LAB } from './constants.js'
 
 const DEFAULT = {

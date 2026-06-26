@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-pep-category.js
+ * @module utils
+ * @description 基础设施工具：pinyin-pep-category.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 人教版（PEP）常见拼音分类着色：用于「拼音」页声母 / 韵母等网格背景与图例。
  * 与设计文案「颜色分类（人教版常见分法）」一致。
  */

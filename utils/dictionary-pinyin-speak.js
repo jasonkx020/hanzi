@@ -1,4 +1,11 @@
 /**
+ * @file dictionary-pinyin-speak.js
+ * @module utils
+ * @description 基础设施工具：dictionary-pinyin-speak.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 查字页：汉字读音按完整拼音播本地 opus（失败不 TTS），不拆声母介母韵母；不使用 cnchar.voice。
  */
 import {

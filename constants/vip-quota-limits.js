@@ -1,3 +1,10 @@
+/**
+ * @file vip-quota-limits.js
+ * @module constants
+ * @description 常量定义：vip-quota-limits.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { QUOTA_KEYS } from '@/utils/vip-quota.js'
 
 /** 免费版每日配额（会员跳过校验） */

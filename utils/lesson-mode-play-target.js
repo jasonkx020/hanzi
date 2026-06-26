@@ -1,4 +1,11 @@
 /**
+ * @file lesson-mode-play-target.js
+ * @module utils
+ * @description 基础设施工具：lesson-mode-play-target.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 课次模式页（小测 / 听写 / 跟读）统一读音：与课次字卡 `pyShow` 一致，
  * 优先按上页传入的拼音串播本地音节，避免多音字被 TTS 读成非课内读音。
  */

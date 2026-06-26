@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file index.vue
+  @layer L1 表现层
+  @description 路由页面源文件：index.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<view
 		class="page tab-page-shell tab-page-shell--edge tab-root-page pinyin-page"
 		:class="{ 'pinyin-page--letters': isLetterPinyinTab }"

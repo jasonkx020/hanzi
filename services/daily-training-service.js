@@ -1,4 +1,11 @@
 /**
+ * @file daily-training-service.js
+ * @module services
+ * @description 领域服务源文件：daily-training-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 每日一练：围绕课文进度 — 复习巩固、写字表练字。
  * 同一自然日 + 教材偏好 + shuffleSalt 下队列可复现。
  */

@@ -1,4 +1,11 @@
 /**
+ * @file play-pinyin-local-audio.js
+ * @module utils
+ * @description 基础设施工具：play-pinyin-local-audio.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音格子本地音频（如 static 下的 opus/mp3）。
  * 单例 InnerAudioContext：切换曲目时先 destroy，避免泄漏。
  */

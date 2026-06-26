@@ -1,4 +1,11 @@
 /**
+ * @file vip-order-service.js
+ * @module services
+ * @description 领域服务源文件：vip-order-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员订单：创建、确认、权益拉取（对接服务端或本地演示）
  */
 

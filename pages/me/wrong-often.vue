@@ -1,3 +1,10 @@
+<!--
+  @file wrong-often.vue
+  @layer L1 表现层
+  @description 路由页面源文件：wrong-often.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="我经常错的" subtitle="按出错次数排序，优先复习">
 		<view v-if="rows.length === 0" class="empty">

@@ -1,3 +1,10 @@
+/**
+ * @file dictionary-detail.js
+ * @module data
+ * @description 领域数据：dictionary-detail.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 export const DICTIONARY_DETAIL_MAP = {
 	天: { radical: '大', structure: '上下', strokes: 4, words: ['天空', '天气', '今天'] },
 	地: { radical: '土', structure: '左右', strokes: 6, words: ['大地', '地方', '地球'] },

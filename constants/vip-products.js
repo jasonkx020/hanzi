@@ -1,3 +1,10 @@
+/**
+ * @file vip-products.js
+ * @module constants
+ * @description 常量定义：vip-products.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 /** 订阅会员档位 */
 export const VIP_PLANS = [
 	{

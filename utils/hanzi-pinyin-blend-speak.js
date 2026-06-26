@@ -1,4 +1,11 @@
 /**
+ * @file hanzi-pinyin-blend-speak.js
+ * @module utils
+ * @description 基础设施工具：hanzi-pinyin-blend-speak.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 汉字 → cnchar/字库拼音 → 按完整音节查找本地 opus 播放（失败不 TTS）。
  * 默认不拆声母/介母/韵母；仅 opts.blend===true 时走拼读拆分（如拼音页「拼读练习」）。
  * 不使用 cnchar.voice。

@@ -1,3 +1,10 @@
+/**
+ * @file reward-service.js
+ * @module services
+ * @description 领域服务源文件：reward-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { getCurrentGrowthLevel, countUnlockedMedals } from '@/services/medal-service.js'
 import { MEDAL_LIST } from '@/data/medals.js'
 

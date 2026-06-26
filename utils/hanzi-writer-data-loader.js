@@ -1,4 +1,11 @@
 /**
+ * @file hanzi-writer-data-loader.js
+ * @module utils
+ * @description 基础设施工具：hanzi-writer-data-loader.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * hanzi-writer-data 多源加载：本地 static 优先，CDN 依次回退。
  */
 import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'

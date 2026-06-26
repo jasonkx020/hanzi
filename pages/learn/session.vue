@@ -1,3 +1,10 @@
+<!--
+  @file session.vue
+  @layer L1 表现层
+  @description 路由页面源文件：session.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="学习" subtitle="已迁移至每日一练">
 		<view class="card meng-card">

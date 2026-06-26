@@ -1,3 +1,10 @@
+<!--
+  @file report.vue
+  @layer L1 表现层
+  @description 路由页面源文件：report.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="家长报告" subtitle="本机统计，不上传服务器">
 		<view class="card head">

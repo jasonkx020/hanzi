@@ -1,4 +1,11 @@
 /**
+ * @file ad-service.js
+ * @module utils
+ * @description 基础设施工具：ad-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 激励视频 / Banner 展示（P2）
  * 会员不展示；未配置广告位 ID 时可走演示模式。
  */

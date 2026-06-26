@@ -1,4 +1,11 @@
 /**
+ * @file vip-entitlement-applier.js
+ * @module services
+ * @description 领域服务源文件：vip-entitlement-applier.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 支付成功后写入对应权益（订阅 / 年级包 / 复习包）
  */
 

@@ -1,4 +1,11 @@
 /**
+ * @file vip-pay-platform.js
+ * @module utils
+ * @description 基础设施工具：vip-pay-platform.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 支付渠道识别与平台调起（微信小程序 / App / 其它）
  */
 

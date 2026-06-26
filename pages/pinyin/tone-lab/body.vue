@@ -1,3 +1,10 @@
+<!--
+  @file body.vue
+  @layer L1 表现层
+  @description 路由页面源文件：body.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="四声身体" subtitle="听萌萌读，做对的动作" avatar-pose="happy" :overlap-body="true">
 		<view class="body-page">

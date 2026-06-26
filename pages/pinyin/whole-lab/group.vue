@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file group.vue
+  @layer L1 表现层
+  @description 路由页面源文件：group.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="同组小能手" subtitle="同一组音节，听音辨认" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">

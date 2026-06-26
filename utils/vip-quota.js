@@ -1,4 +1,11 @@
 /**
+ * @file vip-quota.js
+ * @module utils
+ * @description 基础设施工具：vip-quota.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 免费版每日配额（本地按自然日计数；会员不扣减）
  * 小程序 / App 均使用 uni.storage，键名带日期后缀。
  */

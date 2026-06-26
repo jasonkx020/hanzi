@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-four-lines-layout.js
+ * @module utils
+ * @description 基础设施工具：pinyin-four-lines-layout.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 四线三格行内分格与换行：按音节占位宽度贪心装箱，避免挤格、重叠。
  */
 import { estimateSyllableWidthUnits } from '@/utils/pinyin-homework-chunk.js'

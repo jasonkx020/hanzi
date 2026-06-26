@@ -1,3 +1,10 @@
+/**
+ * @file start-write-practice.js
+ * @module modules/literacy/usecases
+ * @description 业务用例源文件：start-write-practice.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { VIP_QUOTA_LIMITS } from '@/constants/vip-quota-limits.js'
 import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.js'
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'

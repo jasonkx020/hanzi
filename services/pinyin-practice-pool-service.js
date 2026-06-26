@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-practice-pool-service.js
+ * @module services
+ * @description 领域服务源文件：pinyin-practice-pool-service.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼读练习 / 闯关：从当前教材识字表抽取有效拼音音节（无声调、可播放）。
  */
 

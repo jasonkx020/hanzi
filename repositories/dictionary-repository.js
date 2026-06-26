@@ -1,3 +1,10 @@
+/**
+ * @file dictionary-repository.js
+ * @module repositories
+ * @description 数据仓储源文件：dictionary-repository.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import cnchar from '@/utils/cnchar-setup.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'

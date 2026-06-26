@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-writing-standard.js
+ * @module utils
+ * @description 基础设施工具：pinyin-writing-standard.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 汉语拼音书写占格（四线三格）——按《汉语拼音方案》教学书写习惯：
  * - 中格：a o e i u ü 等主体占中格；声调标在主要韵母上，占上格与中格交界区域
  * - 上格：b d h k l 等上伸笔顺；b、f、t 等上伸部分

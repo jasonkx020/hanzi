@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade2-up-idioms.mjs
+ * @module scripts
+ * @description 源文件：gen-grade2-up-idioms.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 二年级上册附录词语表中的四字成语 → static/booktext/renjiaoban/二年级上册-成语表.json
  * （词语表全文多为两字、三字词；本文件仅收录典型四字成语，见 note）
  * 运行：node scripts/gen-grade2-up-idioms.mjs

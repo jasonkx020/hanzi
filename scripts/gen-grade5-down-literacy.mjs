@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade5-down-literacy.mjs
+ * @module scripts
+ * @description 源文件：gen-grade5-down-literacy.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 五年级下册识字表 → static/booktext/renjiaoban/五年级下册-识字表.json
  * 运行：node scripts/gen-grade5-down-literacy.mjs
  */

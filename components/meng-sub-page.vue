@@ -1,3 +1,10 @@
+<!--
+  @file meng-sub-page.vue
+  @layer L1 表现层
+  @description UI 组件源文件：meng-sub-page.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 
 	<view class="meng-sub-page" :class="rootClass">

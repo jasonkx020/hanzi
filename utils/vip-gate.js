@@ -1,4 +1,11 @@
 /**
+ * @file vip-gate.js
+ * @module utils
+ * @description 基础设施工具：vip-gate.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 会员 / 配额统一门禁（小程序 + App 共用 uni API）
  */
 

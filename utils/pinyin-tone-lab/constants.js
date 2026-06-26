@@ -1,3 +1,10 @@
+/**
+ * @file constants.js
+ * @module utils
+ * @description 基础设施工具：constants.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 /** 四声元数据（儿童 UI：轮廓 + 颜色 + 口语标签） */
 export const TONE_LEVELS = [
 	{ id: 1, key: 'ear', title: '四声耳朵', emoji: '👂', subtitle: '听一听，选对的形状' },

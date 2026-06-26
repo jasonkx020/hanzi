@@ -1,4 +1,11 @@
 /**
+ * @file merge-renjiao-textbook-full.mjs
+ * @module scripts
+ * @description 源文件：merge-renjiao-textbook-full.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将 static/booktext/renjiaoban 下课文主 JSON（grade*-{up|down}.json）
  * 与同册 -literacy.json / -writing.json / -words.json（若存在）合并为「课文 + 识字 + 写字 + 词语」一体结构。
  *

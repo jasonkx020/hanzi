@@ -1,4 +1,11 @@
 /**
+ * @file uni-legacy-canvas.js
+ * @module utils
+ * @description 基础设施工具：uni-legacy-canvas.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * uni-app 旧版 canvas API（uni.createCanvasContext）跨端封装。
  * App / 各端小程序 / H5 能力不一致，调用前应先 isLegacyCanvasApiAvailable()。
  */

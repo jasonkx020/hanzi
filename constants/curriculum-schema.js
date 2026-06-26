@@ -1,4 +1,11 @@
 /**
+ * @file curriculum-schema.js
+ * @module constants
+ * @description 常量定义：curriculum-schema.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 教材生字 / 用户进度字段约定（与生字 seed JSON、本地 Storage 一致）
  */
 

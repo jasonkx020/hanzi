@@ -1,3 +1,10 @@
+/**
+ * @file ad-placements.js
+ * @module constants
+ * @description 常量定义：ad-placements.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { QUOTA_KEYS } from '@/utils/vip-quota.js'
 
 /** 广告位标识（埋点 placement 字段） */

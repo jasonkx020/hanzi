@@ -1,3 +1,10 @@
+/**
+ * @file quiz.js
+ * @module utils
+ * @description 基础设施工具：quiz.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import { applyToneToSyllableStem } from '@/utils/play-pinyin-local-audio.js'
 import { stripPinyinToneMarks } from '@/utils/pinyin-strip-tone.js'
 import {

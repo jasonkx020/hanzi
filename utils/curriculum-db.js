@@ -1,4 +1,11 @@
 /**
+ * @file curriculum-db.js
+ * @module utils
+ * @description 基础设施工具：curriculum-db.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 教材生字：统编等版本来自打包内嵌 constants/hanzi_curriculum_seed.json（npm run db:build 生成）；
  * 「幼小衔接·课标300基本字」来自 static/booktext/renjiaoban/preschool-bridge.json，不在 seed 中重复。
  */

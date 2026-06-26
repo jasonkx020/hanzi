@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-audio-sample-rate.js
+ * @module constants
+ * @description 常量定义：pinyin-audio-sample-rate.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音本地音频（opus）规范
  * 与 PinYinSound 构建输出一致：48000 Hz · mono · s16le
  */

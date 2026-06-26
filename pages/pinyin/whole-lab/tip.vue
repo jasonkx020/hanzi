@@ -1,4 +1,11 @@
-﻿<template>
+<!--
+  @file tip.vue
+  @layer L1 表现层
+  @description 路由页面源文件：tip.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
+<template>
 	<meng-sub-page title="认读小贴士" subtitle="看提示，听声音，选音节" avatar-pose="happy" :overlap-body="true">
 		<view class="quiz-page">
 			<view class="quiz-progress">

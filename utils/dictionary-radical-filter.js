@@ -1,4 +1,11 @@
 /**
+ * @file dictionary-radical-filter.js
+ * @module utils
+ * @description 基础设施工具：dictionary-radical-filter.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 部首筛选：cnchar 部首与左右旁写法对照（如 氵↔水、亻↔人）。
  */
 import { getRadicalLabel } from '@/repositories/dictionary-repository.js'

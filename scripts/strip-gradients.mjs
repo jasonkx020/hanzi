@@ -1,4 +1,11 @@
 /**
+ * @file strip-gradients.mjs
+ * @module scripts
+ * @description 源文件：strip-gradients.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 将项目内 linear-gradient / radial-gradient 替换为纯色（取渐变最后一档颜色）
  * 用法: node scripts/strip-gradients.mjs
  */

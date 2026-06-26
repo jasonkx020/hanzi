@@ -1,3 +1,10 @@
+<!--
+  @file me.vue
+  @layer L1 表现层
+  @description 路由页面源文件：me.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<view class="page tab-page-shell tab-root-page me-page" :style="tabPageStyle">
 		<meng-tab-hero

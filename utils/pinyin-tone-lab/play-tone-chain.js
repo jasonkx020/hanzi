@@ -1,3 +1,10 @@
+/**
+ * @file play-tone-chain.js
+ * @module utils
+ * @description 基础设施工具：play-tone-chain.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
 import {
 	applyToneToSyllableStem,
 	getLocalPinyinAudioPath,

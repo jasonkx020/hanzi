@@ -1,4 +1,11 @@
 /**
+ * @file pinyin-homework-chunk.js
+ * @module utils
+ * @description 基础设施工具：pinyin-homework-chunk.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 拼音作业本分行：按音节「占位宽度」贪心装箱，避免一行内过长拼音挤在一起重叠。
  */
 

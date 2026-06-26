@@ -1,4 +1,11 @@
 /**
+ * @file user-progress-storage.js
+ * @module utils
+ * @description 基础设施工具：user-progress-storage.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 用户生字进度本地存储（uni.storage），字段与 curriculum-schema COL_PROGRESS 一致。
  */
 

@@ -1,3 +1,10 @@
+<!--
+  @file result.vue
+  @layer L1 表现层
+  @description 路由页面源文件：result.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<view class="page">
 		<!-- 顶区背景向下延伸，导航浮在上方（仿微信小程序自定义顶栏） -->

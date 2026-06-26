@@ -1,4 +1,11 @@
 /**
+ * @file gen-grade2-up-literacy.mjs
+ * @module scripts
+ * @description 源文件：gen-grade2-up-literacy.mjs
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 二年级上册识字表 → static/booktext/renjiaoban/二年级上册-识字表.json（结构与一年级识字表 JSON 一致）
  * 运行：node scripts/gen-grade2-up-literacy.mjs
  */

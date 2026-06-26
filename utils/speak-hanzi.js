@@ -1,4 +1,11 @@
 /**
+ * @file speak-hanzi.js
+ * @module utils
+ * @description 基础设施工具：speak-hanzi.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 汉字点读：优先 cnchar-voice（H5 等环境下的 Web Speech / 内置合成链）；
  * App 端对中文更稳的是 plus.speech；其余降级 Toast。
  */

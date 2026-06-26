@@ -1,4 +1,11 @@
 /**
+ * @file ad-config.js
+ * @module config
+ * @description 配置模块：ad-config.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * 广告配置（P2）
  * - 配置微信 adUnitId 后走真实 Banner / 激励视频；留空且 allowMock 时演示
  * - 会员自动不展示（见 shouldShowAds）

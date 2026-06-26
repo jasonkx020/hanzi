@@ -1,3 +1,10 @@
+<!--
+  @file learned.vue
+  @layer L1 表现层
+  @description 路由页面源文件：learned.vue
+  @software 萌萌识字移动应用软件 V1.0
+  @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+-->
 <template>
 	<meng-sub-page title="我学过的字库" subtitle="在生字详情中标记「已学」的字">
 		<view v-if="rows.length === 0" class="empty">

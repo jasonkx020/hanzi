@@ -1,4 +1,11 @@
 /**
+ * @file cnchar-setup.js
+ * @module utils
+ * @description 基础设施工具：cnchar-setup.js
+ * @software 萌萌识字移动应用软件 V1.0
+ * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
+ */
+/**
  * cnchar 统一初始化入口：请在 main.js 首行引入本模块。
  *
  * - 共用扩展：拼音多音（poly）、笔顺序号（order）、部首结构（radical）、
