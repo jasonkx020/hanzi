@@ -18,6 +18,8 @@ import {
 	SEMESTER,
 	COL
 } from '@/constants/curriculum-schema.js'
+import { invalidateRenjiaoTextbookCache } from '@/utils/renjiao-textbook-loader.js'
+import { invalidateCurriculumDbCache } from '@/utils/curriculum-db.js'
 
 function normalizePrefs(raw) {
 	const d = DEFAULT_CURRICULUM_PREFS
@@ -66,6 +68,8 @@ export function setCurriculumPrefs(patch) {
 	} catch (e) {
 		console.warn('[curriculum-storage] setCurriculumPrefs', e)
 	}
+	invalidateRenjiaoTextbookCache()
+	invalidateCurriculumDbCache()
 	return next
 }
 

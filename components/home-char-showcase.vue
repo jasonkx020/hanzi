@@ -103,8 +103,10 @@ export default {
 			},
 			strokeStarted: false,
 			strokeIndex: 0,
-			strokeNames: getCncharStrokeNameList(SHOWCASE_CHAR),
-			_loopTimer: null
+			strokeNames: [],
+			_loopTimer: null,
+			_deferredInitTimer: null,
+			_showcaseInitStarted: false
 		}
 	},
 	computed: {
@@ -119,13 +121,26 @@ export default {
 		}
 	},
 	mounted() {
-		this.loadMeta()
+		this._deferredInitTimer = setTimeout(() => {
+			this._deferredInitTimer = null
+			this.initShowcaseDeferred()
+		}, 120)
 	},
 	beforeUnmount() {
+		if (this._deferredInitTimer != null) {
+			clearTimeout(this._deferredInitTimer)
+			this._deferredInitTimer = null
+		}
 		this.clearLoopTimer()
 		this.$refs.stroke?.stopAnimation?.()
 	},
 	methods: {
+		initShowcaseDeferred() {
+			if (this._showcaseInitStarted) return
+			this._showcaseInitStarted = true
+			this.strokeNames = getCncharStrokeNameList(SHOWCASE_CHAR)
+			this.loadMeta()
+		},
 		clearLoopTimer() {
 			if (this._loopTimer != null) {
 				clearTimeout(this._loopTimer)
@@ -183,6 +198,7 @@ export default {
 			this.$refs.stroke?.stopAnimation?.()
 		},
 		resumeShowcase() {
+			this.initShowcaseDeferred()
 			this.$nextTick(() => {
 				setTimeout(() => this.startStrokeLoop(), 520)
 			})

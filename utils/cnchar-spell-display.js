@@ -14,7 +14,7 @@
  *
  * 依赖 main.js 已引入的 `./utils/cnchar-setup.js`（含 cnchar-poly）；此处再挂一次同名实例，避免独立引用时遗漏插件。
  */
-import cnchar from './cnchar-setup.js'
+import cnchar, { ensureCncharReadySync } from './cnchar-setup.js'
 import { appendDebugLog } from './debug-console-hook.js'
 
 /** 调试：同时写 console + 调试页缓冲（构建移除 console 时仍可在日志页看到） */
@@ -40,6 +40,7 @@ export function spellDisplayString(text, ...args) {
 	const t = String(text ?? '').trim()
 	if (!t) return ''
 	try {
+		ensureCncharReadySync()
 		const raw = cnchar.spell(t, ...args)
 		let out
 		if (args.includes('array') && Array.isArray(raw)) {
@@ -124,6 +125,7 @@ export function listSpellReadingsForHanzi(char) {
 	const c = String(char || '').match(/[\u4e00-\u9fff]/)?.[0]
 	if (!c) return []
 	try {
+		ensureCncharReadySync()
 		let raw = cnchar.spell(c, 'tone', 'poly', 'array', 'low')
 		debugSpell('[listSpellReadingsForHanzi]', {
 			input: c,

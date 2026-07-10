@@ -9,7 +9,7 @@
  * 笔顺动画：笔画读音与绘制并行；同一笔内按拐点分段入队。
  * 拐点仅触发分段读音（与绘制并行）；每一笔收尾后 await getStrokeAudioQueueTail() 再进下一笔。
  */
-import cnchar from '@/utils/cnchar-setup.js'
+import cnchar, { ensureCncharReadySync } from '@/utils/cnchar-setup.js'
 import {
 	normalizeStrokeLabel,
 	resolveStrokeLabelSyllables,
@@ -31,6 +31,7 @@ export function getCncharStrokeNameList(char) {
 	const c = String(char || '').trim().charAt(0)
 	if (!c) return []
 	try {
+		ensureCncharReadySync()
 		const rows = cnchar.stroke(c, 'order', 'name')
 		if (Array.isArray(rows) && rows[0] && Array.isArray(rows[0])) {
 			return rows[0]

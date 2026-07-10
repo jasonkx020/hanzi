@@ -48,9 +48,14 @@ function main() {
 	const raw = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
 	const rows = normalizeRows(raw)
 	const outPath = path.join(root, 'constants', 'hanzi_curriculum_seed.json')
+	const staticOutPath = path.join(root, 'static', 'curriculum', 'hanzi_curriculum_seed.json')
 	fs.mkdirSync(path.dirname(outPath), { recursive: true })
-	fs.writeFileSync(outPath, JSON.stringify(rows))
+	fs.mkdirSync(path.dirname(staticOutPath), { recursive: true })
+	const payload = JSON.stringify(rows)
+	fs.writeFileSync(outPath, payload)
+	fs.writeFileSync(staticOutPath, payload)
 	console.log('[build-curriculum] wrote', outPath, 'rows:', rows.length, '(textbook seed only; MOE300 from preschool-bridge.json at runtime)')
+	console.log('[build-curriculum] wrote', staticOutPath, '(runtime lazy load copy)')
 }
 
 main()

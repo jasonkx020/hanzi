@@ -5,7 +5,7 @@
  * @software 萌萌识字移动应用软件 V1.0
  * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
  */
-import cnchar from '@/utils/cnchar-setup.js'
+import cnchar, { ensureCncharReady } from '@/utils/cnchar-setup.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
@@ -202,6 +202,8 @@ async function inferStrokeCountNetwork(hanzi) {
 export async function getDictionaryEntry(hanzi, hint = '') {
 	const target = String(hanzi || '').trim().charAt(0)
 	if (!target) return null
+
+	await ensureCncharReady()
 
 	const cached = getCachedDictionaryDetail(target)
 	if (cached && cached.source === 'cnchar_v2') {

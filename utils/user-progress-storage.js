@@ -125,15 +125,29 @@ export function listLearnedChars() {
 		.sort((a, b) => (b[COL_PROGRESS.updated_at_ms] || 0) - (a[COL_PROGRESS.updated_at_ms] || 0))
 }
 
+/** 一次 Storage 读取，同时得到已学与常错列表（供 initAppStores 使用） */
+export function readProgressLists() {
+	const map = readMap()
+	const learned = []
+	const wrong = []
+	for (const rec of Object.values(map)) {
+		if (Number(rec[COL_PROGRESS.learned]) === 1) learned.push(rec)
+		if ((Number(rec[COL_PROGRESS.wrong_count]) || 0) > 0) wrong.push(rec)
+	}
+	const byUpdatedDesc = (a, b) =>
+		(b[COL_PROGRESS.updated_at_ms] || 0) - (a[COL_PROGRESS.updated_at_ms] || 0)
+	learned.sort(byUpdatedDesc)
+	wrong.sort((a, b) => {
+		const dw = (Number(b[COL_PROGRESS.wrong_count]) || 0) - (Number(a[COL_PROGRESS.wrong_count]) || 0)
+		if (dw !== 0) return dw
+		return byUpdatedDesc(a, b)
+	})
+	return { learned, wrong, map }
+}
+
 /** wrong_count > 0，按错误次数降序 */
 export function listWrongOftenChars() {
-	return Object.values(readMap())
-		.filter((r) => (Number(r[COL_PROGRESS.wrong_count]) || 0) > 0)
-		.sort((a, b) => {
-			const dw = (Number(b[COL_PROGRESS.wrong_count]) || 0) - (Number(a[COL_PROGRESS.wrong_count]) || 0)
-			if (dw !== 0) return dw
-			return (b[COL_PROGRESS.updated_at_ms] || 0) - (a[COL_PROGRESS.updated_at_ms] || 0)
-		})
+	return readProgressLists().wrong
 }
 
 function recordMatchesCurriculumPrefs(rec, prefs) {

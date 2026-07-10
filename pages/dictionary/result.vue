@@ -189,7 +189,7 @@ import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import { getMengNavMetrics, mengHeaderBgHeightStyle } from '@/utils/meng-nav-metrics.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
-import cnchar from '@/utils/cnchar-setup.js'
+import cnchar, { ensureCncharReadySync } from '@/utils/cnchar-setup.js'
 import {
 	MENG_ASSETS,
 	buildMengAssetSrcCandidates,
@@ -278,6 +278,7 @@ export default {
 			const c = String(this.hanzi || '').trim().charAt(0)
 			if (!c || c === '—') return this.hanzi || '—'
 			try {
+				ensureCncharReadySync()
 				if (typeof cnchar.isCnChar === 'function' && !cnchar.isCnChar(c)) return c
 			} catch (_) {}
 			return c

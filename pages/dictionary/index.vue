@@ -225,7 +225,7 @@
 </template>
 
 <script>
-import cnchar from '@/utils/cnchar-setup.js'
+import cnchar, { ensureCncharReadySync } from '@/utils/cnchar-setup.js'
 import drawNative from '@/utils/draw-native.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
@@ -413,6 +413,7 @@ export default {
 			const c = String(raw || '').trim().charAt(0)
 			if (!c) return ''
 			try {
+				ensureCncharReadySync()
 				if (typeof cnchar.isCnChar === 'function' && !cnchar.isCnChar(c)) return c
 			} catch (_) {}
 			return c

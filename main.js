@@ -5,7 +5,6 @@
  * @software 萌萌识字移动应用软件 V1.0
  * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
  */
-import './utils/cnchar-setup.js'
 import { installDebugConsoleHook } from '@/utils/debug-console-hook.js'
 
 installDebugConsoleHook()

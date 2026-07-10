@@ -124,7 +124,10 @@ export default {
 			/** 人教 JSON 该篇 content */
 			rjContent: '',
 			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
-			quizPassedForLesson: false
+			quizPassedForLesson: false,
+			/** 上次 reload 对应的教材+课次 key */
+			_lastLessonReloadKey: '',
+			_lessonVoicePlayedKey: ''
 		}
 	},
 	computed: {
@@ -148,17 +151,32 @@ export default {
 		this.refreshStatusBarPx()
 		this._lessonLoadQuery(query)
 	},
-	async onShow() {
+	onShow() {
 		this.refreshStatusBarPx()
-		await this.reloadLesson()
-		this.refreshProgress()
-		this.refreshLessonQuizBadge()
-		const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.hint)
-		playMengmengVoiceOnce(MENG_VOICE.LESSON_START, `meng_voice_lesson_${lessonKey}`).catch(
-			() => {}
-		)
+		const key = this.lessonReloadKey()
+		if (key !== this._lastLessonReloadKey) {
+			this.reloadLesson().then(() => {
+				this._lastLessonReloadKey = key
+				this.refreshProgress()
+				this.refreshLessonQuizBadge()
+			})
+		} else {
+			this.refreshProgress()
+			this.refreshLessonQuizBadge()
+		}
+		if (this._lessonVoicePlayedKey !== key) {
+			this._lessonVoicePlayedKey = key
+			const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.hint)
+			playMengmengVoiceOnce(MENG_VOICE.LESSON_START, `meng_voice_lesson_${lessonKey}`).catch(
+				() => {}
+			)
+		}
 	},
 	methods: {
+		lessonReloadKey() {
+			const p = getCurriculumPrefs()
+			return `${p.textbook_version_id}|${p.grade}|${p.semester}|${this.rjLessonIdx}|${this.hint}`
+		},
 		refreshStatusBarPx() {
 			this.statusBarPx = getMengNavMetrics().statusBarPx
 		},
@@ -174,6 +192,7 @@ export default {
 				this.hint = query?.hint ? decodeURIComponent(query.hint) : '课次字卡'
 			}
 			await this.reloadLesson()
+			this._lastLessonReloadKey = this.lessonReloadKey()
 			this.refreshProgress()
 			this.refreshLessonQuizBadge()
 		},

@@ -173,6 +173,7 @@ export default {
 			_welcomeTimer: null,
 			_heroCarouselTimer: null,
 			_heroResumeTimer: null,
+			_refreshScheduled: false,
 			curriculumTabs: listHomeCurriculumTabs()
 		}
 	},
@@ -196,7 +197,7 @@ export default {
 	onShow() {
 		this.setTabBarIndex(0)
 		this.startHeroCarousel()
-		this.refresh()
+		this.scheduleRefresh()
 		this.scheduleWelcomeVoice()
 		this.$refs.charShowcase?.resumeShowcase?.()
 	},
@@ -214,6 +215,16 @@ export default {
 		stopMengmengVoice()
 	},
 	methods: {
+		scheduleRefresh() {
+			if (this._refreshScheduled) return
+			this._refreshScheduled = true
+			this.$nextTick(() => {
+				setTimeout(() => {
+					this._refreshScheduled = false
+					this.refresh()
+				}, 0)
+			})
+		},
 		scheduleWelcomeVoice() {
 			if (this._welcomeTimer != null) {
 				clearTimeout(this._welcomeTimer)

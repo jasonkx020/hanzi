@@ -31,6 +31,21 @@ function buildFileName(grade, semester) {
 	return renjiaoTextbookJsonFile(grade, semester, 'main')
 }
 
+function textbookCacheKey(grade, semester) {
+	return `${Number(grade)}|${semester === '下' ? '下' : '上'}`
+}
+
+/** @type {Map<string, Array<Record<string, unknown>>>} */
+const textbookCache = new Map()
+/** @type {Map<string, Promise<Array<Record<string, unknown>>>>} */
+const textbookInflight = new Map()
+
+/** 切换教材/年级/册别时由 curriculum-storage 调用 */
+export function invalidateRenjiaoTextbookCache() {
+	textbookCache.clear()
+	textbookInflight.clear()
+}
+
 /** 将 uni.request / 本地读出的 payload 统一为可 JSON.parse 的字符串或已是数组 */
 function normalizeTextbookJsonPayload(data) {
 	if (data == null || data === '') return ''
@@ -109,9 +124,28 @@ async function requestText(webPath) {
 }
 
 /**
- * 读取 static/booktext/renjiaoban 中的统编语文课文
+ * 读取 static/booktext/renjiaoban 中的统编语文课文（带内存缓存）
  */
 export async function loadRenjiaoTextbookTexts({ grade, semester }) {
+	const key = textbookCacheKey(grade, semester)
+	if (textbookCache.has(key)) return textbookCache.get(key)
+	if (textbookInflight.has(key)) return textbookInflight.get(key)
+
+	const task = loadRenjiaoTextbookTextsUncached({ grade, semester })
+		.then((arr) => {
+			textbookCache.set(key, arr)
+			textbookInflight.delete(key)
+			return arr
+		})
+		.catch((e) => {
+			textbookInflight.delete(key)
+			throw e
+		})
+	textbookInflight.set(key, task)
+	return task
+}
+
+async function loadRenjiaoTextbookTextsUncached({ grade, semester }) {
 	const fileName = buildFileName(grade, semester)
 	if (!fileName) return []
 	const urlCandidates = [`${STATIC_BOOKTEXT_ROOT}${fileName}`]

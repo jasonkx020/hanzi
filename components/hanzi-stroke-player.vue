@@ -34,6 +34,7 @@
 
 <script>
 import drawNative from '@/utils/draw-native.js'
+import { ensureCncharDrawReady } from '@/utils/cnchar-setup.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import {
 	getCncharStrokeNameList,
@@ -166,8 +167,15 @@ export default {
 			`hanzi-stroke-${Date.now()}-${++_idSeq}`
 	},
 	mounted() {
-		this.refreshStrokeNames()
-		this.remount()
+		ensureCncharDrawReady()
+			.then(() => {
+				this.refreshStrokeNames()
+				this.remount()
+			})
+			.catch((e) => {
+				console.warn('[hanzi-stroke-player] cnchar draw init', e)
+				this.animFallback = true
+			})
 	},
 	beforeUnmount() {
 		this.teardown()

@@ -5,7 +5,7 @@
  * @software 萌萌识字移动应用软件 V1.0
  * @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
  */
-import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
+import { readProgressLists } from '@/utils/user-progress-storage.js'
 
 const learningState = {
 	learnedCount: 0,
@@ -13,8 +13,9 @@ const learningState = {
 }
 
 export function refreshLearningState() {
-	learningState.learnedCount = getLearnedChars().length
-	learningState.wrongCount = getWrongChars().length
+	const { learned, wrong } = readProgressLists()
+	learningState.learnedCount = learned.length
+	learningState.wrongCount = wrong.length
 	return learningState
 }
 

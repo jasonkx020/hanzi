@@ -155,14 +155,16 @@ function mergeCharRows(primary, extra) {
  */
 export async function loadCurriculumCharRowsForPinyin(prefs) {
 	const p = prefs || getCurriculumPrefs()
-	let rows = await queryCurriculumChars(p)
+	let rows = []
 	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
 		try {
-			const rj = await loadRenjiaoCharRows(p)
-			rows = mergeCharRows(rows, rj)
+			rows = await loadRenjiaoCharRows(p)
 		} catch (e) {
 			console.warn('[pinyin-practice-pool] renjiao rows', e)
 		}
+	}
+	if (!rows.length) {
+		rows = await queryCurriculumChars(p)
 	}
 	if (rows.length < 12) {
 		try {

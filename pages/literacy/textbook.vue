@@ -19,7 +19,7 @@
 			<meng-status-bar-spacer :height-px="statusBarPx" />
 			<meng-page-nav title="课本同步学" class="tb-nav" :inset-status-bar="false">
 				<template #right>
-					<view class="tb-circle-btn tb-circle-btn--nav" @click="reload">
+					<view class="tb-circle-btn tb-circle-btn--nav" @click="forceReload">
 						<text class="tb-circle-icon">🔄</text>
 					</view>
 				</template>
@@ -261,7 +261,9 @@ export default {
 			modalVersion: '统编(人教版)',
 			versionOptions: VERSION_OPTIONS,
 			/** 静态图 @error 回退：key → 候选下标（云打包优先 /static/） */
-			staticImgTryIndex: {}
+			staticImgTryIndex: {},
+			/** 上次 reload 时的教材偏好 key */
+			_lastReloadPrefsKey: ''
 		}
 	},
 	computed: {
@@ -323,15 +325,22 @@ export default {
 				console.warn('[textbook] image load failed', key, webPath, list)
 			}
 		},
-		async reload() {
+		async reload(force = false) {
 			if (!hasUserCurriculumPrefsSaved()) {
 				this.ensureCurriculumSelected()
+				return
+			}
+			const prefs = getCurriculumPrefs()
+			const prefsKey = this.prefsReloadKey(prefs)
+			if (!force && this.loading) return
+			if (!force && prefsKey === this._lastReloadPrefsKey && this.lessons.length) {
+				this.summary = formatCurriculumSummary(prefs)
+				this.patchLessonDoneBadges()
 				return
 			}
 			if (this.loading) return
 			this.loading = true
 			try {
-				const prefs = getCurriculumPrefs()
 				this.summary = formatCurriculumSummary(prefs)
 				this.textbookTexts = []
 				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
@@ -378,6 +387,7 @@ export default {
 						})
 				}
 				this.patchLessonDoneBadges()
+				this._lastReloadPrefsKey = prefsKey
 			} catch (e) {
 				console.warn('[textbook] reload', e)
 				uni.showToast({ title: '加载失败，请重试', icon: 'none' })
@@ -413,6 +423,14 @@ export default {
 				this.$set(lesson, 'doneBadgeText', text)
 			}
 		},
+		prefsReloadKey(prefs) {
+			const p = prefs || getCurriculumPrefs()
+			return `${p.textbook_version_id}|${p.grade}|${p.semester}|${p.list_type_preference || ''}`
+		},
+		forceReload() {
+			this._lastReloadPrefsKey = ''
+			return this.reload(true)
+		},
 		ensureCurriculumSelected() {
 			if (!hasUserCurriculumPrefsSaved()) {
 				this.curriculumPickerRequired = true
@@ -420,10 +438,16 @@ export default {
 				this.chars = []
 				this.textbookTexts = []
 				this.summary = '请先选择教材'
+				this._lastReloadPrefsKey = ''
 				this.openCurriculumPicker()
 				return
 			}
 			this.curriculumPickerRequired = false
+			const key = this.prefsReloadKey()
+			if (key === this._lastReloadPrefsKey && this.lessons.length) {
+				this.patchLessonDoneBadges()
+				return
+			}
 			this.reload()
 		},
 		openCurriculumPicker() {
@@ -451,7 +475,8 @@ export default {
 			const wasRequired = this.curriculumPickerRequired
 			this.curriculumPickerRequired = false
 			this.showCurriculumPicker = false
-			await this.reload()
+			this._lastReloadPrefsKey = ''
+			await this.reload(true)
 			uni.showToast({
 				title: wasRequired ? `已选择${book.label}` : `已切换到${book.label}`,
 				icon: 'success'
