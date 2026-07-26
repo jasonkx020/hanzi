@@ -5,7 +5,7 @@
 			<view class="meng-hero-sky-layer" />
 			<view class="tb-hero-sky" />
 			<meng-status-bar-spacer :height-px="statusBarPx" />
-			<meng-page-nav title="课本同步学" class="tb-nav" :inset-status-bar="false">
+			<meng-page-nav title="萌萌识字" class="tb-nav" :inset-status-bar="false">
 				<template #right>
 					<view class="tb-circle-btn tb-circle-btn--nav" @click="reload">
 						<text class="tb-circle-icon">🔄</text>
@@ -14,21 +14,22 @@
 			</meng-page-nav>
 			<view class="tb-hero-card">
 				<view class="tb-hero-body">
-					<view class="tb-cover-wrap" @click="openCurriculumPicker">
+					<view class="tb-cover-wrap">
 						<image
 							class="tb-cover-img"
 							:src="heroBookCoverSrc"
 							mode="aspectFit"
 							:lazy-load="false"
 						/>
-						<text class="tb-cover-tag">换教材</text>
+						<text class="tb-cover-tag">萌萌常用字</text>
 					</view>
 					<view class="tb-hero-meta">
 						<text class="tb-hero-sub">{{ summary }}</text>
 						<view v-if="lessons.length" class="tb-stat-pill">
 							<text class="tb-stat-txt">
-								共 <text class="tb-stat-num">{{ lessons.length }}</text> 课 ·
-								<text class="tb-stat-num">{{ statSlotCount }}</text> 个生字
+								已闯 <text class="tb-stat-num">{{ clearedLevelCount }}</text> /
+								共 <text class="tb-stat-num">{{ lessons.length }}</text> 关 ·
+								<text class="tb-stat-num">{{ statSlotCount }}</text> 个字
 							</text>
 						</view>
 					</view>
@@ -36,144 +37,125 @@
 			</view>
 		</view>
 
-		<view v-if="!curriculumPickerRequired" class="tb-sheet">
-		<view v-if="textbookTexts.length" class="textbook-panel">
-			<view class="textbook-panel-head">
-				<text class="textbook-panel-title">{{ textbookTextsPanelTitle }}</text>
-				<text class="textbook-panel-sub">当前册别共 {{ textbookTexts.length }} 课，点标题可阅读说明</text>
-			</view>
-			<view
-				v-for="(item, idx) in textbookTexts.slice(0, 12)"
-				:key="`${idx}-${item.title}`"
-				class="text-row"
-				@click="openText(item, idx)"
-			>
-				<text class="text-row-title">{{ item.title || `第${idx + 1}篇` }}</text>
-				<text class="text-row-arrow">›</text>
-			</view>
-		</view>
-
-		<!-- 课次列表：大卡片，好点 -->
+		<view class="tb-sheet">
 		<view class="section-head">
-			<text class="section-title">选一课，学生字</text>
-			<text class="section-hint">点课进入字卡；该课识字表生字均已标「已学」时显示绿标（无识字表数据时按本课全部生字）</text>
+			<text class="section-title">一关一关认汉字</text>
+			<text class="section-hint">本关小测全部答对后解锁下一关</text>
 		</view>
 
-		<view v-if="lessons.length" class="lesson-list">
-			<view
-				v-for="(lesson, i) in lessons"
-				:key="`${lesson.hint}-${i}`"
-				class="lesson-card"
-				@click="openLesson(lesson)"
-			>
-				<view class="lesson-num">{{ i + 1 }}</view>
-				<view class="lesson-main">
-					<view class="lesson-title-row">
-						<text class="lesson-title">{{ lesson.hint }}</text>
-						<text v-if="lesson.doneBadgeText" class="lesson-done-badge">{{ lesson.doneBadgeText }}</text>
+		<view v-if="lessons.length" class="level-path">
+			<!-- 已通关：默认折叠 -->
+			<view v-if="clearedLevelCount > 0" class="level-cleared-block">
+				<view class="level-cleared-summary" @click="toggleClearedExpand">
+					<view class="level-dot level-dot--cleared">★</view>
+					<view class="level-cleared-summary-main">
+						<text class="level-cleared-title">已通关 1～{{ clearedLevelCount }}</text>
+						<text class="level-cleared-sub">{{ clearedExpanded ? '收起回顾' : '点开可回顾' }}</text>
 					</view>
-					<text class="lesson-meta">{{ lesson.count }} 个字 · 去学习</text>
+					<text class="level-cleared-chevron">{{ clearedExpanded ? '▴' : '▾' }}</text>
 				</view>
-				<text class="lesson-arrow">›</text>
+				<view v-if="clearedExpanded" class="level-cleared-list">
+					<view
+						v-for="node in clearedPathNodes"
+						:key="'c-' + node.index"
+						class="level-node level-node--cleared"
+						@click="openLevel(node.lesson, node.index)"
+					>
+						<view class="level-rail">
+							<view class="level-dot level-dot--cleared">{{ node.index + 1 }}</view>
+							<view class="level-rail-line" />
+						</view>
+						<view class="level-card level-card--cleared">
+							<text class="level-card-title">{{ displayLessonHint(node.lesson.hint, node.index) }}</text>
+							<text class="level-card-meta">已通关 · 回顾</text>
+						</view>
+					</view>
+				</view>
+				<view class="level-rail-bridge" />
+			</view>
+
+			<!-- 当前关 -->
+			<view
+				v-if="currentPathNode"
+				class="level-node level-node--current"
+				@click="openLevel(currentPathNode.lesson, currentPathNode.index)"
+			>
+				<view class="level-rail">
+					<view class="level-dot level-dot--current">{{ currentPathNode.index + 1 }}</view>
+					<view v-if="lockedPathNode || remainingLockedHint > 0" class="level-rail-line" />
+				</view>
+				<view class="level-card level-card--current">
+					<text class="level-card-kicker">{{ allLevelsCleared ? '全部通关' : '当前关卡' }}</text>
+					<text class="level-card-title">{{
+						displayLessonHint(currentPathNode.lesson.hint, currentPathNode.index)
+					}}</text>
+					<text class="level-card-meta">
+						{{ currentPathNode.lesson.count }} 个字 ·
+						{{ allLevelsCleared ? '再玩一遍' : '开始闯关' }}
+					</text>
+					<view class="level-card-cta">
+						<text class="level-card-cta-text">{{
+							allLevelsCleared ? '回顾本关' : '开始闯关'
+						}}</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 下一关锁定预告 -->
+			<view
+				v-if="lockedPathNode"
+				class="level-node level-node--locked"
+				@click="openLevel(lockedPathNode.lesson, lockedPathNode.index)"
+			>
+				<view class="level-rail">
+					<view class="level-dot level-dot--locked">锁</view>
+					<view v-if="remainingLockedHint > 0" class="level-rail-line level-rail-line--faint" />
+				</view>
+				<view class="level-card level-card--locked">
+					<text class="level-card-title">第 {{ lockedPathNode.index + 1 }} 关 · {{
+						displayLessonHint(lockedPathNode.lesson.hint, lockedPathNode.index)
+					}}</text>
+					<text class="level-card-meta">通关上一关后解锁</text>
+				</view>
+			</view>
+
+			<view v-if="remainingLockedHint > 0" class="level-more-hint">
+				<text class="level-more-hint-text">还有 {{ remainingLockedHint }} 关等你解锁</text>
 			</view>
 		</view>
 
 		<view v-else class="empty-box">
-			<text class="empty-title">暂时没有课次数据</text>
-			<text class="empty-desc">请先到识字首页「当前进度」里选好教材与年级册别；若已选择仍无数据，可检查字表类型是否过滤过窄。</text>
-			<button class="empty-btn" type="primary" size="mini" @click="goHome">回识字首页</button>
+			<text class="empty-title">暂时没有字卡</text>
+			<text class="empty-desc">点右上角刷新试试；若仍没有，请稍后再来。</text>
+			<button class="empty-btn" type="primary" size="mini" @click="reload">刷新</button>
 		</view>
 
 		<view class="foot-tip">
 			<image class="foot-icon-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
-			<text class="foot-msg">点一课进入字卡听读音；点封面可换年级册别。</text>
+			<text class="foot-msg">和萌萌一起闯关：本关小测全部答对，就能解锁下一关。</text>
 		</view>
-		</view>
-
-		<view
-			v-if="showCurriculumPicker"
-			class="picker-mask"
-			:class="{ 'picker-mask--required': curriculumPickerRequired }"
-			@click="onPickerMaskTap"
-		>
-			<view class="picker-panel" @click.stop>
-				<view class="picker-head">
-					<view class="picker-head-text">
-						<text class="picker-title">选择教材</text>
-						<text v-if="curriculumPickerRequired" class="picker-required-hint">
-							首次进入请先选一本教材，选好后才能使用课本同步
-						</text>
-					</view>
-					<text
-						v-if="!curriculumPickerRequired"
-						class="picker-close"
-						@click="closeCurriculumPicker"
-					>×</text>
-				</view>
-
-				<view class="version-row">
-					<view
-						v-for="v in versionOptions"
-						:key="v.value"
-						class="version-chip"
-						:class="{ 'version-chip-on': modalVersion === v.value }"
-						@click="chooseVersion(v.value)"
-					>
-						<image class="version-icon" :src="resolveAppStaticImg(v.icon)" mode="aspectFill" />
-						<text class="version-label">{{ v.label }}</text>
-					</view>
-				</view>
-
-				<scroll-view scroll-y class="book-scroll">
-					<!-- <view class="book-columns-head">
-						<text class="book-col-title">上册</text>
-						<text class="book-col-title">下册</text>
-					</view> -->
-					<view
-						v-for="row in currentBookRows"
-						:key="`grade-${row.grade}`"
-						class="book-row"
-					>
-						<view
-							v-for="book in [row.up, row.down].filter(Boolean)"
-							:key="book.key"
-							class="book-card"
-							@click="selectBook(book)"
-						>
-							<view class="book-cover-wrap">
-								<image
-									class="book-cover"
-									:src="book.cover"
-									mode="aspectFit"
-									:lazy-load="false"
-								/>
-							</view>
-							<text class="book-label">{{ book.label }}</text>
-						</view>
-					</view>
-				</scroll-view>
-			</view>
 		</view>
 	</view>
 </template>
 
 <script>
-import { TEXTBOOK_VERSION_IDS, COL_PROGRESS } from '@/constants/curriculum-schema.js'
+import { TEXTBOOK_VERSION_IDS, LIST_TYPE } from '@/constants/curriculum-schema.js'
 import {
 	getCurriculumPrefs,
-	setCurriculumPrefs,
 	formatCurriculumSummary,
-	hasUserCurriculumPrefsSaved
+	ensurePreschoolCurriculumPrefs
 } from '@/utils/curriculum-storage.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildTextbookSyncLessonList,
-	filterRenjiaoTextbookReadableTexts,
 	getRenjiaoTextbookLoaderParams,
 	isRenjiaoTextbookSyncPrefs,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
-import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
+import {
+	buildStoredLessonKey,
+	hasLessonQuizPassed
+} from '@/utils/user-lesson-progress-storage.js'
 import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
@@ -196,13 +178,11 @@ const COVER_BOOKS = [
 ]
 
 const VERSION_OPTIONS = [
-	{ label: '人教版', value: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ, icon: '/static/images/yuwen0101.jpg' },
 	{
-		label: '幼小衔接',
+		label: '萌萌常用字',
 		value: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
 		icon: '/static/images/yuwen_youxiao.jpg'
-	}//,
-	// { label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
+	}
 ]
 
 /** 与当前教材偏好对应的静态封面路径（再经 resolveAppStaticImg） */
@@ -229,14 +209,14 @@ export default {
 			chars: [],
 			lessons: [],
 			loading: false,
-			textbookTexts: [],
 			showCurriculumPicker: false,
-			/** 未保存过教材偏好：须选一本教材后才能使用本页 */
 			curriculumPickerRequired: false,
-			modalVersion: '统编(人教版)',
+			modalVersion: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
 			versionOptions: VERSION_OPTIONS,
-			/** 顶部「换教材」按钮：当前册封面（完整显示，aspectFit） */
-			heroBookCoverSrc: ''
+			/** 顶部封面：萌萌常用字 */
+			heroBookCoverSrc: '',
+			/** 已通关列表是否展开 */
+			clearedExpanded: false
 		}
 	},
 	computed: {
@@ -246,7 +226,7 @@ export default {
 					grade: 0,
 					semester: '上',
 					key: `${this.modalVersion}-0-上`,
-					label: '课标300基本字',
+					label: '萌萌常用字',
 					cover: this.resolveAppStaticImg('/static/images/yuwen_youxiao.jpg')
 				}
 				return [{ grade: 0, up: book, down: null }]
@@ -265,19 +245,59 @@ export default {
 			})
 			return Object.values(map).sort((a, b) => a.grade - b.grade)
 		},
-		textbookTextsPanelTitle() {
-			const p = getCurriculumPrefs()
-			if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
-				return '课标基本字 · 小课说明'
-			}
-			return '人教版（部编）课文原文'
-		},
-		/** 课本 JSON 课次：识字+写字条数之和；其它版本用生字库行数 */
+		/** 字卡站：识字+写字条数之和；其它版本用生字库行数 */
 		statSlotCount() {
 			if (this.lessons.length && typeof this.lessons[0].rjIdx === 'number') {
 				return this.lessons.reduce((s, l) => s + (Number(l.count) || 0), 0)
 			}
 			return this.chars.length
+		},
+		/** 连续通关数量（从第 1 关起） */
+		clearedLevelCount() {
+			let n = 0
+			for (let i = 0; i < this.lessons.length; i++) {
+				if (!this.isLessonCleared(this.lessons[i])) break
+				n += 1
+			}
+			return n
+		},
+		/** 当前可闯关下标；全通则为最后一关 */
+		currentLevelIndex() {
+			const len = this.lessons.length
+			if (!len) return 0
+			const c = this.clearedLevelCount
+			if (c >= len) return len - 1
+			return c
+		},
+		allLevelsCleared() {
+			return this.lessons.length > 0 && this.clearedLevelCount >= this.lessons.length
+		},
+		clearedPathNodes() {
+			const n = this.clearedLevelCount
+			const out = []
+			for (let i = 0; i < n; i++) {
+				out.push({ type: 'cleared', lesson: this.lessons[i], index: i })
+			}
+			return out
+		},
+		currentPathNode() {
+			const i = this.currentLevelIndex
+			const lesson = this.lessons[i]
+			if (!lesson) return null
+			return { type: 'current', lesson, index: i }
+		},
+		lockedPathNode() {
+			if (this.allLevelsCleared) return null
+			const i = this.currentLevelIndex + 1
+			const lesson = this.lessons[i]
+			if (!lesson) return null
+			return { type: 'locked', lesson, index: i }
+		},
+		/** 锁定预告之后还有几关未展示 */
+		remainingLockedHint() {
+			if (this.allLevelsCleared) return 0
+			const afterLocked = this.lessons.length - (this.currentLevelIndex + 2)
+			return afterLocked > 0 ? afterLocked : 0
 		}
 	},
 	onShow() {
@@ -300,29 +320,33 @@ export default {
 			const prefs = getCurriculumPrefs()
 			this.heroBookCoverSrc = this.resolveAppStaticImg(rawCoverPathForPrefs(prefs))
 		},
+		refreshProgressOnly() {
+			ensurePreschoolCurriculumPrefs()
+			this.curriculumPickerRequired = false
+			this.showCurriculumPicker = false
+			const prefs = getCurriculumPrefs()
+			this.syncHeroBookCover()
+			this.summary = formatCurriculumSummary(prefs)
+			this.patchLessonDoneBadges()
+		},
 		async reload() {
-			if (!hasUserCurriculumPrefsSaved()) {
-				this.ensureCurriculumSelected()
-				return
-			}
+			ensurePreschoolCurriculumPrefs()
 			if (this.loading) return
 			this.loading = true
 			try {
 				const prefs = getCurriculumPrefs()
 				this.syncHeroBookCover()
 				this.summary = formatCurriculumSummary(prefs)
-				this.textbookTexts = []
 				if (isRenjiaoTextbookSyncPrefs(prefs)) {
 					const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
 					const raw = await loadRenjiaoTextbookTexts(loaderParams)
-					this.textbookTexts = filterRenjiaoTextbookReadableTexts(raw)
 					this.chars = []
 					this.lessons = buildTextbookSyncLessonList(raw)
 				} else {
 					this.chars = await queryCurriculumChars(prefs)
 					const map = Object.create(null)
 					this.chars.forEach((row) => {
-						const hint = String(row.lesson_hint || '未分课次')
+						const hint = String(row.lesson_hint || '未分站')
 						if (!map[hint]) map[hint] = { hint, rows: [] }
 						map[hint].rows.push(row)
 					})
@@ -349,6 +373,14 @@ export default {
 				this.loading = false
 			}
 		},
+		displayLessonHint(hint, index) {
+			const raw = String(hint || '').trim()
+			if (!raw) return `第 ${Number(index) + 1} 站`
+			if (/课|课文|单元/.test(raw)) {
+				return `第 ${Number(index) + 1} 站`
+			}
+			return raw
+		},
 		collectLessonLearnCharKeys(rows) {
 			const set = new Set()
 			for (const r of rows || []) {
@@ -362,91 +394,81 @@ export default {
 		},
 		patchLessonDoneBadges() {
 			const prefs = getCurriculumPrefs()
-			const map = getUserProgressMap()
-			const learned = (ch) => {
-				const key = makeProgressKey(prefs.textbook_version_id, prefs.grade, prefs.semester, ch)
-				const rec = map[key]
-				return !!(rec && Number(rec[COL_PROGRESS.learned]) === 1)
-			}
 			for (const lesson of this.lessons) {
-				const keys = lesson.learnCheckKeys
-				let text = ''
-				if (keys && keys.length && keys.every((c) => learned(c))) {
-					text = lesson.doneBadgeKind === 'lesson' ? '本课已学' : '识字已学'
-				}
-				this.$set(lesson, 'doneBadgeText', text)
+				const lessonKey = buildStoredLessonKey(
+					typeof lesson.rjIdx === 'number' ? lesson.rjIdx : null,
+					lesson.hint
+				)
+				const cleared = hasLessonQuizPassed(prefs, lessonKey)
+				this.$set(lesson, 'doneBadgeText', cleared ? '已通关' : '')
 			}
 		},
+		isLessonCleared(lesson) {
+			if (!lesson) return false
+			if (lesson.doneBadgeText === '已通关') return true
+			const prefs = getCurriculumPrefs()
+			const lessonKey = buildStoredLessonKey(
+				typeof lesson.rjIdx === 'number' ? lesson.rjIdx : null,
+				lesson.hint
+			)
+			return hasLessonQuizPassed(prefs, lessonKey)
+		},
+		isLevelUnlocked(index) {
+			const i = Number(index)
+			if (!Number.isFinite(i) || i < 0) return false
+			if (i === 0) return true
+			return this.clearedLevelCount >= i
+		},
+		toggleClearedExpand() {
+			this.clearedExpanded = !this.clearedExpanded
+		},
 		ensureCurriculumSelected() {
-			if (!hasUserCurriculumPrefsSaved()) {
-				this.curriculumPickerRequired = true
-				this.lessons = []
-				this.chars = []
-				this.textbookTexts = []
-				this.summary = '请先选择教材'
-				this.openCurriculumPicker()
+			ensurePreschoolCurriculumPrefs()
+			this.curriculumPickerRequired = false
+			this.showCurriculumPicker = false
+			if (this.lessons && this.lessons.length) {
+				this.refreshProgressOnly()
 				return
 			}
-			this.curriculumPickerRequired = false
 			this.reload()
 		},
 		openCurriculumPicker() {
-			const p = getCurriculumPrefs()
-			this.modalVersion = p.textbook_version_id || TEXTBOOK_VERSION_IDS.TONGBIAN_RJ
-			this.showCurriculumPicker = true
+			/* 已锁定萌萌常用字，不再换教材 */
 		},
-		onPickerMaskTap() {
-			if (this.curriculumPickerRequired) return
-			this.closeCurriculumPicker()
-		},
+		onPickerMaskTap() {},
 		closeCurriculumPicker() {
-			if (this.curriculumPickerRequired) return
 			this.showCurriculumPicker = false
 		},
-		chooseVersion(versionId) {
-			this.modalVersion = versionId
-		},
-		async selectBook(book) {
-			setCurriculumPrefs({
-				textbook_version_id: this.modalVersion,
-				grade: book.grade,
-				semester: book.semester
-			})
-			const wasRequired = this.curriculumPickerRequired
+		chooseVersion() {},
+		selectBook() {
+			ensurePreschoolCurriculumPrefs()
+			this.showCurriculumPicker = false
 			this.curriculumPickerRequired = false
-			this.showCurriculumPicker = false
-			await this.reload()
-			uni.showToast({
-				title: wasRequired ? `已选择${book.label}` : `已切换到${book.label}`,
-				icon: 'success'
-			})
-		},
-		openText(item, idx) {
-			const title = item && item.title ? item.title : `第${idx + 1}篇`
-			const raw = item && item.content ? String(item.content).trim() : ''
-			uni.showModal({
-				title,
-				content: raw.length > 900 ? `${raw.slice(0, 900)}\n\n（内容较长，已截断）` : raw || '暂无内容',
-				showCancel: false,
-				confirmText: '关闭'
-			})
+			this.reload()
 		},
 		goHome() {
 			reLaunchHome()
 		},
-		openLesson(lesson) {
-			if (this.curriculumPickerRequired) {
-				this.openCurriculumPicker()
+		openLevel(lesson, index) {
+			if (!this.isLevelUnlocked(index)) {
+				const need = Number(index)
+				uni.showToast({
+					title: need > 0 ? `先闯过第 ${need} 站哦` : '关卡未解锁',
+					icon: 'none'
+				})
 				return
 			}
+			this.openLesson(lesson)
+		},
+		openLesson(lesson) {
 			if (typeof lesson.rjIdx === 'number') {
 				uni.navigateTo({
-					url: `/pages/literacy/lesson?rjLesson=${lesson.rjIdx}`
+					url: `/pages/dictionary/result?rjLesson=${lesson.rjIdx}`
 				})
 				return
 			}
 			uni.navigateTo({
-				url: `/pages/literacy/lesson?hint=${encodeURIComponent(lesson.hint)}`
+				url: `/pages/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}`
 			})
 		}
 	}
@@ -629,59 +651,6 @@ export default {
 	box-sizing: border-box;
 }
 
-.textbook-panel {
-	margin-bottom: 20rpx;
-	background: #fff5f8;
-	border-radius: 22rpx;
-	padding: 18rpx 20rpx;
-	border: 1rpx solid rgba(255, 200, 180, 0.35);
-}
-
-.textbook-panel-head {
-	margin-bottom: 8rpx;
-}
-
-.textbook-panel-title {
-	display: block;
-	font-size: 28rpx;
-	font-weight: 700;
-	color: var(--meng-text);
-}
-
-.textbook-panel-sub {
-	display: block;
-	margin-top: 4rpx;
-	font-size: 22rpx;
-	color: #8a8279;
-}
-
-.text-row {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	padding: 16rpx 6rpx;
-	border-top: 1rpx solid rgba(255, 220, 200, 0.45);
-}
-
-.text-row:active {
-	opacity: 0.85;
-}
-
-.text-row-title {
-	flex: 1;
-	font-size: 26rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.45;
-	font-weight: 500;
-}
-
-.text-row-arrow {
-	font-size: 34rpx;
-	color: rgba(196, 77, 106, 0.4);
-	margin-left: 12rpx;
-}
-
 .section-head {
 	margin-bottom: 14rpx;
 	padding-left: 4rpx;
@@ -702,96 +671,227 @@ export default {
 	line-height: 1.45;
 }
 
-.lesson-list {
+.level-path {
 	display: flex;
 	flex-direction: column;
+	padding: 4rpx 0 8rpx;
 }
 
-.lesson-list > .lesson-card + .lesson-card {
-	margin-top: 14rpx;
+.level-cleared-block {
+	margin-bottom: 4rpx;
 }
 
-.lesson-card {
+.level-cleared-summary {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 24rpx 20rpx;
-	background: #fff;
-	border-radius: 24rpx;
-	border: 2rpx solid rgba(255, 230, 210, 0.6);
-	box-shadow: 0 8rpx 20rpx rgba(44, 36, 25, 0.05);
+	padding: 16rpx 18rpx;
+	border-radius: 20rpx;
+	background: rgba(127, 212, 154, 0.16);
+	border: 1rpx solid rgba(127, 212, 154, 0.35);
 	box-sizing: border-box;
 }
 
-.lesson-card:active {
-	opacity: 0.94;
-	transform: scale(0.995);
+.level-cleared-summary:active {
+	opacity: 0.92;
 }
 
-.lesson-num {
-	flex-shrink: 0;
-	width: 56rpx;
-	height: 56rpx;
-	line-height: 56rpx;
-	text-align: center;
+.level-cleared-summary-main {
+	flex: 1;
+	min-width: 0;
+	margin-left: 14rpx;
+}
+
+.level-cleared-title {
+	display: block;
 	font-size: 26rpx;
+	font-weight: 700;
+	color: #2e7d4f;
+}
+
+.level-cleared-sub {
+	display: block;
+	margin-top: 4rpx;
+	font-size: 22rpx;
+	color: #6b9080;
+}
+
+.level-cleared-chevron {
+	font-size: 28rpx;
+	color: #5a9a72;
+	margin-left: 8rpx;
+}
+
+.level-cleared-list {
+	margin-top: 10rpx;
+}
+
+.level-rail-bridge {
+	width: 4rpx;
+	height: 18rpx;
+	margin: 6rpx 0 6rpx 30rpx;
+	background: rgba(127, 212, 154, 0.45);
+	border-radius: 4rpx;
+}
+
+.level-node {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	margin-bottom: 12rpx;
+}
+
+.level-rail {
+	width: 64rpx;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.level-dot {
+	width: 52rpx;
+	height: 52rpx;
+	border-radius: 18rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 22rpx;
 	font-weight: 800;
 	color: #fff;
+	box-sizing: border-box;
+}
+
+.level-dot--cleared {
 	background: #7fd49a;
-	border-radius: 16rpx;
-	margin-right: 18rpx;
 	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.28);
 }
 
-.lesson-main {
-	flex: 1;
-	min-width: 0;
+.level-dot--current {
+	width: 60rpx;
+	height: 60rpx;
+	border-radius: 20rpx;
+	font-size: 26rpx;
+	background: #ec407a;
+	box-shadow: 0 8rpx 18rpx rgba(236, 64, 122, 0.35);
 }
 
-.lesson-title-row {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	justify-content: space-between;
+.level-dot--locked {
+	background: #c5bdb4;
+	color: #fff;
+	font-size: 22rpx;
 }
 
-.lesson-title-row .lesson-title {
+.level-rail-line {
+	flex: 1;
+	width: 4rpx;
+	min-height: 24rpx;
+	margin-top: 6rpx;
+	background: rgba(236, 64, 122, 0.28);
+	border-radius: 4rpx;
+}
+
+.level-rail-line--faint {
+	background: rgba(180, 170, 160, 0.35);
+}
+
+.level-card {
 	flex: 1;
 	min-width: 0;
+	padding: 18rpx 20rpx;
+	border-radius: 22rpx;
+	box-sizing: border-box;
+}
+
+.level-card--cleared {
+	background: #fff;
+	border: 1rpx solid rgba(127, 212, 154, 0.4);
+}
+
+.level-card--current {
+	padding: 24rpx 22rpx;
+	background: linear-gradient(145deg, #fff7fa 0%, #ffe8f0 100%);
+	border: 2rpx solid rgba(236, 64, 122, 0.35);
+	box-shadow: 0 10rpx 28rpx rgba(236, 64, 122, 0.12);
+}
+
+.level-card--locked {
+	background: #f5f2ef;
+	border: 1rpx dashed rgba(160, 150, 140, 0.45);
+	opacity: 0.92;
+}
+
+.level-card-kicker {
 	display: block;
-	font-size: 30rpx;
+	font-size: 22rpx;
 	font-weight: 700;
-	color: var(--meng-text);
+	color: #ec407a;
+	margin-bottom: 6rpx;
+}
+
+.level-card-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
 	line-height: 1.35;
 	word-break: break-all;
 }
 
-.lesson-done-badge {
-	flex-shrink: 0;
-	margin-left: 12rpx;
-	padding: 4rpx 14rpx;
-	font-size: 22rpx;
+.level-card--locked .level-card-title {
+	font-size: 26rpx;
 	font-weight: 600;
-	color: #fff;
-	background: #43a047;
-	border-radius: 999rpx;
-	line-height: 1.3;
+	color: #8a8279;
 }
 
-.lesson-meta {
+.level-card-meta {
 	display: block;
 	margin-top: 8rpx;
 	font-size: 24rpx;
-	color: #c44d6a;
 	font-weight: 600;
+	color: #c44d6a;
 }
 
-.lesson-arrow {
-	flex-shrink: 0;
-	font-size: 40rpx;
-	color: rgba(196, 77, 106, 0.35);
-	margin-left: 12rpx;
-	font-weight: 300;
+.level-card--cleared .level-card-meta {
+	color: #43a047;
+}
+
+.level-card--locked .level-card-meta {
+	color: #9e958c;
+	font-weight: 500;
+}
+
+.level-card-cta {
+	margin-top: 16rpx;
+	align-self: flex-start;
+	display: inline-flex;
+	padding: 12rpx 28rpx;
+	border-radius: 999rpx;
+	background: #ec407a;
+	box-shadow: 0 6rpx 14rpx rgba(236, 64, 122, 0.28);
+}
+
+.level-card-cta-text {
+	font-size: 26rpx;
+	font-weight: 800;
+	color: #fff;
+}
+
+.level-node--current:active .level-card--current,
+.level-node--cleared:active .level-card--cleared {
+	opacity: 0.94;
+	transform: scale(0.995);
+}
+
+.level-more-hint {
+	margin: 4rpx 0 8rpx 64rpx;
+	padding: 12rpx 16rpx;
+}
+
+.level-more-hint-text {
+	font-size: 22rpx;
+	color: #9e958c;
+	font-weight: 500;
 }
 
 .empty-box {

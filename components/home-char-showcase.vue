@@ -12,12 +12,11 @@
 						char="字"
 						:display-pinyin="showcasePinyin"
 						:length="strokeSize"
-						:loop-animate="true"
+						:loop-animate="false"
 						:stroke-audio-enabled="false"
 						:show-play-fab="false"
 						hide-stroke-hint
 						@ready-change="onStrokeReady"
-						@animating-change="onAnimatingChange"
 						@stroke-index="onStrokeIndexChange"
 					/>
 					<!-- <text v-if="currentStrokeLabel" class="home-char-showcase__stroke-line clamp-1">
@@ -56,10 +55,10 @@
 					</view>
 
 					<view class="home-char-showcase__tags">
-						<text class="home-char-showcase__tag">笔顺动画</text>
-						<text class="home-char-showcase__tag">拼音学习</text>
+						<text class="home-char-showcase__tag">静态笔顺</text>
+						<text class="home-char-showcase__tag">拼音跟读</text>
 						<text class="home-char-showcase__tag">查字详解</text>
-						<text class="home-char-showcase__tag">课本同步</text>
+						<text class="home-char-showcase__tag">和萌萌认字</text>
 					</view>
 				</view>
 			</view>
@@ -151,22 +150,7 @@ export default {
 		onStrokeReady(ready) {
 			if (!ready || this.strokeStarted) return
 			this.strokeStarted = true
-			this.$nextTick(() => {
-				setTimeout(() => this.startStrokeLoop(), 400)
-			})
-		},
-		startStrokeLoop() {
-			const player = this.$refs.stroke
-			if (!player || typeof player.playAnimation !== 'function') return
-			player.playAnimation()
-		},
-		onAnimatingChange(animating) {
-			if (animating) return
-			this.clearLoopTimer()
-			this._loopTimer = setTimeout(() => {
-				this._loopTimer = null
-				this.startStrokeLoop()
-			}, 1600)
+			/* 首页常驻：只展示静态字形，不自动播笔顺动画 */
 		},
 		onStrokeIndexChange(idx) {
 			this.strokeIndex = Number(idx) || 0
@@ -176,9 +160,8 @@ export default {
 			this.$refs.stroke?.stopAnimation?.()
 		},
 		resumeShowcase() {
-			this.$nextTick(() => {
-				setTimeout(() => this.startStrokeLoop(), 520)
-			})
+			/* 首页不恢复循环动画 */
+			this.pauseShowcase()
 		},
 		goCharDetail() {
 			this.pauseShowcase()

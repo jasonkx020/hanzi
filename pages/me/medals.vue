@@ -75,14 +75,11 @@ export default {
 			if (next.require.learnedTotal != null) {
 				parts.push(`已学 ${snapshot.learnedTotal}/${next.require.learnedTotal} 字`)
 			}
-			if (next.require.pinyinPractice != null) {
-				parts.push(`拼音练 ${snapshot.pinyinPractice}/${next.require.pinyinPractice} 次`)
+			if (next.require.strokePractice != null) {
+				parts.push(`写字 ${snapshot.strokePractice}/${next.require.strokePractice} 次`)
 			}
 			if (next.require.lessonQuizPassed != null) {
-				parts.push(`小测通关 ${snapshot.lessonQuizPassed}/${next.require.lessonQuizPassed} 课`)
-			}
-			if (next.require.strokePractice != null) {
-				parts.push(`描红 ${snapshot.strokePractice}/${next.require.strokePractice} 次`)
+				parts.push(`小测验通关 ${snapshot.lessonQuizPassed}/${next.require.lessonQuizPassed} 站`)
 			}
 			if (next.require.dailyStreak != null) {
 				parts.push(`连续打卡 ${snapshot.dailyStreak}/${next.require.dailyStreak} 天`)

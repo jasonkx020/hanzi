@@ -73,9 +73,9 @@ export async function purchaseVipPlan(planId) {
 	if (order.mock) {
 		const iapHint =
 			plan.kind === 'grade_pack'
-				? `永久解锁 ${plan.grade} 年级字库`
+				? '永久解锁更多汉字'
 				: plan.kind === 'review_pack'
-					? '解锁期末复习字包'
+					? '解锁复习字包'
 					: `约 ${plan.durationDays} 天会员权益`
 		const confirmed = await new Promise((resolve, reject) => {
 			uni.showModal({

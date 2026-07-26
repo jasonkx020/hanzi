@@ -788,8 +788,9 @@ export default {
 		},
 		async playCurrentStrokeAudio() {
 			if (this.completed || this.demoPlaying) return
-			if (!this.isFastPaceActive() && this.introBusy) return
 			this.clearWelcomeTimer()
+			stopMengmengVoice()
+			// 允许打断进行中的引导并重播（勿因 introBusy 静默 return）
 			this.cancelWriteIntro()
 			if (this.isFastPaceActive()) {
 				await this.beginStrokeGuidance(this.activeStroke)
@@ -853,21 +854,10 @@ export default {
 			}
 			this.startSessionChar(i)
 		},
-		/** 内嵌模式：用户点击后播放当前应收笔画提示 */
+		/** 内嵌模式：用户点击后直接播当前笔画名（不先播萌萌「点听提示」以免占住链路） */
 		playCompactStrokeHint() {
-			if (this.completed || this.demoPlaying || this.introBusy) return
-			const voiceId = this.compact ? MENG_VOICE.DAILY_STROKE_HINT : MENG_VOICE.STROKE_HINT_PLAY
-			this.cancelWriteIntro()
-			const gen = ++this.introGen
-			this.introBusy = true
-			const run = async () => {
-				try {
-					await this.playMengThenStrokeGuidance(voiceId, this.activeStroke)
-				} finally {
-					if (gen === this.introGen) this.introBusy = false
-				}
-			}
-			run()
+			if (this.completed || this.demoPlaying) return
+			this.playCurrentStrokeAudio()
 		},
 		playMengVoiceIf(id, opts) {
 			if (!this.shouldPlayPracticeVoice()) return Promise.resolve(false)
@@ -986,19 +976,9 @@ export default {
 				this.scheduleCompleteFeedback()
 			}
 		},
-		scheduleCompactCorrectFeedback(strokeNo) {
-			const gen = ++this.introGen
-			this.introBusy = true
-			;(async () => {
-				try {
-					await settleWritePracticeAudio({ stopMeng: true })
-					await this.playMengVoiceIf(MENG_VOICE.DAILY_STROKE_OK, { minGapMs: 0 })
-					await waitForMengmengVoiceIdle()
-					await sleepWriteMs(WRITE_KID_AUDIO.AFTER_OK_MS)
-				} finally {
-					if (gen === this.introGen) this.introBusy = false
-				}
-			})()
+		scheduleCompactCorrectFeedback(_strokeNo) {
+			// 每日一练：鼓励音与书写并行，切勿 introBusy 锁田字格（否则下一笔要点「听提示」才能写）
+			this.playMengVoiceIf(MENG_VOICE.DAILY_STROKE_OK, { minGapMs: 400 }).catch(() => {})
 		},
 		scheduleNextStrokeGuidance(nextStrokeIndex) {
 			if (this.isFastPaceActive()) {
@@ -1031,13 +1011,18 @@ export default {
 				this.$nextTick(() => this.applyStrokeGuideBlink(strokeIndex))
 				return
 			}
+			// 每日一练内嵌：只高亮 + 轻提示音，不锁书写
+			if (compact) {
+				this.$nextTick(() => this.applyCompactStrokeGuideVisual(strokeIndex))
+				this.playMengVoiceIf(MENG_VOICE.DAILY_STROKE_WRONG, { minGapMs: 400 }).catch(() => {})
+				return
+			}
 			const gen = ++this.introGen
 			this.introBusy = true
-			const voiceId = compact ? MENG_VOICE.DAILY_STROKE_WRONG : MENG_VOICE.STROKE_WRITE_WRONG
 			;(async () => {
 				try {
 					await settleWritePracticeAudio({ stopMeng: true })
-					await this.playMengVoiceIf(voiceId, { minGapMs: 0 })
+					await this.playMengVoiceIf(MENG_VOICE.STROKE_WRITE_WRONG, { minGapMs: 0 })
 					await waitForMengmengVoiceIdle()
 					await sleepWriteMs(WRITE_KID_AUDIO.AFTER_WRONG_MS)
 					if (gen !== this.introGen || this.completed || this.demoPlaying) return

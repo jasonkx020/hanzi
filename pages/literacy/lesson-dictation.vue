@@ -365,7 +365,7 @@ export default {
 		this.calcCanvasSize()
 		const payload = takeLessonDictationTransfer()
 		if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) {
-			uni.showToast({ title: '题目数据已失效，请从课次字卡重新进入', icon: 'none' })
+			uni.showToast({ title: '题目数据已失效，请从字卡重新进入', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1600)
 			return
 		}
@@ -375,12 +375,12 @@ export default {
 			const nav = title.length > 14 ? `${title.slice(0, 13)}…` : title
 			uni.setNavigationBarTitle({ title: `${nav} · 听一听写` })
 		} else {
-			this.lessonTitle = '本课生字'
+			this.lessonTitle = '本站汉字'
 			uni.setNavigationBarTitle({ title: '听一听写' })
 		}
 		const pool = orderedUniqueRows(payload.rows)
 		if (!pool.length) {
-			uni.showToast({ title: '本课无生字可听写', icon: 'none' })
+			uni.showToast({ title: '本站无汉字可听写', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1800)
 			return
 		}

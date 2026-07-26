@@ -66,17 +66,20 @@
 							<image class="cta-icon-img" :src="assets.entry.textbook" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col">
-							<text class="cta-label">课本同步</text>
-							<text class="cta-sub">按课识字</text>
+							<text class="cta-label">萌萌识字</text>
+							<text class="cta-sub">和萌萌一起认字</text>
 						</view>
 					</view>
-					<view class="cta-btn cta-btn--pinyin" @click="goPinyin">
-						<view class="cta-icon-ring">
-							<image class="cta-icon-img" :src="assets.tab.learnActive" mode="aspectFit" />
+					<view class="cta-btn cta-btn--pinyin" @click="goWrongOften">
+						<view v-if="wrongCount > 0" class="cta-badge">
+							<text class="cta-badge-text">{{ wrongCountDisplay }}</text>
 						</view>
-						<view class="cta-text-col">
-							<text class="cta-label">拼音学习</text>
-							<text class="cta-sub">拼读与闯关</text>
+						<view class="cta-icon-ring">
+							<image class="cta-icon-img" :src="assets.entry.strokeLab" mode="aspectFit" />
+						</view>
+						<view class="cta-text-col cta-text-col--badge">
+							<text class="cta-label">易错字</text>
+							<text class="cta-sub">{{ wrongEntrySub }}</text>
 						</view>
 					</view>
 				</view>
@@ -131,6 +134,7 @@ import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-ga
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
 import { getCurriculumPrefs, setCurriculumPrefs, formatGradeSemesterLabel, listHomeCurriculumTabs } from '@/utils/curriculum-storage.js'
 import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-storage.js'
+import { getWrongChars } from '@/repositories/learning-repository.js'
 import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
 import MengTabHero from '@/components/meng-tab-hero.vue'
@@ -146,8 +150,7 @@ import {
 } from '@/utils/mengmeng-voice.js'
 import {
 	navigateToDictionaryHome,
-	navigateToMe,
-	navigateToPinyinHome
+	navigateToMe
 } from '@/utils/root-nav.js'
 
 const HERO_POSES = ['wave', 'book', 'happy']
@@ -164,12 +167,16 @@ export default {
 			dailyDesc: '加载今日练习…',
 			dailyBtnLabel: '开始练习',
 			textbookVolumeLabel: '',
+			wrongCount: 0,
 			mascotFallback: false,
 			heroDotIndex: 0,
-			heroSlides: ['跟着课本，轻松识字', '边玩边练，每天进步一点点', '和萌萌一起认字'],
+			heroSlides: ['和萌萌一起认字', '边玩边练，每天进步一点点', '写一写，记一记'],
 			_welcomeTimer: null,
 			_heroCarouselTimer: null,
 			_heroResumeTimer: null,
+			/** 同会话跳过重复 buildDailyTrainingPlan */
+			_lastPlanKey: '',
+			_lastPlanAt: 0,
 			curriculumTabs: listHomeCurriculumTabs()
 		}
 	},
@@ -182,6 +189,15 @@ export default {
 					? 'book'
 					: poses[i % poses.length] || 'wave'
 			}))
+		},
+		wrongCountDisplay() {
+			const n = Number(this.wrongCount) || 0
+			return n > 99 ? '99+' : String(n)
+		},
+		wrongEntrySub() {
+			const n = Number(this.wrongCount) || 0
+			if (n <= 0) return '暂无易错，继续加油'
+			return '点我巩固复习'
 		}
 	},
 	watch: {
@@ -196,7 +212,7 @@ export default {
 		this.startHeroCarousel()
 		this.refresh()
 		this.scheduleWelcomeVoice()
-		this.$refs.charShowcase?.resumeShowcase?.()
+		this.$refs.charShowcase?.pauseShowcase?.()
 	},
 	onHide() {
 		this.$refs.charShowcase?.pauseShowcase?.()
@@ -257,13 +273,40 @@ export default {
 			this.summary = getCurriculumSummary()
 			this.textbookVolumeLabel = formatGradeSemesterLabel(getCurriculumPrefs())
 			this.vipActive = isVipActive()
+			this.wrongCount = getWrongChars().length
 			const p = getCurriculumPrefs()
+			const planKey = [
+				p.textbook_version_id,
+				p.grade,
+				p.semester,
+				p.list_type_preference
+			].join('|')
+			const now = Date.now()
+			const hasPlanUi =
+				this.dailyDesc &&
+				this.dailyDesc !== '加载今日练习…' &&
+				this.dailyDesc !== '今日练习加载失败，点我重试'
+			if (
+				hasPlanUi &&
+				this._lastPlanKey === planKey &&
+				(now - this._lastPlanAt < 2000 || this._lastPlanAt > 0)
+			) {
+				this.encourageText = buildEncourageText({ remain: 5 })
+				this.heroSlides = [
+					this.dailyDesc,
+					this.encourageText,
+					`${this.textbookVolumeLabel} · 和萌萌一起认字`
+				]
+				return
+			}
 			const learned = countLearnedCharsForCurriculumPrefs(p)
 			try {
 				const plan = await buildDailyTrainingPlan(p)
 				const summary = formatDailyPlanHomeSummary(plan, learned)
 				this.dailyDesc = summary.desc
 				this.dailyBtnLabel = summary.btnLabel
+				this._lastPlanKey = planKey
+				this._lastPlanAt = Date.now()
 			} catch (e) {
 				console.warn('[home] daily plan', e)
 				this.dailyDesc = '今日练习加载失败，点我重试'
@@ -273,7 +316,7 @@ export default {
 			this.heroSlides = [
 				this.dailyDesc,
 				this.encourageText,
-				`${this.textbookVolumeLabel} · 跟着课本轻松识字`
+				`${this.textbookVolumeLabel} · 和萌萌一起认字`
 			]
 			this.heroDotIndex = 0
 		},
@@ -293,10 +336,7 @@ export default {
 			uni.navigateTo({ url: '/pages/vip/vip' })
 		},
 		goSettings() {
-			uni.navigateTo({ url: '/pages/settings/curriculum' })
-		},
-		goPinyin() {
-			navigateToPinyinHome()
+			uni.navigateTo({ url: '/pages/me/learned' })
 		},
 		goDictionary() {
 			navigateToDictionaryHome()
@@ -308,6 +348,9 @@ export default {
 			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
 			void startWritePractice()
 		},
+		goWrongOften() {
+			uni.navigateTo({ url: '/pages/me/wrong-often' })
+		},
 		goTextbook() {
 			startTextbookLearning()
 		},
@@ -315,10 +358,6 @@ export default {
 			startLiteracyGame()
 		},
 		goDaily() {
-			if (this.dailyBtnLabel === '去设置') {
-				uni.navigateTo({ url: '/pages/settings/curriculum' })
-				return
-			}
 			playMengmengVoice(MENG_VOICE.HOME_DAILY, { debounceMs: 200 }).catch(() => {})
 			startDailyTraining()
 		}
@@ -512,6 +551,7 @@ export default {
 }
 
 .cta-btn {
+	position: relative;
 	flex: 1;
 	display: flex;
 	flex-direction: row;
@@ -547,6 +587,30 @@ export default {
 	flex-shrink: 0;
 }
 
+.cta-badge {
+	position: absolute;
+	top: 8rpx;
+	right: 10rpx;
+	z-index: 2;
+	min-width: 32rpx;
+	height: 32rpx;
+	padding: 0 8rpx;
+	border-radius: 16rpx;
+	background: #e85d4c;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	border: 2rpx solid #fff;
+}
+
+.cta-badge-text {
+	font-size: 18rpx;
+	font-weight: 800;
+	color: #fff;
+	line-height: 1;
+}
+
 .cta-icon-img {
 	width: 40rpx;
 	height: 40rpx;
@@ -555,6 +619,10 @@ export default {
 .cta-text-col {
 	flex: 1;
 	min-width: 0;
+}
+
+.cta-text-col--badge {
+	padding-right: 36rpx;
 }
 
 .cta-label {

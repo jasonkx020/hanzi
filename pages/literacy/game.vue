@@ -12,7 +12,7 @@
 			<text class="lobby-balloon" aria-hidden="true">🎈</text>
 			<text class="lobby-title">萌萌的气球营</text>
 			<text class="lobby-lead">听一听、把汉字和拼音配一对，帮萌萌收集小星星～</text>
-			<text class="lobby-sub">字都来自你选的课本；下面可以优先带上「常错的字」多练几遍。</text>
+			<text class="lobby-sub">字都来自萌萌常用字；下面可以优先带上「常错的字」多练几遍。</text>
 
 			<view class="lobby-switch-row">
 				<text class="lobby-switch-label">常错字优先进字池</text>
@@ -72,58 +72,70 @@
 			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
 		</view>
 
-		<!-- 星星配对 -->
+		<!-- 星星配对（点选连线） -->
 		<view v-else-if="phase === 'pair'" class="pair-wrap">
 			<view class="play-head">
 				<text class="play-mascot">⭐</text>
 				<view class="play-head-text">
 					<text class="play-tag pair-tag">星星配对</text>
-					<text class="play-step">先点左边的字，再点右边它对应的拼音</text>
+					<text class="play-step">点左边的字，再点右边拼音，连成一条线</text>
 				</view>
 			</view>
 			<text class="pair-progress">已配好 {{ pairMatched }} / {{ pairTarget }} 对</text>
 
-			<view class="pair-columns">
-				<view class="pair-col">
-					<text class="pair-col-hd">汉字</text>
-					<view
-						v-for="(cell, i) in pairLeft"
-						:key="'L' + i"
-						class="pair-cell"
-						:class="{
-							'pair-cell-done': cell.done,
-							'pair-cell-sel': pickLIdx === i && !cell.done
-						}"
-						@click="onTapPairLeft(i)"
-					>
-						<text class="pair-char">{{ cell.done ? '✓' : cell.hanzi }}</text>
+			<view id="pair-board" class="pair-board">
+				<canvas
+					canvas-id="pair-link-canvas"
+					id="pair-link-canvas"
+					class="pair-link-canvas"
+					:style="pairCanvasStyle"
+					:width="pairCanvasBufW"
+					:height="pairCanvasBufH"
+				/>
+				<view class="pair-columns">
+					<view class="pair-col">
+						<text class="pair-col-hd">汉字</text>
+						<view
+							v-for="(cell, i) in pairLeft"
+							:id="'pair-L-' + i"
+							:key="'L' + i"
+							class="pair-cell"
+							:class="{
+								'pair-cell-done': cell.done,
+								'pair-cell-sel': pickLIdx === i && !cell.done
+							}"
+							@click="onTapPairLeft(i)"
+						>
+							<text class="pair-char">{{ cell.done ? '✓' : cell.hanzi }}</text>
+						</view>
 					</view>
-				</view>
-				<view class="pair-mid" />
-				<view class="pair-col">
-					<text class="pair-col-hd">拼音</text>
-					<view
-						v-for="(cell, i) in pairRight"
-						:key="'R' + i"
-						class="pair-cell pair-cell-py"
-						:class="{
-							'pair-cell-done': cell.done,
-							'pair-cell-sel': pickRIdx === i && !cell.done
-						}"
-						@click="onTapPairRight(i)"
-					>
-						<text v-if="cell.done" class="pair-char">✓</text>
-						<pinyin-four-lines-row
-							v-else
-							class="pair-pflr"
-							:syllables="pairSyllablesForPinyin(cell.pinyin)"
-							size="compact"
-						/>
+					<view class="pair-mid" />
+					<view class="pair-col">
+						<text class="pair-col-hd">拼音</text>
+						<view
+							v-for="(cell, i) in pairRight"
+							:id="'pair-R-' + i"
+							:key="'R' + i"
+							class="pair-cell pair-cell-py"
+							:class="{
+								'pair-cell-done': cell.done,
+								'pair-cell-sel': pickRIdx === i && !cell.done
+							}"
+							@click="onTapPairRight(i)"
+						>
+							<text v-if="cell.done" class="pair-char">✓</text>
+							<pinyin-four-lines-row
+								v-else
+								class="pair-pflr"
+								:syllables="pairSyllablesForPinyin(cell.pinyin)"
+								size="compact"
+							/>
+						</view>
 					</view>
 				</view>
 			</view>
 
-			<text class="play-hint">左右各点一次，把字和它自己的拼音配成一对</text>
+			<text class="play-hint">点字再点拼音，连线配对；配错了红线会闪一下哦</text>
 			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
 		</view>
 
@@ -167,6 +179,7 @@ import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.j
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { reLaunchHome } from '@/utils/root-nav.js'
 import { recordGameLevelClear } from '@/utils/achievement-stats-storage.js'
+import { createLegacyCanvasContext, flushLegacyCanvasDraw } from '@/utils/uni-legacy-canvas.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
@@ -175,6 +188,10 @@ const MIXED_PAIR_PAIRS = 3
 /** 听音辨字至少需要 2 个不同汉字（1 目标 + 干扰项） */
 const MIN_GAME_POOL = 2
 const FALLBACK_GAME_CHARS = ['大', '小', '天', '口', '手', '人', '山', '水', '火', '木']
+/** 配对成功连线配色（轮换） */
+const PAIR_LINK_COLORS = ['#66bb6a', '#7e57c2', '#42a5f5', '#ffa726', '#ec407a']
+const PAIR_BAD_FLASH_MS = 420
+const PAIR_LINK_CANVAS_ID = 'pair-link-canvas'
 
 function shuffle(arr) {
 	const a = (arr || []).slice()
@@ -248,10 +265,28 @@ export default {
 			pairTarget: ROUND_PAIR,
 			pickLIdx: null,
 			pickRIdx: null,
-			pairMatched: 0
+			pairMatched: 0,
+			/** 已配对连线 { lIdx, rIdx, color } */
+			pairLinks: [],
+			/** 临时错线 { lIdx, rIdx } */
+			pairBadLink: null,
+			pairBoardCssW: 300,
+			pairBoardCssH: 400,
+			pairCanvasBufW: 300,
+			pairCanvasBufH: 400,
+			_pairBadTimer: null,
+			_pairRedrawTimer: null,
+			_pairDrawGen: 0,
+			_pairBadToken: 0
 		}
 	},
 	computed: {
+		pairCanvasStyle() {
+			return {
+				width: `${this.pairBoardCssW}px`,
+				height: `${this.pairBoardCssH}px`
+			}
+		},
 		optionColClass() {
 			return this.options.length >= 3 ? 'opts-3' : 'opts-2'
 		},
@@ -304,12 +339,178 @@ export default {
 	onUnload() {
 		this._openingDoneModal = false
 		this.doneModalVisible = false
+		this.clearPairLineTimers()
 		this.stopGameAudio()
 	},
 	onHide() {
 		this.stopGameAudio()
 	},
 	methods: {
+		clearPairLineTimers() {
+			if (this._pairBadTimer != null) {
+				clearTimeout(this._pairBadTimer)
+				this._pairBadTimer = null
+			}
+			if (this._pairRedrawTimer != null) {
+				clearTimeout(this._pairRedrawTimer)
+				this._pairRedrawTimer = null
+			}
+		},
+		clearPairLineState() {
+			this.clearPairLineTimers()
+			this.pairLinks = []
+			this.pairBadLink = null
+			this._pairDrawGen++
+			this._pairBadToken++
+			this.clearPairCanvas()
+		},
+		clearPairCanvas() {
+			const ctx = createLegacyCanvasContext(PAIR_LINK_CANVAS_ID, this)
+			if (!ctx) return
+			const w = this.pairCanvasBufW || this.pairBoardCssW || 1
+			const h = this.pairCanvasBufH || this.pairBoardCssH || 1
+			try {
+				ctx.clearRect(0, 0, w, h)
+				flushLegacyCanvasDraw(ctx)
+			} catch (_) {}
+		},
+		scheduleRedrawPairLines(delayMs = 48) {
+			if (this._pairRedrawTimer != null) {
+				clearTimeout(this._pairRedrawTimer)
+				this._pairRedrawTimer = null
+			}
+			const gen = this._pairDrawGen
+			this.$nextTick(() => {
+				this._pairRedrawTimer = setTimeout(() => {
+					this._pairRedrawTimer = null
+					if (gen !== this._pairDrawGen || this.phase !== 'pair') return
+					this.redrawPairLines()
+				}, Math.max(0, delayMs))
+			})
+		},
+		measurePairBoardLayout() {
+			return new Promise((resolve) => {
+				const nL = this.pairLeft.length
+				const nR = this.pairRight.length
+				if (!nL || !nR) {
+					resolve(null)
+					return
+				}
+				const q = uni.createSelectorQuery().in(this)
+				q.select('#pair-board').boundingClientRect()
+				for (let i = 0; i < nL; i++) q.select(`#pair-L-${i}`).boundingClientRect()
+				for (let i = 0; i < nR; i++) q.select(`#pair-R-${i}`).boundingClientRect()
+				q.exec((res) => {
+					const board = res && res[0]
+					if (!board || !(board.width > 0) || !(board.height > 0)) {
+						resolve(null)
+						return
+					}
+					const lefts = (res || []).slice(1, 1 + nL)
+					const rights = (res || []).slice(1 + nL, 1 + nL + nR)
+					resolve({ board, lefts, rights })
+				})
+			})
+		},
+		anchorFromRect(rect, board, side) {
+			if (!rect || !board) return null
+			const y = rect.top - board.top + rect.height / 2
+			const x =
+				side === 'right'
+					? rect.left - board.left + rect.width
+					: rect.left - board.left
+			if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+			return { x, y }
+		},
+		strokePairSegment(ctx, x1, y1, x2, y2, color, width, dashed) {
+			ctx.setStrokeStyle(color)
+			ctx.setLineWidth(width)
+			ctx.setLineCap('round')
+			if (dashed) {
+				const dx = x2 - x1
+				const dy = y2 - y1
+				const len = Math.sqrt(dx * dx + dy * dy) || 1
+				const ux = dx / len
+				const uy = dy / len
+				const dash = 7
+				const gap = 5
+				let d = 0
+				let draw = true
+				while (d < len) {
+					const seg = Math.min(draw ? dash : gap, len - d)
+					const sx = x1 + ux * d
+					const sy = y1 + uy * d
+					const ex = x1 + ux * (d + seg)
+					const ey = y1 + uy * (d + seg)
+					if (draw) {
+						ctx.beginPath()
+						ctx.moveTo(sx, sy)
+						ctx.lineTo(ex, ey)
+						ctx.stroke()
+					}
+					d += seg
+					draw = !draw
+				}
+				return
+			}
+			ctx.beginPath()
+			ctx.moveTo(x1, y1)
+			ctx.lineTo(x2, y2)
+			ctx.stroke()
+		},
+		fillPairDot(ctx, x, y, color, r) {
+			ctx.setFillStyle(color)
+			ctx.beginPath()
+			ctx.arc(x, y, r, 0, Math.PI * 2)
+			ctx.fill()
+		},
+		async redrawPairLines() {
+			if (this.phase !== 'pair') return
+			const layout = await this.measurePairBoardLayout()
+			if (!layout) return
+			const { board, lefts, rights } = layout
+			const cssW = Math.max(1, Math.round(board.width))
+			const cssH = Math.max(1, Math.round(board.height))
+			this.pairBoardCssW = cssW
+			this.pairBoardCssH = cssH
+			this.pairCanvasBufW = cssW
+			this.pairCanvasBufH = cssH
+
+			await new Promise((r) => this.$nextTick(r))
+			if (this.phase !== 'pair') return
+			const ctx = createLegacyCanvasContext(PAIR_LINK_CANVAS_ID, this)
+			if (!ctx) return
+			ctx.clearRect(0, 0, cssW, cssH)
+
+			const midX = cssW / 2
+			for (const link of this.pairLinks || []) {
+				const a = this.anchorFromRect(lefts[link.lIdx], board, 'right')
+				const b = this.anchorFromRect(rights[link.rIdx], board, 'left')
+				if (!a || !b) continue
+				const color = link.color || PAIR_LINK_COLORS[0]
+				this.strokePairSegment(ctx, a.x, a.y, b.x, b.y, color, 3.2, false)
+				this.fillPairDot(ctx, a.x, a.y, color, 4.5)
+				this.fillPairDot(ctx, b.x, b.y, color, 4.5)
+			}
+
+			if (this.pairBadLink) {
+				const a = this.anchorFromRect(lefts[this.pairBadLink.lIdx], board, 'right')
+				const b = this.anchorFromRect(rights[this.pairBadLink.rIdx], board, 'left')
+				if (a && b) {
+					this.strokePairSegment(ctx, a.x, a.y, b.x, b.y, '#e53935', 3.5, false)
+					this.fillPairDot(ctx, a.x, a.y, '#e53935', 4)
+					this.fillPairDot(ctx, b.x, b.y, '#e53935', 4)
+				}
+			} else if (this.pickLIdx != null && this.pickRIdx == null) {
+				const a = this.anchorFromRect(lefts[this.pickLIdx], board, 'right')
+				if (a) {
+					this.strokePairSegment(ctx, a.x, a.y, midX, a.y, '#b39ddb', 2.4, true)
+					this.fillPairDot(ctx, a.x, a.y, '#7e57c2', 4)
+				}
+			}
+
+			flushLegacyCanvasDraw(ctx)
+		},
 		clearAutoHear() {
 			if (this.autoHearTimer != null) {
 				clearTimeout(this.autoHearTimer)
@@ -448,7 +649,7 @@ export default {
 				this.pool = await this.buildPool()
 				if (this.pool.length < MIN_GAME_POOL) {
 					uni.showToast({
-						title: '字库加载失败，请检查教材设置或稍后重试',
+						title: '字库加载失败，请稍后重试',
 						icon: 'none',
 						duration: 2800
 					})
@@ -458,7 +659,7 @@ export default {
 					this.startHearRound(ROUND_HEAR)
 				} else if (mode === 'pair') {
 					if (this.pool.length < ROUND_PAIR) {
-						uni.showToast({ title: '生字不够配对啦，换本字多一点的课本', icon: 'none' })
+						uni.showToast({ title: '汉字不够配对啦，稍后再来', icon: 'none' })
 						return
 					}
 					this.startPairRound(ROUND_PAIR)
@@ -546,44 +747,77 @@ export default {
 					return { hanzi, pinyin: this.pairPinyinLabel(r) }
 				})
 			)
+			this.clearPairLineState()
 			this.pairLeft = leftOrder.map((hanzi) => ({ hanzi, done: false }))
 			this.pairRight = rightOrder.map((x) => ({ hanzi: x.hanzi, pinyin: x.pinyin, done: false }))
 			this.pickLIdx = null
 			this.pickRIdx = null
 			this.pairMatched = 0
 			this.phase = 'pair'
+			this.scheduleRedrawPairLines(80)
 		},
 		onTapPairLeft(i) {
 			const cell = this.pairLeft[i]
 			if (!cell || cell.done) return
+			if (this._pairBadTimer != null) {
+				clearTimeout(this._pairBadTimer)
+				this._pairBadTimer = null
+			}
+			this.pairBadLink = null
 			this.pickLIdx = i
+			this.scheduleRedrawPairLines(16)
 			this.tryPairMatch()
 		},
 		onTapPairRight(i) {
 			const cell = this.pairRight[i]
 			if (!cell || cell.done) return
+			if (this.pickLIdx == null) {
+				uni.showToast({ title: '先点左边的汉字哦', icon: 'none' })
+				return
+			}
 			this.pickRIdx = i
 			this.tryPairMatch()
 		},
 		tryPairMatch() {
 			if (this.pickLIdx == null || this.pickRIdx == null) return
-			const L = this.pairLeft[this.pickLIdx]
-			const R = this.pairRight[this.pickRIdx]
+			const li = this.pickLIdx
+			const ri = this.pickRIdx
+			const L = this.pairLeft[li]
+			const R = this.pairRight[ri]
+			if (!L || !R) return
 			if (L.hanzi === R.hanzi) {
-				this.$set(this.pairLeft, this.pickLIdx, { ...L, done: true })
-				this.$set(this.pairRight, this.pickRIdx, { ...R, done: true })
+				if (this._pairBadTimer != null) {
+					clearTimeout(this._pairBadTimer)
+					this._pairBadTimer = null
+				}
+				this.pairBadLink = null
+				const color = PAIR_LINK_COLORS[this.pairLinks.length % PAIR_LINK_COLORS.length]
+				this.pairLinks = this.pairLinks.concat([{ lIdx: li, rIdx: ri, color }])
+				this.$set(this.pairLeft, li, { ...L, done: true })
+				this.$set(this.pairRight, ri, { ...R, done: true })
 				this.pickLIdx = null
 				this.pickRIdx = null
 				this.pairMatched++
 				this.score++
 				recordGameLevelClear(1)
+				this.scheduleRedrawPairLines(32)
 				if (this.pairMatched >= this.pairTarget) {
 					this.finishPairPhase()
 				}
 			} else {
 				uni.showToast({ title: '这个字和这条拼音不是一对哦', icon: 'none' })
+				this.pairBadLink = { lIdx: li, rIdx: ri }
 				this.pickLIdx = null
 				this.pickRIdx = null
+				this.scheduleRedrawPairLines(16)
+				if (this._pairBadTimer != null) clearTimeout(this._pairBadTimer)
+				const badToken = ++this._pairBadToken
+				this._pairBadTimer = setTimeout(() => {
+					this._pairBadTimer = null
+					if (badToken !== this._pairBadToken) return
+					this.pairBadLink = null
+					this.scheduleRedrawPairLines(0)
+				}, PAIR_BAD_FLASH_MS)
 			}
 		},
 		finishPairPhase() {
@@ -776,6 +1010,7 @@ export default {
 		backToLobby() {
 			this.closeDoneModal()
 			this.stopGameAudio()
+			this.clearPairLineState()
 			this.phase = 'lobby'
 		},
 		goHome() {
@@ -1077,19 +1312,35 @@ export default {
 	margin-bottom: 20rpx;
 }
 
+.pair-board {
+	position: relative;
+	width: 100%;
+	margin-bottom: 16rpx;
+	box-sizing: border-box;
+}
+
+.pair-link-canvas {
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 1;
+	pointer-events: none;
+}
+
 .pair-columns {
+	position: relative;
+	z-index: 2;
 	display: flex;
 	flex-direction: row;
 	justify-content: center;
 	align-items: flex-start;
-	margin-bottom: 16rpx;
 }
 
 .pair-col {
 	display: flex;
 	flex-direction: column;
-	width: 38%;
-	max-width: 280rpx;
+	width: 34%;
+	max-width: 260rpx;
 }
 
 .pair-col-hd {
@@ -1116,7 +1367,7 @@ export default {
 }
 
 .pair-mid {
-	width: 24rpx;
+	width: 100rpx;
 	flex-shrink: 0;
 }
 

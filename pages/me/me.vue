@@ -51,8 +51,8 @@
 		</view>
 		<view class="section-label section-label-spaced">设置与工具</view>
 		<view class="list list-gap">
-			<view class="item" @click="goCurriculum">
-				<text>教材与进度</text>
+			<view class="item" @click="goLearned">
+				<text>识字进度</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goGuardian">
@@ -133,7 +133,7 @@ export default {
 			uni.navigateTo({ url: '/pages/me/family-profiles' })
 		},
 		goCurriculum() {
-			uni.navigateTo({ url: '/pages/settings/curriculum' })
+			uni.navigateTo({ url: '/pages/me/learned' })
 		},
 		goGuardian() {
 			uni.navigateTo({ url: '/pages/settings/guardian' })

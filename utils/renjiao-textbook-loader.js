@@ -248,7 +248,20 @@ function requestText(url) {
 	})
 }
 
+/** 进程内缓存：同册教材 JSON 只读一次 */
+const textbookPayloadCache = new Map()
+
+function textbookPayloadCacheKey(grade, semester) {
+	const g = Number(grade)
+	const sem = semester === '下' ? '下' : '上'
+	return `${g}-${sem}`
+}
+
 async function loadTextbookPayload({ grade, semester }) {
+	const cacheKey = textbookPayloadCacheKey(grade, semester)
+	if (textbookPayloadCache.has(cacheKey)) {
+		return textbookPayloadCache.get(cacheKey)
+	}
 	const fileNames = buildMainFileNameCandidates(grade, semester)
 	if (!fileNames.length) return null
 	let text = ''
@@ -272,7 +285,9 @@ async function loadTextbookPayload({ grade, semester }) {
 	if (loadedName && loadedName !== fileNames[0]) {
 		console.info('[renjiao-textbook-loader] using fallback file', loadedName)
 	}
-	return parseTextbookJsonPayload(text)
+	const payload = parseTextbookJsonPayload(text)
+	textbookPayloadCache.set(cacheKey, payload)
+	return payload
 }
 
 /**

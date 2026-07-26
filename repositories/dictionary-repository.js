@@ -290,11 +290,24 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 export async function getDictionaryRelated(hanzi, hint = '') {
 	const target = String(hanzi || '').trim().charAt(0)
 	const rows = await queryCurriculumChars(getCurriculumPrefs())
-	const sameLesson = rows
-		.filter((r) => String(r.lesson_hint || '') === String(hint || '') && String(r.hanzi || '') !== target)
-		.map((r) => String(r.hanzi || '').trim())
-		.filter(Boolean)
-		.slice(0, 8)
+	const seen = Object.create(null)
+	const sameLessonRows = []
+	for (const r of rows) {
+		if (String(r.lesson_hint || '') !== String(hint || '')) continue
+		const h = String(r.hanzi || '').trim().charAt(0)
+		if (!h || !/[\u4e00-\u9fff]/.test(h) || seen[h]) continue
+		seen[h] = 1
+		let py = trimPinyinText(r.pinyin)
+		if (!py) {
+			try {
+				py = trimPinyinText(spellDisplayString(h, 'tone', 'poly', 'low'))
+			} catch (_) {
+				py = ''
+			}
+		}
+		sameLessonRows.push({ hanzi: h, pinyin: py })
+	}
+	const sameLesson = sameLessonRows.map((r) => r.hanzi)
 	const similar = rows
 		.map((r) => String(r.hanzi || '').trim())
 		.filter((h) => h && h !== target)
@@ -303,6 +316,7 @@ export async function getDictionaryRelated(hanzi, hint = '') {
 			const pyB = String(rows.find((x) => String(x.hanzi) === h)?.pinyin || '')
 			return pyA && pyB && pyA[0] === pyB[0]
 		})
+		.filter((h, i, arr) => arr.indexOf(h) === i)
 		.slice(0, 8)
-	return { sameLesson, similar }
+	return { sameLesson, sameLessonRows, similar }
 }

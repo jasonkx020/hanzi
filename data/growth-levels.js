@@ -21,16 +21,16 @@ export const GROWTH_LEVELS = [
 	{
 		level: 2,
 		id: 'lv2',
-		name: '拼音小侠',
-		summary: '拼音练习累计 50 次',
-		cosmetic: '拼音页萌萌新姿态',
-		require: { pinyinPractice: 50 }
+		name: '写字小侠',
+		summary: '写字练习累计 50 次',
+		cosmetic: '写字页萌萌新姿态',
+		require: { strokePractice: 50 }
 	},
 	{
 		level: 3,
 		id: 'lv3',
-		name: '课本同步星',
-		summary: '完成 5 课小测通关',
+		name: '字卡小将',
+		summary: '完成 5 站小测验通关',
 		cosmetic: '绿色头像框',
 		require: { lessonQuizPassed: 5 }
 	},

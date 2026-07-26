@@ -89,7 +89,7 @@ export function buildWeeklyReport(prefs = getCurriculumPrefs()) {
 	lines.push('【萌萌识字 · 周学习报告】')
 	lines.push(`统计周期：${weekStart.getMonth() + 1}月${weekStart.getDate()}日 — ${weekEnd.getMonth() + 1}月${weekEnd.getDate()}日`)
 	lines.push(`学习档案：${profile?.name || '默认'}`)
-	lines.push(`教材：${formatCurriculumSummary(prefs)}`)
+	lines.push(`识字进度：${formatCurriculumSummary(prefs)}`)
 	lines.push('')
 	lines.push('—— 本周概览 ——')
 	lines.push(`每日一练完成：${dailyInWeek} 天`)

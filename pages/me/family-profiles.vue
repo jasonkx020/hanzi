@@ -30,7 +30,7 @@
 		</view>
 
 		<view class="foot">
-			<text class="foot-line">切换档案会加载各自的学习进度与教材设置。</text>
+			<text class="foot-line">切换档案会加载各自的学习进度与识字记录。</text>
 			<text class="foot-line">非家庭年卡仅保留 1 份档案；开通家庭年卡后可添加第 2 位。</text>
 		</view>
 	</meng-sub-page>

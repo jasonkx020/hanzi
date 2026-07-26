@@ -24,27 +24,27 @@ export const MEDAL_LIST = [
 	},
 	{
 		id: 'm03',
-		name: '拼音开口',
-		rule: '完成 5 次拼音自动连读',
-		theme: '喇叭与四线格',
-		iconEmoji: '📣',
+		name: '每日坚持',
+		rule: '连续 5 天完成每日一练',
+		theme: '日历与星星',
+		iconEmoji: '📅',
 		fallbackPose: 'wave',
-		check: { type: 'pinyinAutoReadChain', min: 5 }
+		check: { type: 'dailyStreak', min: 5 }
 	},
 	{
 		id: 'm04',
-		name: '连读小达人',
-		rule: '完成 1 次整页自动连读',
-		theme: '音符连读',
+		name: '听读小达人',
+		rule: '气球营听音通关 1 次',
+		theme: '音符',
 		iconEmoji: '🎵',
 		fallbackPose: 'happy',
-		check: { type: 'pinyinAutoReadChain', min: 1 }
+		check: { type: 'gameLevelClear', min: 1 }
 	},
 	{
 		id: 'm05',
-		name: '课本同步星',
-		rule: '完成 1 课小测通关',
-		theme: '课本与勾',
+		name: '字卡小将',
+		rule: '完成 1 站小测验通关',
+		theme: '字卡与勾',
 		iconEmoji: '✅',
 		fallbackPose: 'book',
 		check: { type: 'lessonQuizPassed', min: 1 }

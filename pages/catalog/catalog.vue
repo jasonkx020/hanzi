@@ -1,13 +1,13 @@
 <template>
-	<meng-sub-page title="教材目录" subtitle="按课次浏览生字">
+	<meng-sub-page title="字卡目录" subtitle="按分组浏览汉字">
 		<view class="bar">
 			<text class="bar-text">{{ summary }}</text>
 		</view>
 		<view class="placeholder meng-card">
 			<meng-avatar pose="book" size="md" />
-			<text class="p-title">教材目录与课次</text>
-			<text class="p-desc">当前共 {{ chars.length }} 字，按 lesson_hint 自动分组。</text>
-			<button type="primary" size="mini" @click="goSettings">筛选条件</button>
+			<text class="p-title">萌萌识字分组</text>
+			<text class="p-desc">当前共 {{ chars.length }} 字，按主题自动分组。</text>
+			<button type="primary" size="mini" @click="goSettings">识字进度</button>
 			<button class="mt" type="default" size="mini" @click="reloadDb">刷新数据</button>
 		</view>
 		<view v-if="lessons.length" class="lesson-list">
@@ -48,7 +48,7 @@ export default {
 			this.chars = await queryCurriculumChars(getCurriculumPrefs())
 			const map = Object.create(null)
 			this.chars.forEach((row) => {
-				const hint = String(row.lesson_hint || '未分课次')
+				const hint = String(row.lesson_hint || '未分组')
 				if (!map[hint]) {
 					map[hint] = { hint, count: 0 }
 				}
@@ -57,7 +57,7 @@ export default {
 			this.lessons = Object.values(map)
 		},
 		openLesson(lesson) {
-			uni.navigateTo({ url: `/pages/literacy/lesson?hint=${encodeURIComponent(lesson.hint)}` })
+			uni.navigateTo({ url: `/pages/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}` })
 		},
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })

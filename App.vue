@@ -7,9 +7,13 @@ import {
 	syncVipEntitlementFromServer,
 	resumePendingVipPurchaseIfAny
 } from '@/services/vip-pay-service.js'
+import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
 	export default {
 		onLaunch: function() {
 			console.log('App Launch')
+			try {
+				ensurePreschoolCurriculumPrefs()
+			} catch (_) {}
 			applyMengSafeAreaCssVars()
 			setTimeout(() => applyMengSafeAreaCssVars(), 80)
 			setTimeout(() => applyMengSafeAreaCssVars(), 320)

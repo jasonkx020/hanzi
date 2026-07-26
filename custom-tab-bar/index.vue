@@ -40,12 +40,6 @@ export default {
 					text: '识字'
 				},
 				{
-					pagePath: '/pages/pinyin/index',
-					iconPath: MENG_ASSETS.tab.learn,
-					iconPathActive: MENG_ASSETS.tab.learnActive,
-					text: '拼音'
-				},
-				{
 					pagePath: '/pages/dictionary/index',
 					iconPath: MENG_ASSETS.tab.catalog,
 					iconPathActive: MENG_ASSETS.tab.catalogActive,

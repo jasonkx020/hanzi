@@ -74,7 +74,7 @@ export function hasLessonQuizPassed(dims, lessonKey) {
  * @param {string} p.semester
  * @param {number} p.score
  * @param {number} p.totalQ
- * @param {boolean} p.passed 是否达到通关线（与产品一致：≥ ceil(0.8 * totalQ) 对）
+ * @param {boolean} p.passed 是否达到通关线（与产品一致：本关小测全部答对）
  */
 export function recordLessonQuizAttempt(p) {
 	const lessonKey = String(p.lesson_key || '').trim()

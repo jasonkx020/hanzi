@@ -25,13 +25,13 @@
 				</view>
 				<view v-else-if="poolSize === 0" class="daily-empty">
 					<meng-avatar pose="curious" size="lg" />
-					<text class="daily-empty-title">暂无生字可练</text>
-					<text class="daily-empty-desc">切换年级字表，或通过课本同步学选课。</text>
-					<view class="daily-cta" @click="goCurriculum">
-						<text class="daily-cta-text">教材设置</text>
+					<text class="daily-empty-title">暂无汉字可练</text>
+					<text class="daily-empty-desc">先去「萌萌识字」认几个字，再回来练一练。</text>
+					<view class="daily-cta" @click="goTextbook">
+						<text class="daily-cta-text">去萌萌识字</text>
 					</view>
-					<view class="daily-cta daily-cta--ghost" @click="goTextbook">
-						<text class="daily-cta-text daily-cta-text--ghost">课本同步</text>
+					<view class="daily-cta daily-cta--ghost" @click="goBackHome">
+						<text class="daily-cta-text daily-cta-text--ghost">返回首页</text>
 					</view>
 				</view>
 
@@ -110,7 +110,7 @@
 											:display-pinyin="strokeDisplayPinyin"
 											:narrator="narrator"
 											:length="148"
-											:show-play-fab="true"
+											:show-play-fab="false"
 											:stroke-audio-enabled="true"
 											:preview-only="true"
 											:hide-stroke-hint="strokeHintOnSide"
@@ -149,7 +149,7 @@
 											<text v-if="pinyinQuizFeedback" class="daily-py-feedback">{{
 												pinyinQuizFeedback
 											}}</text>
-											<text v-if="dailyStrokeHint" class="daily-stroke-hint">{{ dailyStrokeHint }}</text>
+											<!-- <text v-if="dailyStrokeHint" class="daily-stroke-hint">{{ dailyStrokeHint }}</text> -->
 										</view>
 									</view>
 								</view>
@@ -309,7 +309,9 @@ export default {
 			pinyinPickId: '',
 			pinyinQuizFeedback: '',
 			dailyBlocked: false,
-			dailyBlockMessage: ''
+			dailyBlockMessage: '',
+			/** 同会话：prefs+日期未变则跳过 rebuild */
+			_lastPlanKey: ''
 		}
 	},
 	computed: {
@@ -352,12 +354,12 @@ export default {
 		strokeHintOnSide() {
 			return this.isReviewSegment
 		},
-		dailyStrokeHint() {
-			if (!this.strokeHintOnSide || !this.dailyStrokeNames.length) return ''
-			const label = this.dailyStrokeNames[this.dailyStrokeIndex]
-			if (!label) return ''
-			return `第 ${this.dailyStrokeIndex + 1} 笔 · ${label}`
-		},
+		// dailyStrokeHint() {
+		// 	if (!this.strokeHintOnSide || !this.dailyStrokeNames.length) return ''
+		// 	const label = this.dailyStrokeNames[this.dailyStrokeIndex]
+		// 	if (!label) return ''
+		// 	return `第 ${this.dailyStrokeIndex + 1} 笔 · ${label}`
+		// },
 		isReviewSegment() {
 			return this.activeSegment === 'review'
 		},
@@ -438,7 +440,24 @@ export default {
 	},
 	async onShow() {
 		this.narrator = getAudioNarrator()
-		await this.reload()
+		const p = getCurriculumPrefs()
+		const planKey = [
+			p.textbook_version_id,
+			p.grade,
+			p.semester,
+			p.list_type_preference,
+			this.dateKey || ''
+		].join('|')
+		const canSkip =
+			this.plan &&
+			!this.dailyBlocked &&
+			this._lastPlanKey &&
+			this._lastPlanKey === planKey &&
+			this.dateKey &&
+			this.plan.dateKey === this.dateKey
+		if (!canSkip) {
+			await this.reload()
+		}
 		playMengmengVoice(voiceIdForDailySegment(this.activeSegment), { debounceMs: 400 }).catch(
 			() => {}
 		)
@@ -494,7 +513,7 @@ export default {
 			uni.showToast({ title: '笔顺暂不可用', icon: 'none' })
 		},
 		goCurriculum() {
-			uni.navigateTo({ url: '/pages/settings/curriculum' })
+			startTextbookLearning()
 		},
 		goTextbook() {
 			startTextbookLearning()
@@ -572,6 +591,13 @@ export default {
 			this.dateKey = plan.dateKey
 			this.poolSize = plan.poolSize
 			this.focusLessonHint = plan.focusLessonHint || ''
+			this._lastPlanKey = [
+				p.textbook_version_id,
+				p.grade,
+				p.semester,
+				p.list_type_preference,
+				plan.dateKey
+			].join('|')
 			this.pickFirstSegmentWithItems()
 			if (this.activeSegment !== 'write') {
 				await this.loadCurrentDetail()
@@ -668,11 +694,6 @@ export default {
 				recordCharWrong(this.detailEntry.hanzi, 1, getCurriculumPrefs())
 			}
 		},
-		async replayPinyinWithVoice() {
-			await playMengmengVoice(MENG_VOICE.DAILY_PINYIN_REPLAY, { minGapMs: 600 })
-			await sleepMs(LESSON_AUDIO_GAP_MS)
-			await this.speakCurrentPinyin()
-		},
 		onInlineWriteComplete() {
 			if (this.currentIndex >= this.segmentItems.length - 1) {
 				recordDailySessionComplete()
@@ -739,21 +760,28 @@ export default {
 			}
 		},
 		async onTapPlayPinyin() {
-			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
+			if (!this.detailEntry?.hanzi) return
 			if (this.strokeAnimating) stopStrokeOrderAudio()
-			await this.replayPinyinWithVoice()
+			// 直接播生字读音；勿先播萌萌「再听一遍」，否则可能占住链路导致听不到字音
+			stopMengmengVoice()
+			stopLocalPinyinAudio()
+			this.dictPinyinPlaying = false
+			await this.speakCurrentPinyin()
 		},
 		async speakCurrentPinyin() {
 			if (!this.detailEntry?.hanzi || this.dictPinyinPlaying) return
 			if (this.strokeAnimating) stopStrokeOrderAudio()
 			this.dictPinyinPlaying = true
 			try {
-				await speakDictionaryEntryPinyin({
+				const ok = await speakDictionaryEntryPinyin({
 					hanzi: this.detailEntry.hanzi,
-					fallbackPinyin: this.detailEntry.pinyin,
+					fallbackPinyin: this.detailEntry.pinyin || this.currentItem?.pinyin || '',
 					narrator: this.narrator,
 					...DICTIONARY_LOCAL_PINYIN_OPTS
 				})
+				if (!ok) {
+					uni.showToast({ title: '未播放成功，请检查静音或重试', icon: 'none' })
+				}
 			} finally {
 				this.dictPinyinPlaying = false
 			}

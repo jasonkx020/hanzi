@@ -4,10 +4,6 @@ export function reLaunchHome() {
 	uni.reLaunch({ url: '/pages/home/home' })
 }
 
-export function navigateToPinyinHome() {
-	uni.navigateTo({ url: '/pages/pinyin/index' })
-}
-
 export function navigateToDictionaryHome() {
 	uni.navigateTo({ url: '/pages/dictionary/index' })
 }

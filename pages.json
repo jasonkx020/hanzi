@@ -8,13 +8,6 @@
 			}
 		},
 		{
-			"path": "pages/pinyin/index",
-			"style": {
-				"navigationBarTitleText": "拼音",
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path": "pages/dictionary/index",
 			"style": {
 				"navigationBarTitleText": "查字",
@@ -59,7 +52,7 @@
 		{
 			"path": "pages/settings/curriculum",
 			"style": {
-				"navigationBarTitleText": "教材与进度",
+				"navigationBarTitleText": "识字进度",
 				"navigationStyle": "custom"
 			}
 		},
@@ -80,21 +73,21 @@
 		{
 			"path": "pages/literacy/textbook",
 			"style": {
-				"navigationBarTitleText": "课本同步学",
+				"navigationBarTitleText": "萌萌识字",
 				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/literacy/lesson",
 			"style": {
-				"navigationBarTitleText": "课次字卡",
+				"navigationBarTitleText": "字卡",
 				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/literacy/lesson-quiz",
 			"style": {
-				"navigationBarTitleText": "本课小测",
+				"navigationBarTitleText": "小测验",
 				"navigationStyle": "custom"
 			}
 		},
@@ -130,13 +123,6 @@
 			"path": "pages/literacy/game",
 			"style": {
 				"navigationBarTitleText": "萌萌的气球营",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/pinyin/drill",
-			"style": {
-				"navigationBarTitleText": "拼音闯关",
 				"navigationStyle": "custom"
 			}
 		},

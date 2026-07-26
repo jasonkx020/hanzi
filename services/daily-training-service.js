@@ -337,7 +337,7 @@ export function countWeakInDailyItems(items) {
 /** @param {DailyTrainingPlan} plan */
 export function formatDailyPlanHomeSummary(plan, learnedCount = 0) {
 	if (!plan.poolSize) {
-		return { desc: '暂无生字，可切换年级或去课本选课', btnLabel: '去设置' }
+		return { desc: '暂无汉字，去萌萌识字选一站吧', btnLabel: '去认字' }
 	}
 	const { stats } = plan
 	const parts = []

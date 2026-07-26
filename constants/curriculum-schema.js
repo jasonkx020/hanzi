@@ -45,10 +45,10 @@ export const LIST_TYPE_PREFERENCE = {
 	...LIST_TYPE
 }
 
-/** 默认本地偏好 */
+/** 默认本地偏好：固定萌萌常用字（学前 300），不再按年级课本切换 */
 export const DEFAULT_CURRICULUM_PREFS = {
-	textbook_version_id: TEXTBOOK_VERSION_IDS.TONGBIAN_RJ,
-	grade: 1,
+	textbook_version_id: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
+	grade: 0,
 	semester: SEMESTER.UP,
 	list_type_preference: LIST_TYPE_PREFERENCE.ALL
 }

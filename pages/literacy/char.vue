@@ -3,7 +3,7 @@
 		<view class="card meng-card">
 			<meng-avatar pose="book" size="md" />
 			<text class="title">功能整合中</text>
-			<text class="desc">请从课次字卡或查字结果进入单字详情。</text>
+			<text class="desc">请从字卡或查字结果进入单字详情。</text>
 		</view>
 	</meng-sub-page>
 </template>

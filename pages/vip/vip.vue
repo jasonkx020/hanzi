@@ -57,9 +57,9 @@
 			<button class="link-btn" type="default" @click="goFamilyProfiles">管理学习档案</button>
 		</view>
 
-		<view class="card">
-			<text class="section-title">年级字库（永久）</text>
-			<text class="section-desc">单独解锁某年级上下册，无需订阅也可切换该年级（统编人教版）。</text>
+		<view v-if="gradeProducts.length" class="card">
+			<text class="section-title">扩展字库</text>
+			<text class="section-desc">单独解锁扩展内容（可选）。</text>
 			<view class="grade-grid">
 				<view
 					v-for="g in gradeProducts"
@@ -74,12 +74,12 @@
 			</view>
 		</view>
 
-		<view class="card">
+		<view v-if="reviewProduct" class="card">
 			<text class="section-title">复习字包</text>
 			<view class="plan plan--flat" @click="buy(reviewProduct.id)">
 				<text class="plan-name">{{ reviewProduct.name }}</text>
 				<text class="plan-price">¥{{ reviewProduct.priceYuan }}</text>
-				<text class="plan-meta">{{ reviewPackOwned ? '已购买' : '期末集中复习用' }}</text>
+				<text class="plan-meta">{{ reviewPackOwned ? '已购买' : '集中复习用' }}</text>
 			</view>
 		</view>
 
@@ -174,9 +174,9 @@ export default {
 			try {
 				const r = await requestPurchase(planId)
 				this.refresh()
-				const product = [...this.subscriptionPlans, ...this.gradeProducts, this.reviewProduct].find(
-					(x) => x.id === planId
-				)
+				const product = [...this.subscriptionPlans, ...this.gradeProducts, this.reviewProduct]
+					.filter(Boolean)
+					.find((x) => x.id === planId)
 				let title = this.payConfigured ? '购买成功' : '已开通（演示）'
 				if (product?.kind === 'grade_pack') title = '年级已解锁'
 				if (product?.kind === 'review_pack') title = '复习包已解锁'

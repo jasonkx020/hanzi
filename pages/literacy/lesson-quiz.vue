@@ -1,6 +1,6 @@
 <template>
 	<meng-sub-page
-		:title="lessonTitle || '本课小测'"
+		:title="lessonTitle || '小测验'"
 		subtitle="听音认字 · 看字选音"
 		:full-height="true"
 		:padded="false"
@@ -27,7 +27,7 @@
 			</view>
 
 			<view class="chip-row">
-				<text class="chip">本课 {{ charCount }} 字</text>
+				<text class="chip">本站 {{ charCount }} 字</text>
 				<text class="chip chip--accent">{{ totalQ }} 题全覆盖</text>
 			</view>
 
@@ -100,6 +100,7 @@
 							class="quiz-py-pflr"
 							:syllables="pyOptionsForPflr"
 							size="tone"
+							sheet-bd="#e53935"
 							:interactive="!optDisabled"
 							:highlight-column-index="pyHighlightCol"
 							@cell-click="onPickPinyinCell"
@@ -134,10 +135,10 @@
 			<text class="done-emoji">{{ quizJustPassed ? '🎉' : '💪' }}</text>
 			<text class="done-title">小测完成</text>
 			<text class="done-score">答对 {{ score }} / {{ totalQ }} 题</text>
-			<text class="done-cover">本课 {{ charCount }} 个生字均已测到</text>
-			<text v-if="quizJustPassed" class="pass-line">达标啦，已记入本课进度</text>
+			<text class="done-cover">本站 {{ charCount }} 个生字均已测到</text>
+			<text v-if="quizJustPassed" class="pass-line">满分通关，已解锁下一关进度</text>
 			<text v-else class="pass-line pass-line--muted">
-				达标：答对 ≥ {{ passNeed }} 题（约八成），再练一次吧
+				达标：需全部答对（{{ passNeed }} 题），再练一次吧
 			</text>
 			<text class="done-msg">{{ doneEncourage }}</text>
 			<view class="done-actions">
@@ -198,7 +199,7 @@ export default {
 	data() {
 		return {
 			phase: 'quiz',
-			lessonTitle: '本课小测',
+			lessonTitle: '小测验',
 			rjLessonIdx: null,
 			pool: [],
 			charCount: 0,
@@ -275,7 +276,7 @@ export default {
 	onLoad() {
 		const payload = takeLessonQuizTransfer()
 		if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) {
-			uni.showToast({ title: '题目数据已失效，请从课次字卡重新进入', icon: 'none' })
+			uni.showToast({ title: '题目数据已失效，请从字卡重新进入', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1600)
 			return
 		}
@@ -285,8 +286,8 @@ export default {
 			const nav = title.length > 14 ? `${title.slice(0, 13)}…` : title
 			uni.setNavigationBarTitle({ title: `${nav} · 小测` })
 		} else {
-			this.lessonTitle = '本课生字'
-			uni.setNavigationBarTitle({ title: '本课小测' })
+			this.lessonTitle = '本站生字'
+			uni.setNavigationBarTitle({ title: '小测验' })
 		}
 		const rj = payload.rjLessonIdx
 		if (rj != null && rj !== '') {
@@ -297,7 +298,7 @@ export default {
 		}
 		const pool = orderedUniqueRows(payload.rows)
 		if (pool.length < 2) {
-			uni.showToast({ title: '本课至少需要 2 个不同生字才能小测', icon: 'none' })
+			uni.showToast({ title: '本站至少需要 2 个不同生字才能小测', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1800)
 			return
 		}
@@ -917,12 +918,42 @@ export default {
 	min-width: 0;
 }
 
+/* 拼音红色 + 四线谱蓝色 */
+.quiz-py-pflr ::v-deep .pflr-glyph {
+	color: #e53935;
+	font-weight: 700;
+}
+
+.quiz-py-pflr ::v-deep .pflr-line-top {
+	border-top-color: #42a5f5;
+}
+
+.quiz-py-pflr ::v-deep .pflr-line-dash {
+	border-top-color: rgba(66, 165, 245, 0.78);
+}
+
+.quiz-py-pflr ::v-deep .pflr-line-base {
+	border-top-color: #1e88e5;
+}
+
+.quiz-py-pflr ::v-deep .pflr-line-bottom {
+	border-bottom-color: #42a5f5;
+}
+
+.quiz-py-pflr ::v-deep .pflr-cell:not(:last-child) {
+	border-right-color: rgba(66, 165, 245, 0.4);
+}
+
 .quiz-py-pflr ::v-deep .pflr-cell {
 	overflow: visible;
 }
 
 .quiz-py-pflr ::v-deep .pflr-cell--reading {
 	z-index: 4;
+}
+
+.quiz-py-pflr ::v-deep .pflr-cell--reading .pflr-glyph {
+	color: #c62828;
 }
 
 .quiz-py-wrap--reading ::v-deep .pflr--reading-glow .pflr-sheet {

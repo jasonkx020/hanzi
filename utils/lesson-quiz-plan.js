@@ -117,8 +117,10 @@ export function buildPinyinOptions(target, pool, spellFn) {
 	return shuffle([correct, ...distractors.slice(0, 2)])
 }
 
-export function calcQuizPassNeed(totalQ, ratio = 0.8) {
+export function calcQuizPassNeed(totalQ, ratio = 1) {
 	const t = Math.max(0, Math.floor(Number(totalQ) || 0))
 	if (!t) return 0
+	/** 默认满分通关；ratio < 1 时按比例向上取整（兼容旧调用） */
+	if (ratio >= 1) return t
 	return Math.ceil(ratio * t)
 }

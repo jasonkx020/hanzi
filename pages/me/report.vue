@@ -2,14 +2,14 @@
 	<meng-sub-page title="家长报告" subtitle="本机统计，不上传服务器">
 		<view class="card head">
 			<text class="title">家长报告</text>
-			<text class="desc">统计基于本机当前教材设置，不会上传服务器。</text>
+			<text class="desc">统计基于本机萌萌识字进度，不会上传服务器。</text>
 			<text class="curriculum">{{ curriculumLine }}</text>
 		</view>
 
 		<view class="stats">
 			<view class="stat-item">
 				<text class="num">{{ learnedScoped }}</text>
-				<text class="label">本册已学字</text>
+				<text class="label">已学字</text>
 			</view>
 			<view class="stat-item">
 				<text class="num">{{ wrongScoped }}</text>
@@ -17,15 +17,15 @@
 			</view>
 			<view class="stat-item">
 				<text class="num">{{ quizPassedCount }}</text>
-				<text class="label">课次小测已通过</text>
+				<text class="label">小测验已通过</text>
 			</view>
 		</view>
 
 		<view class="card">
-			<text class="sub-title">本册 · 课次小测</text>
-			<text class="sub-desc">在「课本同步学」进入课次字卡，完成「小测」且答对约八成以上，会计入通过。</text>
-			<text v-if="quizTouchedCount > 0" class="meta">有过小测记录的课次：{{ quizTouchedCount }}（含未通关）</text>
-			<text v-if="!recentPasses.length" class="empty">暂无课次小测通关记录。</text>
+			<text class="sub-title">小测验记录</text>
+			<text class="sub-desc">在「萌萌识字」进入字卡，完成「小测验」且全部答对，会计入通过。</text>
+			<text v-if="quizTouchedCount > 0" class="meta">有过小测记录的站：{{ quizTouchedCount }}（含未通关）</text>
+			<text v-if="!recentPasses.length" class="empty">暂无小测验通关记录。</text>
 			<view v-for="(row, idx) in recentPasses" :key="`${row.lesson_key}-${idx}`" class="pass-row">
 				<text class="pass-name">{{ formatLessonLabel(row.lesson_key) }}</text>
 				<text class="pass-date">通过 {{ formatPassDate(row.quiz_passed_at_ms) }}</text>
@@ -34,7 +34,7 @@
 		</view>
 
 		<view class="card">
-			<text class="sub-title">薄弱字 TOP5（本册）</text>
+			<text class="sub-title">薄弱字 TOP5</text>
 			<text v-if="!topWrong.length" class="empty">暂无错字记录，继续保持。</text>
 			<view v-for="(row, idx) in topWrong" :key="`${row.hanzi}-${idx}`" class="weak-row">
 				<text class="weak-char">{{ row[hanziKey] }}</text>
@@ -56,8 +56,8 @@
 		</view>
 
 		<view class="foot-note">
-			<text class="foot-line">· 「听音找字」不计入课次小测通关数。</text>
-			<text class="foot-line">· 切换教材与年级后，本页会显示对应册别数据。</text>
+			<text class="foot-line">· 「听音找字」不计入小测验通关数。</text>
+			<text class="foot-line">· 进度保存在本机，换设备需自行备份。</text>
 		</view>
 	</meng-sub-page>
 </template>
@@ -136,12 +136,12 @@ export default {
 			const s = String(lessonKey || '')
 			if (s.startsWith('rj:')) {
 				const n = parseInt(s.slice(3), 10)
-				if (Number.isFinite(n) && n >= 0) return `课本同步 第 ${n + 1} 课`
+				if (Number.isFinite(n) && n >= 0) return `萌萌识字 · 第 ${n + 1} 站`
 				return s
 			}
 			if (s.startsWith('hint:')) {
 				const t = s.slice(5).trim()
-				return t || '分课次练习'
+				return t || '字卡练习'
 			}
 			return s || '—'
 		},
