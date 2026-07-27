@@ -17,7 +17,7 @@
 					<view class="tb-cover-wrap">
 						<image
 							class="tb-cover-img"
-							:src="heroBookCoverSrc"
+							:src="ipBookSrc"
 							mode="aspectFit"
 							:lazy-load="false"
 						/>
@@ -47,7 +47,9 @@
 			<!-- 已通关：默认折叠 -->
 			<view v-if="clearedLevelCount > 0" class="level-cleared-block">
 				<view class="level-cleared-summary" @click="toggleClearedExpand">
-					<view class="level-dot level-dot--cleared">★</view>
+					<view class="level-dot level-dot--cleared">
+						<image class="level-mascot" :src="ipCuriousSrc" mode="aspectFit" />
+					</view>
 					<view class="level-cleared-summary-main">
 						<text class="level-cleared-title">已通关 1～{{ clearedLevelCount }}</text>
 						<text class="level-cleared-sub">{{ clearedExpanded ? '收起回顾' : '点开可回顾' }}</text>
@@ -62,12 +64,14 @@
 						@click="openLevel(node.lesson, node.index)"
 					>
 						<view class="level-rail">
-							<view class="level-dot level-dot--cleared">{{ node.index + 1 }}</view>
+							<view class="level-dot level-dot--cleared">
+								<image class="level-mascot" :src="ipCuriousSrc" mode="aspectFit" />
+							</view>
 							<view class="level-rail-line" />
 						</view>
 						<view class="level-card level-card--cleared">
 							<text class="level-card-title">{{ displayLessonHint(node.lesson.hint, node.index) }}</text>
-							<text class="level-card-meta">已通关 · 回顾</text>
+							<text class="level-card-meta">第 {{ node.index + 1 }} 关 · 已通关 · 回顾</text>
 						</view>
 					</view>
 				</view>
@@ -81,7 +85,9 @@
 				@click="openLevel(currentPathNode.lesson, currentPathNode.index)"
 			>
 				<view class="level-rail">
-					<view class="level-dot level-dot--current">{{ currentPathNode.index + 1 }}</view>
+					<view class="level-dot level-dot--current">
+						<image class="level-mascot level-mascot--lg" :src="ipCuriousSrc" mode="aspectFit" />
+					</view>
 					<view v-if="lockedPathNode || remainingLockedHint > 0" class="level-rail-line" />
 				</view>
 				<view class="level-card level-card--current">
@@ -90,6 +96,7 @@
 						displayLessonHint(currentPathNode.lesson.hint, currentPathNode.index)
 					}}</text>
 					<text class="level-card-meta">
+						第 {{ currentPathNode.index + 1 }} 关 ·
 						{{ currentPathNode.lesson.count }} 个字 ·
 						{{ allLevelsCleared ? '再玩一遍' : '开始闯关' }}
 					</text>
@@ -108,7 +115,9 @@
 				@click="openLevel(lockedPathNode.lesson, lockedPathNode.index)"
 			>
 				<view class="level-rail">
-					<view class="level-dot level-dot--locked">锁</view>
+					<view class="level-dot level-dot--locked">
+						<image class="level-mascot level-mascot--dim" :src="ipCuriousSrc" mode="aspectFit" />
+					</view>
 					<view v-if="remainingLockedHint > 0" class="level-rail-line level-rail-line--faint" />
 				</view>
 				<view class="level-card level-card--locked">
@@ -139,7 +148,7 @@
 </template>
 
 <script>
-import { TEXTBOOK_VERSION_IDS, LIST_TYPE } from '@/constants/curriculum-schema.js'
+import { LIST_TYPE } from '@/constants/curriculum-schema.js'
 import {
 	getCurriculumPrefs,
 	formatCurriculumSummary,
@@ -157,48 +166,11 @@ import {
 	hasLessonQuizPassed
 } from '@/utils/user-lesson-progress-storage.js'
 import { resolveAppStaticAbsoluteUrl } from '@/utils/resolve-app-static-url.js'
+import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 import { reLaunchHome } from '@/utils/root-nav.js'
-
-const COVER_BOOKS = [
-	{ grade: 1, semester: '上', cover: '/static/images/yuwen0101.jpg' },
-	{ grade: 1, semester: '下', cover: '/static/images/yuwen0102.jpg' },
-	{ grade: 2, semester: '上', cover: '/static/images/yuwen0201.jpg' },
-	{ grade: 2, semester: '下', cover: '/static/images/yuwen0202.jpg' },
-	{ grade: 3, semester: '上', cover: '/static/images/yuwen0301.jpg' },
-	{ grade: 3, semester: '下', cover: '/static/images/yuwen0302.jpg' },
-	{ grade: 4, semester: '上', cover: '/static/images/yuwen0401.jpg' },
-	{ grade: 4, semester: '下', cover: '/static/images/yuwen0402.jpg' },
-	{ grade: 5, semester: '上', cover: '/static/images/yuwen0501.jpg' },
-	{ grade: 5, semester: '下', cover: '/static/images/yuwen0502.jpg' },
-	{ grade: 6, semester: '上', cover: '/static/images/yuwen0601.jpg' },
-	{ grade: 6, semester: '下', cover: '/static/images/yuwen0602.jpg' }
-]
-
-const VERSION_OPTIONS = [
-	{
-		label: '萌萌常用字',
-		value: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
-		icon: '/static/images/yuwen_youxiao.jpg'
-	}
-]
-
-/** 与当前教材偏好对应的静态封面路径（再经 resolveAppStaticImg） */
-function rawCoverPathForPrefs(prefs) {
-	const p = prefs || {}
-	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
-		return '/static/images/yuwen_youxiao.jpg'
-	}
-	const g = Number(p.grade)
-	const sem = p.semester === '下' ? '下' : '上'
-	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && g >= 1 && g <= 6) {
-		const hit = COVER_BOOKS.find((b) => b.grade === g && b.semester === sem)
-		if (hit) return hit.cover
-	}
-	return '/static/images/yuwen0101.jpg'
-}
 
 export default {
 	components: { MengPageNav, MengStatusBarSpacer },
@@ -209,42 +181,14 @@ export default {
 			chars: [],
 			lessons: [],
 			loading: false,
-			showCurriculumPicker: false,
-			curriculumPickerRequired: false,
-			modalVersion: TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300,
-			versionOptions: VERSION_OPTIONS,
-			/** 顶部封面：萌萌常用字 */
-			heroBookCoverSrc: '',
+			/** 顶部捧书 IP / 关卡指示 IP */
+			ipBookSrc: '',
+			ipCuriousSrc: '',
 			/** 已通关列表是否展开 */
 			clearedExpanded: false
 		}
 	},
 	computed: {
-		currentBookRows() {
-			if (this.modalVersion === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
-				const book = {
-					grade: 0,
-					semester: '上',
-					key: `${this.modalVersion}-0-上`,
-					label: '萌萌常用字',
-					cover: this.resolveAppStaticImg('/static/images/yuwen_youxiao.jpg')
-				}
-				return [{ grade: 0, up: book, down: null }]
-			}
-			const map = {}
-			COVER_BOOKS.forEach((b) => {
-				const book = {
-					...b,
-					cover: this.resolveAppStaticImg(b.cover),
-					key: `${this.modalVersion}-${b.grade}-${b.semester}`,
-					label: `${b.grade}年级${b.semester === '下' ? '下册' : '上册'}`
-				}
-				if (!map[b.grade]) map[b.grade] = { grade: b.grade, up: null, down: null }
-				if (b.semester === '下') map[b.grade].down = book
-				else map[b.grade].up = book
-			})
-			return Object.values(map).sort((a, b) => a.grade - b.grade)
-		},
 		/** 字卡站：识字+写字条数之和；其它版本用生字库行数 */
 		statSlotCount() {
 			if (this.lessons.length && typeof this.lessons[0].rjIdx === 'number') {
@@ -306,7 +250,7 @@ export default {
 	},
 	created() {
 		this.statusBarPx = getMengNavMetrics().statusBarPx
-		this.syncHeroBookCover()
+		this.syncIpAssets()
 	},
 	methods: {
 		/**
@@ -316,16 +260,14 @@ export default {
 		resolveAppStaticImg(src) {
 			return resolveAppStaticAbsoluteUrl(src)
 		},
-		syncHeroBookCover() {
-			const prefs = getCurriculumPrefs()
-			this.heroBookCoverSrc = this.resolveAppStaticImg(rawCoverPathForPrefs(prefs))
+		syncIpAssets() {
+			this.ipBookSrc = this.resolveAppStaticImg(MENG_ASSETS.ip.book)
+			this.ipCuriousSrc = this.resolveAppStaticImg(MENG_ASSETS.ip.curious)
 		},
 		refreshProgressOnly() {
 			ensurePreschoolCurriculumPrefs()
-			this.curriculumPickerRequired = false
-			this.showCurriculumPicker = false
 			const prefs = getCurriculumPrefs()
-			this.syncHeroBookCover()
+			this.syncIpAssets()
 			this.summary = formatCurriculumSummary(prefs)
 			this.patchLessonDoneBadges()
 		},
@@ -335,7 +277,7 @@ export default {
 			this.loading = true
 			try {
 				const prefs = getCurriculumPrefs()
-				this.syncHeroBookCover()
+				this.syncIpAssets()
 				this.summary = formatCurriculumSummary(prefs)
 				if (isRenjiaoTextbookSyncPrefs(prefs)) {
 					const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
@@ -424,26 +366,10 @@ export default {
 		},
 		ensureCurriculumSelected() {
 			ensurePreschoolCurriculumPrefs()
-			this.curriculumPickerRequired = false
-			this.showCurriculumPicker = false
 			if (this.lessons && this.lessons.length) {
 				this.refreshProgressOnly()
 				return
 			}
-			this.reload()
-		},
-		openCurriculumPicker() {
-			/* 已锁定萌萌常用字，不再换教材 */
-		},
-		onPickerMaskTap() {},
-		closeCurriculumPicker() {
-			this.showCurriculumPicker = false
-		},
-		chooseVersion() {},
-		selectBook() {
-			ensurePreschoolCurriculumPrefs()
-			this.showCurriculumPicker = false
-			this.curriculumPickerRequired = false
 			this.reload()
 		},
 		goHome() {
@@ -571,23 +497,23 @@ export default {
 .tb-cover-wrap {
 	flex-shrink: 0;
 	position: relative;
-	width: 152rpx;
+	width: 168rpx;
 	height: 0;
 	padding-bottom: 200rpx;
 	margin-right: 22rpx;
-	border-radius: 18rpx;
-	background: #fff8f0;
+	border-radius: 28rpx;
+	background: rgba(255, 248, 240, 0.65);
 	overflow: hidden;
-	box-shadow: 0 10rpx 28rpx rgba(44, 36, 25, 0.1);
+	box-shadow: 0 10rpx 28rpx rgba(44, 36, 25, 0.08);
 	border: 2rpx solid rgba(255, 200, 180, 0.35);
 }
 
 .tb-cover-img {
 	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
+	left: 6%;
+	top: 4%;
+	width: 88%;
+	height: 88%;
 }
 
 .tb-cover-tag {
@@ -729,7 +655,7 @@ export default {
 .level-rail-bridge {
 	width: 4rpx;
 	height: 18rpx;
-	margin: 6rpx 0 6rpx 30rpx;
+	margin: 6rpx 0 6rpx 36rpx;
 	background: rgba(127, 212, 154, 0.45);
 	border-radius: 4rpx;
 }
@@ -742,7 +668,7 @@ export default {
 }
 
 .level-rail {
-	width: 64rpx;
+	width: 76rpx;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
@@ -750,36 +676,45 @@ export default {
 }
 
 .level-dot {
-	width: 52rpx;
-	height: 52rpx;
-	border-radius: 18rpx;
+	width: 64rpx;
+	height: 64rpx;
+	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 22rpx;
-	font-weight: 800;
-	color: #fff;
 	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.level-mascot {
+	width: 56rpx;
+	height: 56rpx;
+}
+
+.level-mascot--lg {
+	width: 64rpx;
+	height: 64rpx;
+}
+
+.level-mascot--dim {
+	opacity: 0.45;
 }
 
 .level-dot--cleared {
-	background: #7fd49a;
-	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.28);
+	background: rgba(127, 212, 154, 0.28);
+	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.18);
 }
 
 .level-dot--current {
-	width: 60rpx;
-	height: 60rpx;
-	border-radius: 20rpx;
-	font-size: 26rpx;
-	background: #ec407a;
-	box-shadow: 0 8rpx 18rpx rgba(236, 64, 122, 0.35);
+	width: 76rpx;
+	height: 76rpx;
+	background: rgba(236, 64, 122, 0.16);
+	box-shadow: 0 8rpx 18rpx rgba(236, 64, 122, 0.22);
+	border: 2rpx solid rgba(236, 64, 122, 0.35);
 }
 
 .level-dot--locked {
-	background: #c5bdb4;
-	color: #fff;
-	font-size: 22rpx;
+	background: rgba(197, 189, 180, 0.35);
 }
 
 .level-rail-line {
@@ -945,172 +880,5 @@ export default {
 	font-size: 22rpx;
 	color: #6b6560;
 	line-height: 1.5;
-}
-
-.picker-mask {
-	position: fixed;
-	left: 0;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.38);
-	display: flex;
-	align-items: flex-end;
-	z-index: 999;
-}
-
-.picker-mask--required {
-	background: rgba(0, 0, 0, 0.52);
-}
-
-.picker-panel {
-	width: 100%;
-	max-height: 1200rpx;
-	max-height: 78vh;
-	background: #fff6fa;
-	border-radius: 36rpx 36rpx 0 0;
-	padding: 28rpx 24rpx 32rpx;
-	box-sizing: border-box;
-	border-top: 2rpx solid rgba(255, 255, 255, 0.9);
-}
-
-.picker-head {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	margin-bottom: 20rpx;
-	gap: 16rpx;
-}
-
-.picker-head-text {
-	flex: 1;
-	min-width: 0;
-}
-
-.picker-title {
-	display: block;
-	font-size: 32rpx;
-	font-weight: 700;
-	color: var(--meng-text);
-}
-
-.picker-required-hint {
-	display: block;
-	margin-top: 8rpx;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary);
-	line-height: 1.45;
-}
-
-.picker-close {
-	font-size: 44rpx;
-	line-height: 1;
-	color: #8a8279;
-	padding: 4rpx 8rpx;
-}
-
-.version-row {
-	display: flex;
-	flex-direction: row;
-	margin-bottom: 18rpx;
-}
-
-.version-chip {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	background: rgba(255, 255, 255, 0.95);
-	border: 2rpx solid rgba(255, 180, 200, 0.25);
-	border-radius: 20rpx;
-	padding: 14rpx 12rpx;
-	box-sizing: border-box;
-	box-shadow: 0 4rpx 12rpx rgba(44, 36, 25, 0.04);
-}
-
-.version-chip + .version-chip {
-	margin-left: 12rpx;
-}
-
-.version-chip-on {
-	background: #ffd4f0;
-	border-color: var(--meng-chip-active-border, rgba(255, 107, 66, 0.42));
-	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.18);
-}
-
-.version-icon {
-	width: 46rpx;
-	height: 62rpx;
-	border-radius: 6rpx;
-	margin-right: 10rpx;
-}
-
-.version-label {
-	font-size: 26rpx;
-	font-weight: 700;
-	color: #5a534c;
-}
-
-.version-chip-on .version-label {
-	color: #c44d6a;
-}
-
-.book-scroll {
-	max-height: 880rpx;
-	max-height: 56vh;
-}
-
-.book-columns-head {
-	display: flex;
-	flex-direction: row;
-	margin-bottom: 10rpx;
-}
-
-.book-col-title {
-	flex: 1;
-	text-align: center;
-	font-size: 24rpx;
-	font-weight: 600;
-	color: #7a746e;
-}
-
-.book-row {
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	margin-bottom: 18rpx;
-}
-
-.book-card {
-	width: 48%;
-}
-
-/*
- * 竖版课本封面 3:4（宽:高）。不用 aspect-ratio：Android 5+ 旧系统 WebView 不支持，会导致高度为 0、图片不显示。
- * 使用 padding-bottom 占位 + 绝对定位铺满（兼容 Android 5 WebView / Chrome 37 级）。
- */
-.book-cover-wrap {
-	position: relative;
-	width: 100%;
-	height: 0;
-	padding-bottom: 133.3333%;
-	border-radius: 12rpx;
-	background: #f3ebe0;
-	overflow: hidden;
-}
-
-.book-cover {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
-}
-
-.book-label {
-	display: block;
-	text-align: center;
-	margin-top: 8rpx;
-	font-size: 23rpx;
-	color: #5a534c;
 }
 </style>

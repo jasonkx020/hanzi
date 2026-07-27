@@ -68,6 +68,8 @@
 				<text class="arrow">›</text>
 			</view>
 		</view>
+		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏 -->
+		<custom-tab-bar />
 	</view>
 </template>
 
@@ -104,7 +106,7 @@ export default {
 		}
 	},
 	onShow() {
-		this.setTabBarIndex(3)
+		this.setTabBarIndex(2)
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.learnedCount = getLearnedChars().length
 		this.wrongCount = getWrongChars().length

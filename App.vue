@@ -12,6 +12,9 @@ import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
 		onLaunch: function() {
 			console.log('App Launch')
 			try {
+				uni.hideTabBar({ animation: false })
+			} catch (_) {}
+			try {
 				ensurePreschoolCurriculumPrefs()
 			} catch (_) {}
 			applyMengSafeAreaCssVars()
@@ -54,6 +57,9 @@ import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
 		},
 		onShow: function() {
 			console.log('App Show')
+			try {
+				uni.hideTabBar({ animation: false })
+			} catch (_) {}
 			applyMengSafeAreaCssVars()
 		},
 		onHide: function() {
@@ -74,9 +80,10 @@ import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
 		min-height: 100%;
 	}
 
-	/* 主页面底部安全区（已取消底部 TabBar） */
+	/* 主页面底部留白，避免内容被自定义 Tab 遮挡 */
 	.tab-root-page {
-		padding-bottom: env(safe-area-inset-bottom);
+		padding-bottom: calc(132rpx + constant(safe-area-inset-bottom));
+		padding-bottom: calc(132rpx + env(safe-area-inset-bottom));
 		box-sizing: border-box;
 		width: 100%;
 		max-width: 100%;

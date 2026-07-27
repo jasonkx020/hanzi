@@ -2,7 +2,7 @@
 	<view class="home-char-showcase" @click="goCharDetail">
 		<view class="home-char-showcase__card">
 			<!-- <text class="home-char-showcase__kicker">功能示范</text> -->
-			<text class="home-char-showcase__lead">一个「字」看懂：笔顺、拼音、部首与笔画</text>
+			<text class="home-char-showcase__lead">跟萌萌认字：笔顺、拼音、部首一眼看懂</text>
 
 			<view class="home-char-showcase__main">
 				<view class="home-char-showcase__stage">
@@ -57,14 +57,10 @@
 					<view class="home-char-showcase__tags">
 						<text class="home-char-showcase__tag">静态笔顺</text>
 						<text class="home-char-showcase__tag">拼音跟读</text>
-						<text class="home-char-showcase__tag">查字详解</text>
-						<text class="home-char-showcase__tag">和萌萌认字</text>
+						<text class="home-char-showcase__tag">课本同步</text>
+						<text class="home-char-showcase__tag">一字一课</text>
 					</view>
 				</view>
-			</view>
-
-			<view class="home-char-showcase__foot">
-				<text class="home-char-showcase__cta">点按查看「字」的完整解析 ›</text>
 			</view>
 		</view>
 	</view>
@@ -77,7 +73,7 @@ import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { getCncharStrokeNameList } from '@/utils/stroke-order-audio.js'
-import { openDictionaryTab } from '@/utils/dictionary-tab-nav.js'
+import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
 
 const SHOWCASE_CHAR = '字'
 
@@ -165,7 +161,7 @@ export default {
 		},
 		goCharDetail() {
 			this.pauseShowcase()
-			openDictionaryTab(SHOWCASE_CHAR)
+			startTextbookLearning()
 		}
 	}
 }
@@ -311,20 +307,6 @@ export default {
 	color: var(--meng-leaf);
 	background: var(--meng-leaf-soft);
 	border: 1rpx solid rgba(126, 200, 160, 0.35);
-}
-
-.home-char-showcase__foot {
-	margin-top: 14rpx;
-	padding-top: 12rpx;
-	border-top: 1rpx dashed var(--meng-border);
-}
-
-.home-char-showcase__cta {
-	display: block;
-	text-align: center;
-	font-size: 24rpx;
-	font-weight: 600;
-	color: var(--meng-accent-solid);
 }
 
 .clamp-1 {

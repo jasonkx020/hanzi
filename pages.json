@@ -4,14 +4,26 @@
 			"path": "pages/home/home",
 			"style": {
 				"navigationBarTitleText": "识字",
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"backgroundColor": "#F6F3EC",
+				"app-plus": {
+					"animationType": "none",
+					"animationDuration": 0,
+					"background": "#F6F3EC"
+				}
 			}
 		},
 		{
 			"path": "pages/dictionary/index",
 			"style": {
 				"navigationBarTitleText": "查字",
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"backgroundColor": "#F6F3EC",
+				"app-plus": {
+					"animationType": "none",
+					"animationDuration": 0,
+					"background": "#F6F3EC"
+				}
 			}
 		},
 		{
@@ -25,7 +37,13 @@
 			"path": "pages/me/me",
 			"style": {
 				"navigationBarTitleText": "我的",
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"backgroundColor": "#F6F3EC",
+				"app-plus": {
+					"animationType": "none",
+					"animationDuration": 0,
+					"background": "#F6F3EC"
+				}
 			}
 		},
 		{
@@ -196,6 +214,32 @@
 			"navigationBarBackgroundColor": "#F6F3EC",
 			"navigationBarTextStyle": "black"
 		}
+	},
+	"tabBar": {
+		"color": "#9c958c",
+		"selectedColor": "#b84a28",
+		"backgroundColor": "#FFFDF8",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/home/home",
+				"text": "首页",
+				"iconPath": "static/tab/home.png",
+				"selectedIconPath": "static/tab/home-active.png"
+			},
+			{
+				"pagePath": "pages/dictionary/index",
+				"text": "查字",
+				"iconPath": "static/tab/catalog.png",
+				"selectedIconPath": "static/tab/catalog-active.png"
+			},
+			{
+				"pagePath": "pages/me/me",
+				"text": "我的",
+				"iconPath": "static/tab/me.png",
+				"selectedIconPath": "static/tab/me-active.png"
+			}
+		]
 	},
 	"uniIdRouter": {}
 }

@@ -9,7 +9,7 @@
 					:class="{ 'tab-item-active': selected === index }"
 					@click="switchTab(index)"
 				>
-					<view v-if="selected === index" class="tab-active-pill" />
+					<view v-show="selected === index" class="tab-active-pill" />
 					<view class="tab-icon-wrap">
 						<image
 							class="tab-icon"
@@ -28,16 +28,33 @@
 <script>
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
 
+const TAB_SELECTED_KEY = 'meng_tab_selected'
+
+function readCachedSelected() {
+	try {
+		const n = Number(uni.getStorageSync(TAB_SELECTED_KEY))
+		return Number.isFinite(n) && n >= 0 ? n : 0
+	} catch (_) {
+		return 0
+	}
+}
+
+function writeCachedSelected(index) {
+	try {
+		uni.setStorageSync(TAB_SELECTED_KEY, index)
+	} catch (_) {}
+}
+
 export default {
 	data() {
 		return {
-			selected: 0,
+			selected: readCachedSelected(),
 			list: [
 				{
 					pagePath: '/pages/home/home',
 					iconPath: MENG_ASSETS.tab.home,
 					iconPathActive: MENG_ASSETS.tab.homeActive,
-					text: '识字'
+					text: '首页'
 				},
 				{
 					pagePath: '/pages/dictionary/index',
@@ -56,10 +73,31 @@ export default {
 	},
 	mounted() {
 		this.syncSelectedFromRoute()
+		try {
+			uni.$on('meng-tab-selected', this.onMengTabSelected)
+		} catch (_) {}
 	},
+	beforeUnmount() {
+		try {
+			uni.$off('meng-tab-selected', this.onMengTabSelected)
+		} catch (_) {}
+	},
+	// #ifndef VUE3
+	beforeDestroy() {
+		try {
+			uni.$off('meng-tab-selected', this.onMengTabSelected)
+		} catch (_) {}
+	},
+	// #endif
 	methods: {
+		onMengTabSelected(index) {
+			this.syncSelected(index)
+		},
 		syncSelected(index) {
-			if (index >= 0 && index < this.list.length) this.selected = index
+			if (index >= 0 && index < this.list.length) {
+				this.selected = index
+				writeCachedSelected(index)
+			}
 		},
 		syncSelectedFromRoute() {
 			try {
@@ -70,15 +108,20 @@ export default {
 					const p = it.pagePath.replace(/^\//, '')
 					return p === route
 				})
-				if (idx >= 0) this.selected = idx
+				if (idx >= 0) this.syncSelected(idx)
 			} catch (_) {}
 		},
 		switchTab(index) {
 			if (index === this.selected) return
+			// 先更新选中态，避免切页过程中底部栏空白/回弹闪烁
+			this.syncSelected(index)
 			const url = this.list[index].pagePath
 			uni.switchTab({
 				url,
-				fail: (err) => console.warn('[custom-tab-bar] switchTab', err)
+				fail: (err) => {
+					console.warn('[custom-tab-bar] switchTab', err)
+					this.syncSelectedFromRoute()
+				}
 			})
 		}
 	}
@@ -94,18 +137,22 @@ export default {
 	right: 0;
 	bottom: 0;
 	z-index: 999;
-	padding: 0 20rpx calc(12rpx + env(safe-area-inset-bottom));
+	padding: 0;
 	box-sizing: border-box;
 	pointer-events: none;
 }
 
 .tab-wrap {
 	pointer-events: auto;
-	border-radius: var(--meng-tab-float-radius);
+	border-radius: 0;
 	background: var(--meng-tab-bar-bg);
-	border: 1rpx solid var(--meng-border);
-	box-shadow: var(--meng-tab-bar-shadow), 0 8rpx 32rpx rgba(44, 36, 25, 0.06);
+	border: none;
+	border-top: 1rpx solid var(--meng-border);
+	box-shadow: var(--meng-tab-bar-shadow);
 	overflow: hidden;
+	/* 背景贴底；内容避开 Home 指示条 */
+	padding-bottom: constant(safe-area-inset-bottom);
+	padding-bottom: env(safe-area-inset-bottom);
 	/* #ifdef H5 */
 	backdrop-filter: blur(20px);
 	/* #endif */
@@ -168,7 +215,6 @@ export default {
 .tab-icon {
 	width: var(--meng-tab-icon-size);
 	height: var(--meng-tab-icon-size);
-	transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .tab-item-active .tab-icon {

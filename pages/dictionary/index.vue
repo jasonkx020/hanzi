@@ -214,6 +214,8 @@
 				</view>
 			</view>
 		</view>
+		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏 -->
+		<custom-tab-bar />
 	</view>
 </template>
 
@@ -382,7 +384,7 @@ export default {
 		}
 	},
 	onShow() {
-		this.setTabBarIndex(2)
+		this.setTabBarIndex(1)
 		this.narrator = getAudioNarrator()
 		this.summary = formatCurriculumSummary(getCurriculumPrefs())
 		this.reloadDb().then(() => this.applyPendingDictionaryHanzi())

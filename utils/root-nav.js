@@ -1,13 +1,23 @@
-/** 取消 TabBar 后的主路径跳转（原 switchTab / reLaunch 入口） */
+/** Tab 主路径跳转（须与 pages.json tabBar.list 一致） */
+
+function switchTabOrFallback(url, fallback) {
+	uni.switchTab({
+		url,
+		fail: () => {
+			if (typeof fallback === 'function') fallback()
+			else uni.reLaunch({ url })
+		}
+	})
+}
 
 export function reLaunchHome() {
-	uni.reLaunch({ url: '/pages/home/home' })
+	switchTabOrFallback('/pages/home/home')
 }
 
 export function navigateToDictionaryHome() {
-	uni.navigateTo({ url: '/pages/dictionary/index' })
+	switchTabOrFallback('/pages/dictionary/index')
 }
 
 export function navigateToMe() {
-	uni.navigateTo({ url: '/pages/me/me' })
+	switchTabOrFallback('/pages/me/me')
 }

@@ -31,7 +31,7 @@
 
 		<home-char-showcase ref="charShowcase" class="tab-dock-overlap" />
 
-		<view class="tab-dock-overlap home-main">
+		<view class="home-main">
 				<!-- <scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
 					<view class="grade-row">
 						<view
@@ -60,16 +60,7 @@
 					</view>
 				</view>
 
-				<view class="cta-row">
-					<view class="cta-btn cta-btn--textbook" @click="goTextbook">
-						<view class="cta-icon-ring">
-							<image class="cta-icon-img" :src="assets.entry.textbook" mode="aspectFit" />
-						</view>
-						<view class="cta-text-col">
-							<text class="cta-label">萌萌识字</text>
-							<text class="cta-sub">和萌萌一起认字</text>
-						</view>
-					</view>
+				<view class="cta-row cta-row--single">
 					<view class="cta-btn cta-btn--pinyin" @click="goWrongOften">
 						<view v-if="wrongCount > 0" class="cta-badge">
 							<text class="cta-badge-text">{{ wrongCountDisplay }}</text>
@@ -97,18 +88,6 @@
 						</view>
 						<text class="quick-label">气球营</text>
 					</view>
-					<view class="quick-tile" @click="goDictionary">
-						<view class="quick-icon-ring quick-icon-ring--sky">
-							<image class="quick-icon" :src="assets.tab.catalogActive" mode="aspectFit" />
-						</view>
-						<text class="quick-label">查字</text>
-					</view>
-					<view class="quick-tile" @click="goMe">
-						<view class="quick-icon-ring quick-icon-ring--cream">
-							<image class="quick-icon" :src="assets.tab.meActive" mode="aspectFit" />
-						</view>
-						<text class="quick-label">我的</text>
-					</view>
 				</view>
 
 				<meng-ad-banner placement="home_banner" mock-title="和萌萌一起，每天识字一点点" />
@@ -121,6 +100,8 @@
 					</view>
 				</view>
 		</view>
+		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏，避免 custom:true 切页闪烁 -->
+		<custom-tab-bar />
 	</view>
 </template>
 
@@ -128,7 +109,6 @@
 import { getCurriculumSummary } from '@/repositories/curriculum-repository.js'
 import { buildEncourageText } from '@/services/reward-service.js'
 import { isVipActive } from '@/utils/vip.js'
-import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
 import { startWritePractice } from '@/modules/literacy/usecases/start-write-practice.js'
 import { startLiteracyGame } from '@/modules/literacy/usecases/start-literacy-game.js'
 import { startDailyTraining } from '@/modules/literacy/usecases/start-daily-training.js'
@@ -148,10 +128,6 @@ import {
 	playMengmengVoiceOnce,
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
-import {
-	navigateToDictionaryHome,
-	navigateToMe
-} from '@/utils/root-nav.js'
 
 const HERO_POSES = ['wave', 'book', 'happy']
 
@@ -209,6 +185,7 @@ export default {
 		this.scheduleWelcomeVoice()
 	},
 	onShow() {
+		this.setTabBarIndex(0)
 		this.startHeroCarousel()
 		this.refresh()
 		this.scheduleWelcomeVoice()
@@ -338,21 +315,12 @@ export default {
 		goSettings() {
 			uni.navigateTo({ url: '/pages/me/learned' })
 		},
-		goDictionary() {
-			navigateToDictionaryHome()
-		},
-		goMe() {
-			navigateToMe()
-		},
 		goWritePractice() {
 			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
 			void startWritePractice()
 		},
 		goWrongOften() {
 			uni.navigateTo({ url: '/pages/me/wrong-often' })
-		},
-		goTextbook() {
-			startTextbookLearning()
 		},
 		goGame() {
 			startLiteracyGame()
@@ -550,6 +518,11 @@ export default {
 	margin-bottom: 20rpx;
 }
 
+.cta-row--single .cta-btn {
+	flex: 1 1 100%;
+	width: 100%;
+}
+
 .cta-btn {
 	position: relative;
 	flex: 1;
@@ -564,11 +537,6 @@ export default {
 
 .cta-btn--write {
 	background: var(--meng-accent-solid);
-}
-
-.cta-btn--textbook {
-	background: var(--meng-leaf-soft);
-	border: 1rpx solid rgba(126, 200, 160, 0.35);
 }
 
 .cta-btn--pinyin {
@@ -687,14 +655,6 @@ export default {
 
 .quick-icon-ring--yellow {
 	background: #fff4d8;
-}
-
-.quick-icon-ring--sky {
-	background: #e8f4fc;
-}
-
-.quick-icon-ring--cream {
-	background: var(--meng-banner-soft);
 }
 
 .quick-icon {

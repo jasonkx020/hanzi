@@ -14,7 +14,7 @@
 					<text class="daily-empty-title">今日练习已完成</text>
 					<text class="daily-empty-desc">{{ dailyBlockMessage }}</text>
 					<view v-if="showDailyAdUnlock" class="daily-cta daily-cta--ad" @click="unlockDailyByAd">
-						<text class="daily-cta-text">看短视频再练一轮</text>
+						<text class="daily-cta-text daily-cta-text--ad">看短视频再练一轮</text>
 					</view>
 					<view class="daily-cta" @click="goVip">
 						<text class="daily-cta-text">家长开通会员</text>
@@ -36,7 +36,9 @@
 				</view>
 
 				<template v-else>
-					<text v-if="focusLessonHint" class="daily-lesson-line clamp-1">学到：{{ focusLessonHint }}</text>
+					<view v-if="focusLessonHint" class="daily-lesson-pill">
+						<text class="daily-lesson-line clamp-1">学到：{{ focusLessonHint }}</text>
+					</view>
 
 					<scroll-view scroll-x class="seg-scroll" :show-scrollbar="false">
 						<view class="seg-row">
@@ -50,7 +52,8 @@
 								}"
 								@click="pickSegment(seg.key)"
 							>
-								<text class="seg-chip-text">{{ seg.title }} {{ seg.items.length }}</text>
+								<text class="seg-chip-text">{{ seg.title }}</text>
+								<text class="seg-chip-count">{{ seg.items.length }}</text>
 							</view>
 						</view>
 					</scroll-view>
@@ -67,6 +70,7 @@
 							<view class="daily-bar">
 								<view class="daily-bar-fill" :style="{ width: progressPercent }" />
 							</view>
+							<text class="daily-progress-pct">{{ progressPercent }}</text>
 						</view>
 
 						<!-- 练字：内嵌田字格书写 -->
@@ -221,10 +225,10 @@
 			>
 				<text class="foot-btn-text">上一字</text>
 			</view>
-			<view class="foot-btn" @click="markLearned">
+			<view class="foot-btn foot-btn--soft" @click="markLearned">
 				<text class="foot-btn-text">已学</text>
 			</view>
-			<view class="foot-btn" @click="markWrong">
+			<view class="foot-btn foot-btn--soft" @click="markWrong">
 				<text class="foot-btn-text">易错</text>
 			</view>
 			<view
@@ -816,23 +820,34 @@ export default {
 
 .daily-dock-glass {
 	margin: 0 20rpx;
-	padding: 22rpx 20rpx 18rpx;
-	border-radius: 36rpx 36rpx 28rpx 28rpx;
-	background: rgba(255, 255, 255, 0.9);
-	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow: 0 -12rpx 48rpx var(--meng-shadow), 0 16rpx 40rpx var(--meng-shadow);
+	padding: 24rpx 22rpx 20rpx;
+	border-radius: 32rpx;
+	background: var(--meng-glass-bg, rgba(255, 252, 248, 0.92));
+	border: 2rpx solid var(--meng-glass-border, rgba(255, 255, 255, 0.95));
+	box-shadow: 0 12rpx 40rpx var(--meng-shadow);
+}
+
+.daily-lesson-pill {
+	display: inline-flex;
+	max-width: 100%;
+	margin-bottom: 14rpx;
+	padding: 8rpx 16rpx;
+	border-radius: 999rpx;
+	background: var(--meng-leaf-soft);
+	border: 1rpx solid rgba(126, 200, 160, 0.35);
+	box-sizing: border-box;
 }
 
 .daily-lesson-line {
 	display: block;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary);
-	margin-bottom: 12rpx;
+	font-size: 22rpx;
+	font-weight: 600;
+	color: #3d6b4a;
 }
 
 .seg-scroll {
 	width: 100%;
-	margin-bottom: 8rpx;
+	margin-bottom: 10rpx;
 }
 
 .seg-row {
@@ -844,17 +859,20 @@ export default {
 
 .seg-chip {
 	display: inline-flex;
-	padding: 12rpx 24rpx;
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	padding: 12rpx 20rpx;
 	margin-right: 12rpx;
 	border-radius: 999rpx;
-	background: rgba(255, 240, 248, 0.92);
-	border: 2rpx solid rgba(255, 180, 200, 0.22);
+	background: var(--meng-cream);
+	border: 2rpx solid rgba(232, 122, 74, 0.16);
 }
 
 .seg-chip--on {
-	background: #ffd4f0;
+	background: var(--meng-chip-active-bg);
 	border-color: var(--meng-chip-active-border);
-	box-shadow: 0 6rpx 16rpx rgba(255, 120, 160, 0.16);
+	box-shadow: 0 6rpx 16rpx var(--meng-shadow-warm);
 }
 
 .seg-chip--empty {
@@ -863,42 +881,65 @@ export default {
 
 .seg-chip-text {
 	font-size: 24rpx;
-	font-weight: 600;
-	color: #8a6a78;
+	font-weight: 700;
+	color: var(--meng-text-secondary);
+}
+
+.seg-chip-count {
+	min-width: 32rpx;
+	height: 32rpx;
+	padding: 0 8rpx;
+	border-radius: 999rpx;
+	font-size: 20rpx;
+	font-weight: 800;
+	line-height: 32rpx;
+	text-align: center;
+	color: #fff;
+	background: rgba(232, 122, 74, 0.45);
+	box-sizing: border-box;
 }
 
 .seg-chip--on .seg-chip-text {
-	color: #c44d6a;
+	color: var(--meng-tab-active-text, #b84a28);
+}
+
+.seg-chip--on .seg-chip-count {
+	background: var(--meng-accent-solid);
 }
 
 .seg-hint {
 	display: block;
 	font-size: 22rpx;
 	color: var(--meng-text-muted);
-	margin-bottom: 14rpx;
-	line-height: 1.35;
+	margin-bottom: 16rpx;
+	line-height: 1.4;
 }
 
 .daily-progress {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 14rpx;
-	margin-bottom: 12rpx;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+	padding: 12rpx 14rpx;
+	border-radius: 18rpx;
+	background: rgba(255, 248, 240, 0.85);
+	border: 1rpx solid var(--meng-border-warm);
+	box-sizing: border-box;
 }
 
 .daily-progress-num {
 	font-size: 24rpx;
-	font-weight: 700;
-	color: #c44d6a;
+	font-weight: 800;
+	color: var(--meng-accent-solid);
 	flex-shrink: 0;
 }
 
 .daily-bar {
 	flex: 1;
-	height: 8rpx;
+	height: 12rpx;
 	border-radius: 999rpx;
-	background: var(--meng-border);
+	background: rgba(232, 122, 74, 0.12);
 	overflow: hidden;
 }
 
@@ -909,52 +950,59 @@ export default {
 	transition: width 0.2s ease;
 }
 
+.daily-progress-pct {
+	font-size: 20rpx;
+	font-weight: 700;
+	color: var(--meng-text-muted);
+	flex-shrink: 0;
+	min-width: 56rpx;
+	text-align: right;
+}
+
 .daily-panel {
 	margin-bottom: 12rpx;
 }
 
 .daily-panel--char {
-	padding: 4rpx 0 0;
+	padding: 8rpx 0 0;
 }
 
 .daily-panel-empty {
-	padding: 28rpx 12rpx;
+	padding: 36rpx 16rpx;
 	font-size: 26rpx;
 	color: var(--meng-text-secondary);
 	text-align: center;
 	line-height: 1.5;
+	border-radius: 20rpx;
+	background: rgba(255, 248, 240, 0.7);
 }
 
 .daily-empty {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 20rpx 8rpx;
+	padding: 28rpx 8rpx 12rpx;
 	text-align: center;
 }
 
-.daily-empty-emoji {
-	font-size: 64rpx;
-	margin-bottom: 12rpx;
-}
-
 .daily-empty-title {
-	font-size: 30rpx;
-	font-weight: 700;
+	font-size: 32rpx;
+	font-weight: 800;
 	color: var(--meng-text);
-	margin-bottom: 10rpx;
+	margin: 16rpx 0 10rpx;
 }
 
 .daily-empty-desc {
 	font-size: 26rpx;
 	color: var(--meng-text-secondary);
 	line-height: 1.5;
-	margin-bottom: 24rpx;
+	margin-bottom: 28rpx;
+	padding: 0 12rpx;
 }
 
 .daily-cta {
 	width: 100%;
-	height: 84rpx;
+	height: 88rpx;
 	border-radius: 999rpx;
 	display: flex;
 	align-items: center;
@@ -962,16 +1010,18 @@ export default {
 	margin-bottom: 14rpx;
 	background: var(--meng-accent-solid);
 	box-shadow: 0 10rpx 28rpx var(--meng-shadow-warm);
+	box-sizing: border-box;
 }
 
 .daily-cta--ad {
 	background: #fff8e8;
-	border-color: #e8d4a8;
+	border: 2rpx solid #e8d4a8;
+	box-shadow: none;
 }
 
 .daily-cta--ghost {
-	background: rgba(255, 240, 248, 0.95);
-	border: 2rpx solid rgba(255, 180, 200, 0.35);
+	background: transparent;
+	border: 2rpx solid rgba(232, 122, 74, 0.28);
 	box-shadow: none;
 }
 
@@ -981,17 +1031,21 @@ export default {
 	color: #fff;
 }
 
+.daily-cta-text--ad {
+	color: #8a6a28;
+}
+
 .daily-cta-text--ghost {
-	color: #c44d6a;
+	color: var(--meng-tab-active-text, #b84a28);
 }
 
 .daily-tag {
 	display: inline-block;
 	font-size: 20rpx;
-	font-weight: 600;
-	padding: 4rpx 12rpx;
+	font-weight: 700;
+	padding: 6rpx 14rpx;
 	border-radius: 999rpx;
-	margin-bottom: 10rpx;
+	margin-bottom: 12rpx;
 }
 
 .daily-tag--weak {
@@ -1009,23 +1063,23 @@ export default {
 	flex-direction: row;
 	align-items: flex-start;
 	gap: 16rpx;
-	margin-bottom: 14rpx;
+	margin-bottom: 16rpx;
 }
 
 .daily-stroke-box {
 	position: relative;
 	flex-shrink: 0;
-	padding: 8rpx;
-	border-radius: 20rpx;
-	background: #fffaf6;
-	border: 2rpx solid rgba(235, 227, 216, 0.9);
+	padding: 10rpx;
+	border-radius: 24rpx;
+	background: var(--meng-cream);
+	border: 2rpx solid var(--meng-border-warm);
 	box-shadow: inset 0 2rpx 8rpx rgba(44, 36, 25, 0.04);
 }
 
 .daily-tag--on-stroke {
 	position: absolute;
-	top: 4rpx;
-	right: 4rpx;
+	top: 6rpx;
+	right: 6rpx;
 	z-index: 5;
 	margin: 0;
 	box-shadow: 0 2rpx 10rpx rgba(184, 74, 40, 0.12);
@@ -1034,16 +1088,7 @@ export default {
 .daily-char-side {
 	flex: 1;
 	min-width: 0;
-	padding-top: 8rpx;
-}
-
-.daily-stroke-hint {
-	display: block;
-	margin-top: 14rpx;
-	font-size: 24rpx;
-	line-height: 1.45;
-	color: var(--meng-text-muted);
-	font-weight: 500;
+	padding-top: 4rpx;
 }
 
 .daily-py-quiz {
@@ -1053,7 +1098,7 @@ export default {
 .daily-py-quiz-prompt {
 	display: block;
 	font-size: 26rpx;
-	font-weight: 700;
+	font-weight: 800;
 	color: var(--meng-text);
 	margin-bottom: 12rpx;
 }
@@ -1074,10 +1119,11 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	padding: 12rpx 14rpx;
-	border-radius: 16rpx;
-	background: rgba(255, 240, 248, 0.6);
-	border: 2rpx solid rgba(255, 180, 200, 0.28);
+	padding: 14rpx 16rpx;
+	border-radius: 18rpx;
+	background: #fff;
+	border: 2rpx solid var(--meng-border);
+	box-shadow: 0 4rpx 12rpx var(--meng-shadow);
 }
 
 .daily-py-opt--ok {
@@ -1087,7 +1133,7 @@ export default {
 
 .daily-py-opt--bad {
 	background: #fff4ec;
-	border-color: rgba(255, 140, 90, 0.45);
+	border-color: rgba(232, 122, 74, 0.4);
 }
 
 .daily-py-opt-inner {
@@ -1131,12 +1177,12 @@ export default {
 .quick-pill {
 	flex: 1;
 	min-width: calc(50% - 8rpx);
-	height: 64rpx;
+	height: 68rpx;
 	border-radius: 999rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 6rpx 16rpx rgba(44, 36, 25, 0.08);
+	box-shadow: 0 6rpx 16rpx var(--meng-shadow);
 }
 
 .quick-pill text {
@@ -1146,35 +1192,27 @@ export default {
 }
 
 .quick-pill--warm {
-	background: #ffd060;
+	background: #f0a060;
 }
 
 .quick-pill--warm.quick-pill--on {
-	background: #ff8aab;
+	background: var(--meng-accent-solid);
 }
 
 .quick-pill--lavender {
-	background: #cfc8f5;
+	background: #d8eef8;
 }
 
 .quick-pill--lavender text {
-	color: #5a5280;
+	color: #3d6a82;
 }
 
 .daily-words-block {
 	margin-bottom: 14rpx;
 	padding: 14rpx 16rpx;
-	border-radius: 16rpx;
+	border-radius: 18rpx;
 	background: rgba(255, 252, 248, 0.95);
-	border: 1rpx solid rgba(235, 227, 216, 0.85);
-}
-
-.daily-words-label {
-	display: block;
-	font-size: 22rpx;
-	font-weight: 700;
-	color: var(--meng-text-secondary);
-	margin-bottom: 10rpx;
+	border: 1rpx solid var(--meng-border);
 }
 
 .daily-words-chips {
@@ -1191,7 +1229,7 @@ export default {
 	font-weight: 600;
 	color: var(--meng-text);
 	background: #fff;
-	border: 1rpx solid rgba(200, 190, 175, 0.55);
+	border: 1rpx solid var(--meng-border-warm);
 }
 
 .daily-meta {
@@ -1227,10 +1265,11 @@ export default {
 }
 
 .daily-panel--write {
-	padding: 12rpx 14rpx 14rpx;
-	background: transparent;
+	padding: 14rpx 12rpx 16rpx;
+	border-radius: 24rpx;
+	background: rgba(255, 248, 240, 0.65);
+	border: 1rpx solid var(--meng-border-warm);
 	box-shadow: none;
-	border: none;
 }
 
 .daily-write-head {
@@ -1239,11 +1278,11 @@ export default {
 	align-items: baseline;
 	justify-content: center;
 	gap: 14rpx;
-	margin-bottom: 8rpx;
+	margin-bottom: 10rpx;
 }
 
 .daily-write-hanzi {
-	font-size: 44rpx;
+	font-size: 48rpx;
 	font-weight: 800;
 	color: var(--meng-text);
 	line-height: 1;
@@ -1263,32 +1302,38 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: stretch;
-	gap: 12rpx;
+	gap: 10rpx;
 	padding: 14rpx 20rpx;
 	padding-bottom: calc(14rpx + constant(safe-area-inset-bottom));
 	padding-bottom: calc(14rpx + env(safe-area-inset-bottom));
 	box-sizing: border-box;
-	background: rgba(255, 253, 248, 0.97);
-	border-top: 1rpx solid var(--meng-border-warm, #e3d9c8);
-	box-shadow: 0 -10rpx 36rpx var(--meng-shadow, rgba(44, 36, 25, 0.1));
+	background: var(--meng-tab-bar-bg, rgba(255, 253, 248, 0.97));
+	border-top: 1rpx solid var(--meng-border-warm);
+	box-shadow: 0 -8rpx 28rpx var(--meng-shadow);
 }
 
 .foot-btn {
 	flex: 1;
 	min-width: 0;
-	height: 92rpx;
+	height: 88rpx;
 	border-radius: 22rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(255, 240, 248, 0.95);
-	border: 2rpx solid rgba(255, 180, 200, 0.28);
+	background: #fff;
+	border: 2rpx solid var(--meng-border);
+	box-sizing: border-box;
+}
+
+.foot-btn--soft {
+	background: var(--meng-cream);
+	border-color: rgba(232, 122, 74, 0.18);
 }
 
 .foot-btn--primary {
-	background: #ff6b9d;
+	background: var(--meng-accent-solid);
 	border-color: transparent;
-	box-shadow: 0 8rpx 22rpx rgba(255, 100, 150, 0.28);
+	box-shadow: 0 8rpx 22rpx var(--meng-shadow-warm);
 }
 
 .foot-btn--disabled {
@@ -1297,9 +1342,9 @@ export default {
 }
 
 .foot-btn-text {
-	font-size: 30rpx;
+	font-size: 28rpx;
 	font-weight: 700;
-	color: #c44d6a;
+	color: var(--meng-tab-active-text, #b84a28);
 	line-height: 1.2;
 }
 
@@ -1308,7 +1353,7 @@ export default {
 }
 
 .daily-tip {
-	margin-top: 8rpx;
+	margin-top: 10rpx;
 	padding: 14rpx 16rpx;
 	border-radius: 20rpx;
 	background: var(--meng-tip-bg);
