@@ -54,9 +54,9 @@
 							<text class="daily-banner-title">{{ t('home.daily.title') }}</text>
 							<text class="daily-banner-desc clamp-2">{{ dailyDesc }}</text>
 						</view>
-						<view class="daily-banner-btn">
+						<!-- <view class="daily-banner-btn">
 							<text class="daily-banner-btn-text">{{ dailyBtnLabel }}</text>
-						</view>
+						</view> -->
 					</view>
 				</view>
 
@@ -87,6 +87,12 @@
 							<image class="quick-icon" :src="assets.entry.game" mode="aspectFit" />
 						</view>
 						<text class="quick-label">{{ t('home.quick.game') }}</text>
+					</view>
+					<view class="quick-tile" @click="goComponentMap">
+						<view class="quick-icon-ring quick-icon-ring--coral">
+							<text class="quick-icon-emoji">🌳</text>
+						</view>
+						<text class="quick-label">{{ t('home.quick.componentMap') }}</text>
 					</view>
 				</view>
 
@@ -339,6 +345,9 @@ export default {
 		},
 		goGame() {
 			startLiteracyGame()
+		},
+		goComponentMap() {
+			uni.navigateTo({ url: '/pages/tools/component-map' })
 		},
 		goDaily() {
 			playMengmengVoice(MENG_VOICE.HOME_DAILY, { debounceMs: 200 }).catch(() => {})
@@ -670,6 +679,15 @@ export default {
 
 .quick-icon-ring--yellow {
 	background: #fff4d8;
+}
+
+.quick-icon-ring--coral {
+	background: #ffe0d6;
+}
+
+.quick-icon-emoji {
+	font-size: 36rpx;
+	line-height: 1;
 }
 
 .quick-icon {

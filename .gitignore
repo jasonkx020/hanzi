@@ -3,3 +3,4 @@ static/hanzi-writer-data/
 unpackage/
 .hbuilderx/
 .DS_Store
+data/raw/

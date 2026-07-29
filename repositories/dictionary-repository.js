@@ -12,6 +12,11 @@ import { getCachedDictionaryDetail, setCachedDictionaryDetail } from '@/utils/di
 import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 
 import { loadHanziWriterCharData } from '@/utils/hanzi-writer-loader.js'
+import {
+	getVisualNearPeers,
+	shapeSimilarityScore
+} from '@/utils/hanzi-quiz-distractors.js'
+import { applySpellCharPatch } from '@/utils/cnchar-setup.js'
 
 const STROKE_CACHE = Object.create(null)
 
@@ -221,7 +226,7 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 		const radRowCached = cncharRadicalRow(target)
 		return {
 			hanzi: target,
-			pinyin: trimPinyinText(cached.pinyin || ''),
+			pinyin: applySpellCharPatch(target, cached.pinyin || ''),
 			lessonHint: hint || cached.lessonHint || '',
 			radical:
 				radRowCached?.radical ||
@@ -266,7 +271,7 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 
 	const pinyinRaw =
 		String(hit?.pinyin || '').trim() || cncharSpellPoly(target) || ''
-	const pinyin = trimPinyinText(pinyinRaw)
+	const pinyin = applySpellCharPatch(target, trimPinyinText(pinyinRaw))
 
 	const entry = {
 		hanzi: target,
@@ -287,6 +292,64 @@ export async function getDictionaryEntry(hanzi, hint = '') {
 	return entry
 }
 
+function resolveCharPinyin(hanzi, rowPinyin = '') {
+	let py = trimPinyinText(rowPinyin)
+	if (!py) {
+		try {
+			py = trimPinyinText(spellDisplayString(hanzi, 'tone', 'poly', 'low'))
+		} catch (_) {
+			py = ''
+		}
+	}
+	return applySpellCharPatch(hanzi, py)
+}
+
+/**
+ * 形近/易混字：优先教材形近字组，不足时用课内字形相似度补足。
+ * @returns {Promise<Array<{ hanzi: string, pinyin: string }>>}
+ */
+export async function getSimilarShapeChars(hanzi, limit = 8) {
+	const target = String(hanzi || '').trim().charAt(0)
+	const max = Math.max(0, Math.floor(Number(limit) || 0))
+	if (!target || !max) return []
+
+	const seen = Object.create(null)
+	seen[target] = 1
+	const out = []
+
+	for (const h of getVisualNearPeers(target)) {
+		if (seen[h] || out.length >= max) continue
+		seen[h] = 1
+		out.push({ hanzi: h, pinyin: resolveCharPinyin(h) })
+	}
+
+	// 有教材形近组时直接返回；否则用课内字形相似度兜底
+	if (out.length) return out.slice(0, max)
+
+	const rows = await queryCurriculumChars(getCurriculumPrefs())
+	const pinyinByHanzi = Object.create(null)
+	const ranked = []
+	for (const r of rows) {
+		const h = String(r.hanzi || '').trim().charAt(0)
+		if (!h || !/[\u4e00-\u9fff]/.test(h)) continue
+		if (pinyinByHanzi[h] == null) {
+			pinyinByHanzi[h] = resolveCharPinyin(h, r.pinyin)
+		}
+		if (seen[h]) continue
+		const score = shapeSimilarityScore(target, h)
+		if (score < 48) continue
+		ranked.push({ hanzi: h, pinyin: pinyinByHanzi[h], score })
+	}
+	ranked.sort((a, b) => b.score - a.score || a.hanzi.localeCompare(b.hanzi, 'zh'))
+	for (const x of ranked) {
+		if (out.length >= max) break
+		if (seen[x.hanzi]) continue
+		seen[x.hanzi] = 1
+		out.push({ hanzi: x.hanzi, pinyin: x.pinyin })
+	}
+	return out.slice(0, max)
+}
+
 export async function getDictionaryRelated(hanzi, hint = '') {
 	const target = String(hanzi || '').trim().charAt(0)
 	const rows = await queryCurriculumChars(getCurriculumPrefs())
@@ -297,26 +360,10 @@ export async function getDictionaryRelated(hanzi, hint = '') {
 		const h = String(r.hanzi || '').trim().charAt(0)
 		if (!h || !/[\u4e00-\u9fff]/.test(h) || seen[h]) continue
 		seen[h] = 1
-		let py = trimPinyinText(r.pinyin)
-		if (!py) {
-			try {
-				py = trimPinyinText(spellDisplayString(h, 'tone', 'poly', 'low'))
-			} catch (_) {
-				py = ''
-			}
-		}
-		sameLessonRows.push({ hanzi: h, pinyin: py })
+		sameLessonRows.push({ hanzi: h, pinyin: resolveCharPinyin(h, r.pinyin) })
 	}
 	const sameLesson = sameLessonRows.map((r) => r.hanzi)
-	const similar = rows
-		.map((r) => String(r.hanzi || '').trim())
-		.filter((h) => h && h !== target)
-		.filter((h) => {
-			const pyA = String(rows.find((x) => String(x.hanzi) === target)?.pinyin || '')
-			const pyB = String(rows.find((x) => String(x.hanzi) === h)?.pinyin || '')
-			return pyA && pyB && pyA[0] === pyB[0]
-		})
-		.filter((h, i, arr) => arr.indexOf(h) === i)
-		.slice(0, 8)
-	return { sameLesson, sameLessonRows, similar }
+	const similarRows = await getSimilarShapeChars(target, 8)
+	const similar = similarRows.map((r) => r.hanzi)
+	return { sameLesson, sameLessonRows, similar, similarRows }
 }

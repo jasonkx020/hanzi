@@ -6,10 +6,11 @@
 const STORAGE_KEY = 'lesson_session_transfer_v1'
 
 /**
- * @param {object} payload
  * @param {string} [payload.lessonTitle]
  * @param {number|null} [payload.rjLessonIdx]
  * @param {Array<{ hanzi: string, pinyin?: string }>} payload.rows
+ * @param {'wrong_often'|string} [payload.reviewMode] 易错复习等
+ * @param {Array<{ hanzi: string, pinyin?: string }>} [payload.distractorRows] 干扰项字池
  */
 export function putLessonQuizTransfer(payload) {
 	try {
@@ -23,7 +24,15 @@ export function putLessonQuizTransfer(payload) {
 	}
 }
 
-/** @returns {null | { lessonTitle?: string, rjLessonIdx?: number|null, rows: Array<{ hanzi: string, pinyin?: string }> }} */
+/**
+ * @returns {null | {
+ *   lessonTitle?: string,
+ *   rjLessonIdx?: number|null,
+ *   rows: Array<{ hanzi: string, pinyin?: string }>,
+ *   reviewMode?: string,
+ *   distractorRows?: Array<{ hanzi: string, pinyin?: string }>
+ * }}
+ */
 export function takeLessonQuizTransfer() {
 	try {
 		const o = uni.getStorageSync(STORAGE_KEY)

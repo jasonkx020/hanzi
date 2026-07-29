@@ -143,6 +143,24 @@ function visualNearBonus(a, b) {
 	return 0
 }
 
+/** 教材形近字组中的同伴（不含自身） */
+export function getVisualNearPeers(hanzi) {
+	const h = String(hanzi || '').trim().charAt(0)
+	if (!h) return []
+	const seen = Object.create(null)
+	const out = []
+	for (const group of VISUAL_NEAR_GROUPS) {
+		if (!group.includes(h)) continue
+		for (const c of group) {
+			const ch = String(c || '').trim().charAt(0)
+			if (!ch || ch === h || seen[ch]) continue
+			seen[ch] = 1
+			out.push(ch)
+		}
+	}
+	return out
+}
+
 function cncharRadicalMeta(hanzi) {
 	try {
 		if (typeof cnchar.radical !== 'function') return null

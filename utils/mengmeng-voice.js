@@ -243,6 +243,8 @@ export function stopMengmengVoice() {
 	_gen++
 	destroyCtx()
 	settleMengVoiceIdle()
+	/* 打断后必须清空串行链，否则后续 play 会一直卡在未 resolve 的旧 Promise 上 */
+	_playChain = Promise.resolve()
 }
 
 /**

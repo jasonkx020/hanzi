@@ -27,8 +27,8 @@
 			</view>
 
 			<view class="chip-row">
-				<text class="chip">本站 {{ charCount }} 字</text>
-				<text class="chip chip--accent">{{ totalQ }} 题全覆盖</text>
+				<text class="chip">{{ isWrongReview ? `易错 ${charCount} 字` : `本站 ${charCount} 字` }}</text>
+				<text class="chip chip--accent">{{ totalQ }} 题</text>
 			</view>
 
 			<scroll-view
@@ -113,10 +113,10 @@
 							class="opt-py-mark-col"
 						>
 							<text
-								v-if="pyOptionMark(py)"
+								v-if="pyOptionMark(py, i)"
 								class="opt-mark"
-								:class="'opt-mark--' + pyOptionMark(py)"
-							>{{ pyOptionMark(py) === 'ok' ? '✓' : '✗' }}</text>
+								:class="'opt-mark--' + pyOptionMark(py, i)"
+							>{{ pyOptionMark(py, i) === 'ok' ? '✓' : '✗' }}</text>
 							<view v-else class="opt-mark-slot" />
 						</view>
 					</view>
@@ -133,24 +133,36 @@
 		<view v-else class="done-shell">
 			<image class="done-logo" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 			<text class="done-emoji">{{ quizJustPassed ? '🎉' : '💪' }}</text>
-			<text class="done-title">小测完成</text>
+			<text class="done-title">{{ isWrongReview ? '易错复习完成' : '小测完成' }}</text>
 			<text class="done-score">答对 {{ score }} / {{ totalQ }} 题</text>
-			<text class="done-cover">本站 {{ charCount }} 个生字均已测到</text>
-			<text v-if="quizJustPassed" class="pass-line">满分通关，已解锁下一关进度</text>
-			<text v-else class="pass-line pass-line--muted">
-				达标：需全部答对（{{ passNeed }} 题），再练一次吧
+			<text v-if="isWrongReview" class="done-cover">
+				本轮测了 {{ charCount }} 个易错字
+				<template v-if="clearedCount > 0"> · 已移出 {{ clearedCount }} 个</template>
 			</text>
+			<text v-else class="done-cover">本站 {{ charCount }} 个生字均已测到</text>
+			<template v-if="isWrongReview">
+				<text v-if="clearedCount > 0" class="pass-line">测对的字已从易错本移除，继续加油！</text>
+				<text v-else class="pass-line pass-line--muted">还没有移出易错字，再练一遍吧</text>
+			</template>
+			<template v-else>
+				<text v-if="quizJustPassed" class="pass-line">满分通关，已解锁下一关进度</text>
+				<text v-else class="pass-line pass-line--muted">
+					达标：需全部答对（{{ passNeed }} 题），再练一次吧
+				</text>
+			</template>
 			<text class="done-msg">{{ doneEncourage }}</text>
 			<view class="done-actions">
 				<button
-					v-if="!quizJustPassed"
+					v-if="!quizJustPassed || (isWrongReview && clearedCount < charCount)"
 					class="back-btn back-btn--ghost"
 					type="default"
 					@click="restartQuiz"
 				>
 					再测一遍
 				</button>
-				<button class="back-btn" type="primary" @click="goBackLesson">回字卡</button>
+				<button class="back-btn" type="primary" @click="goBackLesson">
+					{{ isWrongReview ? '回易错本' : '回字卡' }}
+				</button>
 			</view>
 		</view>
 	</meng-sub-page>
@@ -159,7 +171,7 @@
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
 import { takeLessonQuizTransfer } from '@/utils/lesson-mode-session.js'
-import { addCharWrongCount } from '@/utils/user-progress-storage.js'
+import { addCharWrongCount, clearCharWrongCount } from '@/utils/user-progress-storage.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { buildStoredLessonKey, recordLessonQuizAttempt } from '@/utils/user-lesson-progress-storage.js'
 import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
@@ -171,6 +183,7 @@ import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import {
 	orderedUniqueRows,
 	buildLessonQuizPlan,
+	buildWrongOftenQuizPlan,
 	buildHanziOptions,
 	buildPinyinOptions,
 	calcQuizPassNeed,
@@ -227,10 +240,26 @@ export default {
 			/** 每题结果：correct | wrong */
 			questionResults: {},
 			autoHearTimer: null,
-			dotScrollId: ''
+			dotScrollId: '',
+			/** 题目代数：换题递增，作废过期异步回调 */
+			questionGen: 0,
+			/** 答题锁：防止连点/听音未结束时重复进入 */
+			pickBusy: false,
+			/** 推进锁：防止 completeQuestion 并发导致跳题、重复加分 */
+			advanceBusy: false,
+			/** 易错复习模式 */
+			reviewMode: '',
+			/** 易错目标字（组卷用，干扰项在 pool） */
+			targetRows: [],
+			/** 本轮已从易错本清除的字 */
+			clearedHanziMap: Object.create(null),
+			clearedCount: 0
 		}
 	},
 	computed: {
+		isWrongReview() {
+			return this.reviewMode === 'wrong_often'
+		},
 		optionColClass() {
 			return this.options.length >= 3 ? 'opts-3' : 'opts-2'
 		},
@@ -238,6 +267,13 @@ export default {
 			return this.qType === 'see_py' ? '看字选音' : '听音选字'
 		},
 		doneEncourage() {
+			if (this.isWrongReview) {
+				if (this.clearedCount > 0 && this.clearedCount >= this.charCount) {
+					return '易错本清空啦，你真棒！'
+				}
+				if (this.clearedCount > 0) return '部分易错字已移出，剩下的再练练就更稳。'
+				return '没关系，回易错本看看颜色深的字，优先攻克它们。'
+			}
 			if (!this.totalQ) return '继续加油！'
 			const r = this.score / this.totalQ
 			if (r >= 1) return '全对，太棒了！'
@@ -276,15 +312,23 @@ export default {
 	onLoad() {
 		const payload = takeLessonQuizTransfer()
 		if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) {
-			uni.showToast({ title: '题目数据已失效，请从字卡重新进入', icon: 'none' })
+			uni.showToast({ title: '题目数据已失效，请重新进入', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1600)
 			return
 		}
+		const reviewMode = String(payload.reviewMode || '').trim()
+		this.reviewMode = reviewMode === 'wrong_often' ? 'wrong_often' : ''
+
 		const title = String(payload.lessonTitle || '').trim()
 		if (title) {
 			this.lessonTitle = title
 			const nav = title.length > 14 ? `${title.slice(0, 13)}…` : title
-			uni.setNavigationBarTitle({ title: `${nav} · 小测` })
+			uni.setNavigationBarTitle({
+				title: this.isWrongReview ? nav : `${nav} · 小测`
+			})
+		} else if (this.isWrongReview) {
+			this.lessonTitle = '易错字小测'
+			uni.setNavigationBarTitle({ title: '易错字小测' })
 		} else {
 			this.lessonTitle = '本站生字'
 			uni.setNavigationBarTitle({ title: '小测验' })
@@ -296,12 +340,42 @@ export default {
 		} else {
 			this.rjLessonIdx = null
 		}
-		const pool = orderedUniqueRows(payload.rows)
+
+		const targetRows = orderedUniqueRows(payload.rows)
+		const distractorRows = orderedUniqueRows(
+			Array.isArray(payload.distractorRows) && payload.distractorRows.length
+				? payload.distractorRows
+				: payload.rows
+		)
+
+		if (this.isWrongReview) {
+			const optionPool = orderedUniqueRows([...distractorRows, ...targetRows])
+			if (!targetRows.length) {
+				uni.showToast({ title: '暂无易错字可测', icon: 'none' })
+				setTimeout(() => uni.navigateBack(), 1600)
+				return
+			}
+			if (optionPool.length < 2) {
+				uni.showToast({ title: '再积累几个字再来测吧', icon: 'none' })
+				setTimeout(() => uni.navigateBack(), 1800)
+				return
+			}
+			this.targetRows = targetRows
+			this.pool = optionPool
+			this.charCount = targetRows.length
+			this.clearedHanziMap = Object.create(null)
+			this.clearedCount = 0
+			this.bootstrapQuiz()
+			return
+		}
+
+		const pool = targetRows
 		if (pool.length < 2) {
 			uni.showToast({ title: '本站至少需要 2 个不同生字才能小测', icon: 'none' })
 			setTimeout(() => uni.navigateBack(), 1800)
 			return
 		}
+		this.targetRows = pool
 		this.pool = pool
 		this.charCount = pool.length
 		this.bootstrapQuiz()
@@ -311,8 +385,26 @@ export default {
 			this.clearAutoHear()
 			stopLocalPinyinAudio()
 			stopMengmengVoice()
-			let plan = buildLessonQuizPlan(this.pool)
-			plan = filterValidPlan(plan, this.pool)
+			let plan = []
+			if (this.isWrongReview) {
+				const remain = (this.targetRows || []).filter((r) => {
+					const h = firstHanzi(r.hanzi)
+					return h && !this.clearedHanziMap[h]
+				})
+				if (!remain.length) {
+					this.phase = 'done'
+					this.quizJustPassed = true
+					this.totalQ = 0
+					this.score = 0
+					return
+				}
+				const built = buildWrongOftenQuizPlan(remain, this.pool)
+				plan = filterValidPlan(built.plan, built.optionPool.length ? built.optionPool : this.pool)
+				if (built.optionPool.length) this.pool = built.optionPool
+				this.charCount = remain.length
+			} else {
+				plan = filterValidPlan(buildLessonQuizPlan(this.pool), this.pool)
+			}
 			if (!plan.length) {
 				uni.showToast({ title: '无法生成题目', icon: 'none' })
 				setTimeout(() => uni.navigateBack(), 1600)
@@ -326,10 +418,32 @@ export default {
 			this.questionResults = {}
 			this.quizJustPassed = false
 			this.phase = 'quiz'
+			this.questionGen = 0
+			this.pickBusy = false
+			this.advanceBusy = false
+			if (!this.isWrongReview) {
+				this.clearedHanziMap = Object.create(null)
+				this.clearedCount = 0
+			}
 			this.loadQuestion(0)
 		},
 		restartQuiz() {
 			this.bootstrapQuiz()
+		},
+		applyWrongReviewResult(correct, hanzi) {
+			if (!this.isWrongReview) return
+			const h = firstHanzi(hanzi)
+			if (!h) return
+			const dims = this.curriculumDims()
+			if (correct) {
+				if (!this.clearedHanziMap[h]) {
+					clearCharWrongCount(h, dims)
+					this.clearedHanziMap = { ...this.clearedHanziMap, [h]: 1 }
+					this.clearedCount = Object.keys(this.clearedHanziMap).length
+				}
+			} else {
+				addCharWrongCount(h, 1, dims)
+			}
 		},
 		curriculumDims() {
 			const p = getCurriculumPrefs()
@@ -347,17 +461,41 @@ export default {
 			}
 		},
 		async playQuizAnswerVoice(correct) {
-			const id = correct ? MENG_VOICE.STROKE_WRITE_OK : MENG_VOICE.STROKE_WRITE_WRONG
+			/* 先清队列，避免上一段卡死导致对错提示永远播不出来 */
 			try {
-				await playMengmengVoice(id, { minGapMs: 0, allowRepeat: true })
+				stopMengmengVoice()
+			} catch (_) {}
+			const id = correct ? MENG_VOICE.DAILY_QUIZ_CORRECT : MENG_VOICE.DAILY_QUIZ_WRONG
+			try {
+				await Promise.race([
+					playMengmengVoice(id, { minGapMs: 0, allowRepeat: true }),
+					new Promise((resolve) => setTimeout(resolve, 2800))
+				])
 			} catch (_) {}
 		},
-		async completeQuestion(correct) {
+		async completeQuestion(correct, gen) {
 			if (this.phase !== 'quiz') return
-			stopLocalPinyinAudio()
-			await this.playQuizAnswerVoice(correct)
-			if (this.phase !== 'quiz') return
-			this.advanceQuestion(correct)
+			if (this.advanceBusy) return
+			const qi = this.qIndex
+			const myGen = gen != null ? gen : this.questionGen
+			if (myGen !== this.questionGen) return
+			this.advanceBusy = true
+			this.optDisabled = true
+			this.pickBusy = true
+			try {
+				try {
+					stopLocalPinyinAudio()
+				} catch (_) {}
+				/* 略等一拍，避免刚停拼音读音时新 InnerAudio 抢不到通道 */
+				await new Promise((r) => setTimeout(r, 80))
+				if (myGen !== this.questionGen || this.phase !== 'quiz') return
+				await this.playQuizAnswerVoice(!!correct)
+				if (this.phase !== 'quiz') return
+				if (myGen !== this.questionGen || this.qIndex !== qi) return
+				this.advanceQuestion(!!correct)
+			} finally {
+				this.advanceBusy = false
+			}
 		},
 		scheduleAutoHear() {
 			this.clearAutoHear()
@@ -390,6 +528,9 @@ export default {
 				this.phase = 'done'
 				return
 			}
+			this.questionGen += 1
+			this.pickBusy = false
+			this.advanceBusy = false
 			this.qType = item.type
 			this.targetHanzi = item.target.hanzi
 			this.targetPinyin =
@@ -417,13 +558,38 @@ export default {
 				spellDisplayString
 			)
 			if (this.pyOptions.length < 3) {
-				this.advanceQuestion()
+				/* 无法出题：不计入对错，直接跳过 */
+				this.$nextTick(() => {
+					if (this.qIndex === idx && this.phase === 'quiz') {
+						this.advanceQuestion(null)
+					}
+				})
 				return
 			}
 		},
 		hanziOptionMark(c) {
-			if (!this.hanziReveal) return ''
-			return firstHanzi(c) === this.targetHanzi ? 'ok' : 'bad'
+			const h = firstHanzi(c)
+			if (!h) return ''
+			if (this.hanziReveal) {
+				return h === this.targetHanzi ? 'ok' : 'bad'
+			}
+			/* 选对：正确答案下打 ✓ */
+			if (
+				this.pickedHanzi &&
+				this.pickedHanzi === this.targetHanzi &&
+				h === this.targetHanzi
+			) {
+				return 'ok'
+			}
+			/* 第一次选错：仅在点中的错误项下打 ✗ */
+			if (
+				this.pickedHanzi &&
+				h === this.pickedHanzi &&
+				h !== this.targetHanzi
+			) {
+				return 'bad'
+			}
+			return ''
 		},
 		hanziSquareClass(c) {
 			const m = this.hanziOptionMark(c)
@@ -432,10 +598,18 @@ export default {
 			if (firstHanzi(c) === this.pickedHanzi) return 'opt-square--sel'
 			return ''
 		},
-		pyOptionMark(py) {
-			if (!this.revealCorrect) return ''
+		pyOptionMark(py, index) {
 			const correct = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
-			return py === correct ? 'ok' : 'bad'
+			const n = normDisplayPinyin(py)
+			if (this.revealCorrect) {
+				return n && n === correct ? 'ok' : 'bad'
+			}
+			const i = Number(index)
+			if (!Number.isFinite(i) || i !== this.pickedPyIndex || !n || !correct) {
+				return ''
+			}
+			/* 选对打 ✓，选错打 ✗ */
+			return n === correct ? 'ok' : 'bad'
 		},
 		onPickPinyinCell(payload) {
 			const i = payload && Number(payload.index)
@@ -444,6 +618,7 @@ export default {
 		},
 		async onHearAgain() {
 			if (this.phase !== 'quiz' || this.qType !== 'hear_pick' || !this.targetHanzi) return
+			if (this.optDisabled || this.advanceBusy) return
 			await playLessonTargetReading(this.targetHanzi, this.targetPinyin)
 		},
 		onPickHanzi(c) {
@@ -451,72 +626,117 @@ export default {
 				this.phase !== 'quiz' ||
 				this.optDisabled ||
 				this.hanziReveal ||
+				this.pickBusy ||
+				this.advanceBusy ||
 				this.qType !== 'hear_pick'
 			) {
 				return
 			}
 			const pick = firstHanzi(c)
+			if (!pick) return
+			const gen = this.questionGen
 			this.pickedHanzi = pick
 			if (pick === this.targetHanzi) {
 				this.optDisabled = true
-				this.completeQuestion(true)
+				this.pickBusy = true
+				this.feedbackText = '答对了！'
+				this.completeQuestion(true, gen)
 				return
 			}
 			if (this.attempt === 1) {
 				this.attempt = 2
 				this.feedbackText = '再想一想，可以再听一遍'
+				this.pickBusy = true
+				this.playQuizAnswerVoice(false).finally(() => {
+					if (gen === this.questionGen && this.phase === 'quiz') {
+						this.pickBusy = false
+					}
+				})
 				return
 			}
-			this.revealHanziMarksAfterWrong()
+			this.revealHanziMarksAfterWrong(gen)
 		},
-		revealHanziMarksAfterWrong() {
+		revealHanziMarksAfterWrong(gen) {
 			this.hanziReveal = true
 			this.optDisabled = true
+			this.pickBusy = true
 			this.feedbackText = ''
-			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
-			this.completeQuestion(false)
+			if (!this.isWrongReview) {
+				addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
+			}
+			this.completeQuestion(false, gen != null ? gen : this.questionGen)
 		},
 		async onPickPinyin(py, pickIndex) {
-			if (this.phase !== 'quiz' || this.optDisabled || this.qType !== 'see_py') return
+			if (
+				this.phase !== 'quiz' ||
+				this.optDisabled ||
+				this.pickBusy ||
+				this.advanceBusy ||
+				this.qType !== 'see_py'
+			) {
+				return
+			}
+			const gen = this.questionGen
+			this.pickBusy = true
 			if (Number.isFinite(pickIndex) && pickIndex >= 0) {
 				this.pickedPyIndex = pickIndex
 			}
 			const pyStr = String(py || '').trim()
-			if (pyStr) {
-				await playOpusForDisplayPinyin(pyStr)
-			}
+			try {
+				if (pyStr) {
+					await playOpusForDisplayPinyin(pyStr, {
+						isCancelled: () => gen !== this.questionGen
+					})
+				}
+			} catch (_) {}
+			if (gen !== this.questionGen || this.phase !== 'quiz') return
+
 			const correct = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
-			if (py === correct) {
+			const pickNorm = normDisplayPinyin(pyStr)
+			if (pickNorm && correct && pickNorm === correct) {
 				this.feedbackText = '读音对了！'
 				this.optDisabled = true
-				this.completeQuestion(true)
+				await this.completeQuestion(true, gen)
 				return
 			}
 			if (this.attempt === 1) {
 				this.attempt = 2
 				this.feedbackText = '再想想这个字的读音'
+				await this.playQuizAnswerVoice(false)
+				if (gen !== this.questionGen || this.phase !== 'quiz') return
+				this.pickBusy = false
 				return
 			}
-			this.markWrongAndReveal()
+			this.markWrongAndReveal(gen)
 		},
-		markWrongAndReveal() {
-			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
+		markWrongAndReveal(gen) {
+			if (!this.isWrongReview) {
+				addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
+			}
 			this.optDisabled = true
+			this.pickBusy = true
 			if (this.qType === 'see_py') {
 				this.revealCorrect = true
 				const py = normDisplayPinyin(this.targetPinyin, this.targetHanzi)
 				this.feedbackText = `正确读音：${py || this.targetPinyin}`
-				this.completeQuestion(false)
+				this.completeQuestion(false, gen != null ? gen : this.questionGen)
 			}
 		},
 		advanceQuestion(correct) {
 			const qi = this.qIndex
 			if (typeof correct === 'boolean' && qi >= 0 && qi < this.totalQ) {
-				this.questionResults = {
-					...this.questionResults,
-					[qi]: correct ? 'correct' : 'wrong'
+				const prev = this.questionResults[qi]
+				/* 同一题只记一次，避免并发重复加分 */
+				if (prev !== 'correct' && prev !== 'wrong') {
+					this.questionResults = {
+						...this.questionResults,
+						[qi]: correct ? 'correct' : 'wrong'
+					}
+					if (correct) this.score++
+					if (this.isWrongReview) {
+						this.applyWrongReviewResult(correct, this.targetHanzi)
+					}
 				}
-				if (correct) this.score++
 			}
 			this.qIndex++
 			if (this.qIndex >= this.totalQ) {
@@ -532,11 +752,15 @@ export default {
 			const score = this.score
 			const need = calcQuizPassNeed(totalQ)
 			this.passNeed = need
-			const passed = totalQ > 0 && score >= need
+			const passed = this.isWrongReview
+				? this.clearedCount > 0 && this.clearedCount >= this.charCount
+				: totalQ > 0 && score >= need
 			this.quizJustPassed = passed
 			if (passed) {
 				playMengmengVoice(MENG_VOICE.LESSON_QUIZ_PASS, { debounceMs: 400 }).catch(() => {})
 			}
+			/* 易错复习不写课次通关进度 */
+			if (this.isWrongReview) return
 			const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.lessonTitle)
 			const d = this.curriculumDims()
 			recordLessonQuizAttempt({
@@ -918,10 +1142,11 @@ export default {
 	min-width: 0;
 }
 
-/* 拼音红色 + 四线谱蓝色 */
+/* 拼音红色 + 四线谱蓝色，常规字重 */
 .quiz-py-pflr ::v-deep .pflr-glyph {
 	color: #e53935;
-	font-weight: 700;
+	font-weight: normal;
+	font-synthesis: none;
 }
 
 .quiz-py-pflr ::v-deep .pflr-line-top {

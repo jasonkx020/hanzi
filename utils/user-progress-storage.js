@@ -108,6 +108,17 @@ export function addCharWrongCount(hanzi, delta, dims) {
 	})
 }
 
+/** 清零错误计数（易错字测对后移出列表） */
+export function clearCharWrongCount(hanzi, dims) {
+	const h = typeof hanzi === 'string' ? hanzi.trim() : ''
+	if (!h) return null
+	return upsertUserCharProgress({
+		...dims,
+		[COL_PROGRESS.hanzi]: h,
+		[COL_PROGRESS.wrong_count]: 0
+	})
+}
+
 export function getUserProgressMap() {
 	return readMap()
 }

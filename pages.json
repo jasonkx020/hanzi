@@ -89,6 +89,13 @@
 			}
 		},
 		{
+			"path": "pages/tools/component-map",
+			"style": {
+				"navigationBarTitleText": "偏旁导图",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/literacy/textbook",
 			"style": {
 				"navigationBarTitleText": "萌萌识字",
@@ -193,6 +200,8 @@
 		"navigationBarTitleText": "萌萌识字",
 		"navigationBarBackgroundColor": "#F6F3EC",
 		"backgroundColor": "#F6F3EC",
+		"rpxCalcMaxDeviceWidth": 480,
+		"rpxCalcBaseDeviceWidth": 375,
 		"app-plus": {
 			"background": "#F6F3EC",
 			"bounce": "vertical",

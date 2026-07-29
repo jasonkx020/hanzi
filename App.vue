@@ -119,5 +119,20 @@ import { initLocale } from '@/utils/i18n.js'
 	.tab-root-page {
 		touch-action: pan-y;
 	}
+	/*
+	 * PC 宽屏：页面按手机宽度居中，避免布局被拉满后与真机不一致。
+	 * 与 pages.json rpxCalcMaxDeviceWidth=480 / Base=375 配套。
+	 */
+	page {
+		max-width: 480px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+	uni-page-body {
+		max-width: 480px;
+		margin-left: auto;
+		margin-right: auto;
+		box-shadow: 0 0 0 1px rgba(44, 36, 25, 0.06);
+	}
 	/* #endif */
 </style>

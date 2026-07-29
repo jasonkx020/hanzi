@@ -589,7 +589,7 @@ export default {
 
 .section-title {
 	display: block;
-	font-size: 30rpx;
+	font-size: 34rpx;
 	font-weight: 800;
 	color: var(--meng-text, #2c2419);
 	margin-bottom: 6rpx;
@@ -597,7 +597,7 @@ export default {
 
 .section-hint {
 	display: block;
-	font-size: 22rpx;
+	font-size: 26rpx;
 	color: var(--meng-text-muted, #8a8076);
 	line-height: 1.45;
 }
@@ -763,7 +763,7 @@ export default {
 
 .level-card-kicker {
 	display: block;
-	font-size: 22rpx;
+	font-size: 26rpx;
 	font-weight: 700;
 	color: #ec407a;
 	margin-bottom: 6rpx;
@@ -771,7 +771,7 @@ export default {
 
 .level-card-title {
 	display: block;
-	font-size: 28rpx;
+	font-size: 34rpx;
 	font-weight: 800;
 	color: var(--meng-text, #2c2419);
 	line-height: 1.35;
@@ -779,7 +779,7 @@ export default {
 }
 
 .level-card--locked .level-card-title {
-	font-size: 26rpx;
+	font-size: 32rpx;
 	font-weight: 600;
 	color: #8a8279;
 }
@@ -787,7 +787,7 @@ export default {
 .level-card-meta {
 	display: block;
 	margin-top: 8rpx;
-	font-size: 24rpx;
+	font-size: 28rpx;
 	font-weight: 600;
 	color: #c44d6a;
 }
@@ -812,7 +812,7 @@ export default {
 }
 
 .level-card-cta-text {
-	font-size: 26rpx;
+	font-size: 30rpx;
 	font-weight: 800;
 	color: #fff;
 }

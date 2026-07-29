@@ -20,6 +20,7 @@
     "assets:hanzi-writer": "node scripts/copy-hanzi-writer-data.mjs",
     "assets:hanzi-writer:prune": "node scripts/prune-hanzi-writer-data.mjs",
     "assets:hanzi-writer:sync": "node scripts/copy-hanzi-writer-data.mjs && node scripts/prune-hanzi-writer-data.mjs",
+    "components:build": "node scripts/build-char-components.mjs",
     "postinstall": "node scripts/copy-hanzi-writer-data.mjs && node scripts/prune-hanzi-writer-data.mjs || exit 0"
   },
   "keywords": [],

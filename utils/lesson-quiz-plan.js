@@ -75,6 +75,31 @@ export function buildLessonQuizPlan(pool, opts = {}) {
 	return shuffle(plan)
 }
 
+/**
+ * 易错字专项：只对 wrongRows 出题；干扰项来自 distractorPool（易错 ∪ 已学等）。
+ * @param {Array<{ hanzi: string, pinyin?: string }>} wrongRows
+ * @param {Array<{ hanzi: string, pinyin?: string }>} distractorPool
+ * @param {{ maxPinyinRound?: number }} [opts]
+ * @returns {{ plan: Array, optionPool: Array<{ hanzi: string, pinyin?: string }> }}
+ */
+export function buildWrongOftenQuizPlan(wrongRows, distractorPool, opts = {}) {
+	const targets = orderedUniqueRows(wrongRows)
+	const optionPool = orderedUniqueRows([...(distractorPool || []), ...targets])
+	if (!targets.length) return { plan: [], optionPool }
+	const maxPy = Number(opts.maxPinyinRound) > 0 ? Number(opts.maxPinyinRound) : 16
+	const plan = []
+	for (const row of targets) {
+		plan.push({ type: 'hear_pick', target: row })
+	}
+	if (targets.length <= maxPy) {
+		const pyRows = targets.filter((r) => normDisplayPinyin(r.pinyin, r.hanzi))
+		for (const row of pyRows) {
+			plan.push({ type: 'see_py', target: row })
+		}
+	}
+	return { plan: shuffle(plan), optionPool }
+}
+
 export function buildHanziOptions(target, pool, spellFn = spellDisplayString) {
 	const t = target.hanzi
 	const need = pool.length >= 3 ? 2 : 1

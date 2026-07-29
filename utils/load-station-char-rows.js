@@ -5,6 +5,7 @@ import { LIST_TYPE } from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
+import { applySpellCharPatch } from '@/utils/cnchar-setup.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
@@ -23,7 +24,7 @@ function normPy(hanzi, pinyin) {
 			if (c) s = spellDisplayString(c, 'tone', 'poly', 'low') || ''
 		} catch (_) {}
 	}
-	return s
+	return applySpellCharPatch(hanzi, s)
 }
 
 function dedupeRows(rawRows) {

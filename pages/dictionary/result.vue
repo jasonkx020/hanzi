@@ -63,14 +63,23 @@
 								resultStrokeAnimating ? '暂停' : '动画'
 							}}</text>
 						</view>
+						<view class="meta-rail-action" @click.stop="goComponentMap">
+							<text class="meta-rail-action-k">偏旁</text>
+							<text class="meta-rail-action-v">导图</text>
+						</view>
 					</view>
 				</view>
 				<view class="hero-stage">
-					<view class="hero-center">
-						<view class="hero-tianzi-wrap" :style="tianziUnifiedStyle">
-						<view class="hero-tianzi-unified">
-							<view class="tianzi-pinyin-row">
-								<view class="tianzi-pinyin-edge" @click.stop="speakCurrentPinyin">
+					<!-- 田字格+组词成组，避免 PC 宽屏用 fr 把间距拉开 -->
+					<view class="hero-cluster">
+						<view class="hero-center">
+							<view class="hero-tianzi-wrap" :style="tianziUnifiedStyle">
+							<view class="hero-tianzi-unified">
+								<view
+									class="tianzi-pinyin-row"
+									:class="{ 'tianzi-pinyin-row--playing': dictPinyinPlaying }"
+									@click.stop="speakCurrentPinyin"
+								>
 									<pinyin-four-lines-row
 										v-if="pinyinRowSyllables.length"
 										class="pinyin-edge-full"
@@ -79,61 +88,38 @@
 									/>
 									<text v-else class="pinyin-edge-plain font-pinyin">{{ pinyinPlain }}</text>
 								</view>
-								<view
-									class="tianzi-speak-btn"
-									:class="{ 'tianzi-speak-btn--playing': dictPinyinPlaying }"
-									role="button"
-									aria-label="听读音"
-									@click.stop="speakCurrentPinyin"
-								>
-									<image
-										v-if="showLabaImg"
-										:key="'laba-' + labaImgSrcIndex"
-										class="tianzi-speak-img"
-										:src="labaImgSrc"
-										mode="aspectFit"
-										:show-menu-by-longpress="false"
-										@error="onLabaImgError"
-									/>
-									<image
-										v-else
-										class="tianzi-speak-img tianzi-speak-img--fallback"
-										:src="labaFallbackIconSrc"
-										mode="aspectFit"
+								<view class="hero-tianzi-body" @click="speakCurrentPinyin">
+									<hanzi-stroke-player
+										ref="strokePlayer"
+										canvas-id="result-stroke-box"
+										:char="displayHanzi"
+										:display-pinyin="pinyin"
+										:narrator="narrator"
+										:length="tianziLength"
+										:show-play-fab="false"
+										:stroke-audio-enabled="true"
+										:hide-stroke-hint="true"
+										@animating-change="onStrokeAnimatingChange"
+										@click-canvas="speakCurrentPinyin"
 									/>
 								</view>
 							</view>
-							<view class="hero-tianzi-body" @click="speakCurrentPinyin">
-								<hanzi-stroke-player
-									ref="strokePlayer"
-									canvas-id="result-stroke-box"
-									:char="displayHanzi"
-									:display-pinyin="pinyin"
-									:narrator="narrator"
-									:length="tianziLength"
-									:show-play-fab="false"
-									:stroke-audio-enabled="true"
-									:hide-stroke-hint="true"
-									@animating-change="onStrokeAnimatingChange"
-									@click-canvas="speakCurrentPinyin"
-								/>
 							</view>
 						</view>
+						<view v-if="heroWordsList.length" class="hero-words">
+							<text class="hero-words-title">组词</text>
+							<view class="hero-words-list">
+								<text
+									v-for="(w, wi) in heroWordsList"
+									:key="'hw-' + wi + '-' + w"
+									class="hero-words-item"
+								>{{ w }}</text>
+							</view>
 						</view>
-					</view>
-					<view v-if="heroWordsList.length" class="hero-words">
-						<text class="hero-words-title">组词</text>
-						<view class="hero-words-list">
-							<text
-								v-for="(w, wi) in heroWordsList"
-								:key="'hw-' + wi + '-' + w"
-								class="hero-words-item"
-							>{{ w }}</text>
+						<view v-else class="hero-words hero-words--empty">
+							<text class="hero-words-title">组词</text>
+							<text class="hero-words-empty">暂无</text>
 						</view>
-					</view>
-					<view v-else class="hero-words hero-words--empty">
-						<text class="hero-words-title">组词</text>
-						<text class="hero-words-empty">暂无</text>
 					</view>
 				</view>
 			</view>
@@ -186,17 +172,18 @@
 				</scroll-view>
 			</view>
 
-			<!-- 相近字 -->
-			<view v-if="similarChars.length" class="similar-section">
-				<text class="similar-title">相近字</text>
-				<view class="similar-chips">
+			<!-- 相似字：形近易混，展示拼音 + 汉字 -->
+			<view v-if="similarRows.length" class="similar-chars">
+				<text class="similar-chars-title">相似字（{{ similarRows.length }}）</text>
+				<view class="similar-chars-grid">
 					<view
-						v-for="ch in similarChars"
-						:key="'p-' + ch"
-						class="similar-chip"
-						@click="onPickRecoChar(ch)"
+						v-for="item in similarRows"
+						:key="'sim-' + item.hanzi"
+						class="similar-chars-cell"
+						@click="onPickSimilarChar(item)"
 					>
-						<text class="similar-chip-char">{{ ch }}</text>
+						<text class="similar-chars-py font-pinyin">{{ item.pinyin || '—' }}</text>
+						<text class="similar-chars-hanzi">{{ item.hanzi }}</text>
 					</view>
 				</view>
 			</view>
@@ -220,7 +207,10 @@ import {
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
-import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
+import {
+	getDictionaryEntry,
+	getSimilarShapeChars
+} from '@/repositories/dictionary-repository.js'
 import { COL_PROGRESS } from '@/constants/curriculum-schema.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-progress-storage.js'
@@ -230,12 +220,7 @@ import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import { getMengNavMetrics, mengHeaderBgHeightStyle } from '@/utils/meng-nav-metrics.js'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
-import cnchar from '@/utils/cnchar-setup.js'
-import {
-	MENG_ASSETS,
-	buildMengAssetSrcCandidates,
-	resolveMengAssetUrl
-} from '@/utils/mengmeng-assets.js'
+import cnchar, { applySpellCharPatch } from '@/utils/cnchar-setup.js'
 import { navigateToDictionaryHome } from '@/utils/root-nav.js'
 import { stopStrokeOrderAudio } from '@/utils/stroke-order-audio.js'
 import {
@@ -252,10 +237,6 @@ export default {
 	data() {
 		return {
 			statusBarPx: 0,
-			assets: MENG_ASSETS,
-			/** 听读音图 src 候选下标（App 逐级重试） */
-			labaImgSrcIndex: 0,
-			labaImgFailed: false,
 			narrator: 'kid',
 			dictPinyinPlaying: false,
 			hanzi: '',
@@ -280,13 +261,14 @@ export default {
 			},
 			sameLesson: [],
 			sameLessonRows: [],
-			similarChars: [],
+			/** 形近相似字 { hanzi, pinyin }[] */
+			similarRows: [],
 			resultStrokeAnimating: false,
 			/** 笔画顺序（字形/笔名）是否展开 */
 			showStrokeAnalysis: false,
 			/** 同站字列表是否展开（默认展开） */
 			showSameLessonPanel: true,
-			/** 点同站/相近字换字序号，用于取消过期读音 */
+			/** 点同站字换字序号，用于取消过期读音 */
 			recoPickSeq: 0,
 			/** 读音代数：打断/换字递增，避免误弹「未播放成功」 */
 			speakGen: 0,
@@ -298,13 +280,19 @@ export default {
 			recoSwitchFrom: '',
 			/** 听写/小测跳转锁，防止连点打开两页 */
 			practiceNavLock: false,
-			/** 与 hanzi-stroke-player 默认 length 一致，用于统一拼音/田字格宽度 */
-			tianziLength: 142
+			/** 触发 upx2px 随窗宽重算（H5 缩放时） */
+			windowWidthPx: 0
 		}
 	},
 	computed: {
+		/** 设计稿 284rpx ≈ 375 宽屏上 142px，与组词 rpx 同比例缩放 */
+		tianziLength() {
+			void this.windowWidthPx
+			return this.upxToPx(284)
+		},
 		tianziShellPx() {
-			return this.tianziLength + 30
+			void this.windowWidthPx
+			return this.upxToPx(344)
 		},
 		tianziUnifiedStyle() {
 			return {
@@ -320,21 +308,6 @@ export default {
 		},
 		hasStrokeAnalysis() {
 			return !!(this.ext.strokeShapes || this.ext.strokeNames)
-		},
-		labaImgSrcList() {
-			return buildMengAssetSrcCandidates(MENG_ASSETS.laba)
-		},
-		labaImgSrc() {
-			const list = this.labaImgSrcList
-			if (!list.length) return MENG_ASSETS.laba
-			const i = Math.min(this.labaImgSrcIndex, list.length - 1)
-			return list[i]
-		},
-		showLabaImg() {
-			return !this.labaImgFailed
-		},
-		labaFallbackIconSrc() {
-			return resolveMengAssetUrl(MENG_ASSETS.laba)
 		},
 		/** 顶图区高度：状态栏 + 导航 + 向下延伸一段，与下方内容自然衔接 */
 		headerBgStyle() {
@@ -362,14 +335,14 @@ export default {
 			if (s && s !== '—' && s !== '-') return [s]
 			return []
 		},
-		/** 主汉字右侧组词：最多 8 个，一词一行 */
+		/** 主汉字右侧组词：最多 6 个，一词一行 */
 		heroWordsList() {
 			const w = this.ext.words
 			if (!Array.isArray(w) || !w.length) return []
 			const list = w
 				.map((x) => String(x || '').trim())
 				.filter((x) => x && x !== '暂无组词')
-			return list.slice(0, 8)
+			return list.slice(0, 5)
 		},
 		navTitle() {
 			const h = String(this.lessonHint || '').trim()
@@ -384,12 +357,19 @@ export default {
 	},
 	onLoad(query) {
 		this.statusBarPx = getMengNavMetrics().statusBarPx
-		this.resetLabaImgSrc()
+		this.syncWindowWidth()
+		// #ifdef H5
+		if (typeof uni.onWindowResize === 'function') {
+			this._onWinResize = () => this.syncWindowWidth()
+			uni.onWindowResize(this._onWinResize)
+		}
+		// #endif
 		this.bootFromQuery(query)
 	},
 	onShow() {
 		this.practiceNavLock = false
 		this.statusBarPx = getMengNavMetrics().statusBarPx
+		this.syncWindowWidth()
 		this.narrator = getAudioNarrator()
 		this.refreshStationProgress()
 	},
@@ -398,11 +378,32 @@ export default {
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	onUnload() {
+		// #ifdef H5
+		if (this._onWinResize && typeof uni.offWindowResize === 'function') {
+			uni.offWindowResize(this._onWinResize)
+			this._onWinResize = null
+		}
+		// #endif
 		this.clearRecoDebounce()
 		this.invalidateSpeak()
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	methods: {
+		syncWindowWidth() {
+			try {
+				this.windowWidthPx = Number(uni.getSystemInfoSync().windowWidth) || 0
+			} catch (_) {
+				this.windowWidthPx = 0
+			}
+		},
+		upxToPx(upx) {
+			const n = Number(upx)
+			if (!Number.isFinite(n) || n <= 0) return 0
+			/* 与全局 rpx 策略一致：超过 480 按 375 宽换算，保证 PC/手机田字格同比例 */
+			const win = Number(this.windowWidthPx) || 0
+			const base = win > 480 || win <= 0 ? 375 : win
+			return Math.round((n / 750) * base)
+		},
 		clearRecoDebounce() {
 			if (this.recoDebounceTimer != null) {
 				clearTimeout(this.recoDebounceTimer)
@@ -515,24 +516,23 @@ export default {
 				this.learnedCount = Object.keys(this.learnedHanziMap).length
 			}
 		},
-		resetLabaImgSrc() {
-			this.labaImgSrcIndex = 0
-			this.labaImgFailed = false
-		},
-		onLabaImgError(e) {
-			const list = this.labaImgSrcList
-			if (this.labaImgSrcIndex < list.length - 1) {
-				this.labaImgSrcIndex += 1
-				return
-			}
-			this.labaImgFailed = true
-			console.warn('[result] laba.png load failed', this.labaImgSrc, e)
-		},
 		onStrokeAnimatingChange(v) {
 			this.resultStrokeAnimating = !!v
 		},
 		toggleStrokePlayer() {
 			this.$refs.strokePlayer?.toggleAnimation()
+		},
+		goComponentMap() {
+			const h = String(this.displayHanzi || this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) {
+				uni.showToast({ title: '暂无汉字', icon: 'none' })
+				return
+			}
+			uni.navigateTo({
+				url: `/pages/tools/component-map?hanzi=${encodeURIComponent(h)}`
+			})
 		},
 		toggleStrokeAnalysis() {
 			if (!this.hasStrokeAnalysis) {
@@ -644,7 +644,7 @@ export default {
 				}
 				this.sameLesson = []
 				this.sameLessonRows = []
-				this.similarChars = []
+				this.similarRows = []
 				this.reloadStrokePlayer()
 				return
 			}
@@ -655,7 +655,7 @@ export default {
 			} else if (pinyin) {
 				pinyin = String(pinyin).replace(/\s+/g, ' ').trim()
 			}
-			const related = await getDictionaryRelated(hanzi, lessonHint)
+			pinyin = applySpellCharPatch(hanzi, pinyin)
 			const ext = entry
 				? {
 						radical: entry.radical,
@@ -677,23 +677,22 @@ export default {
 						strokeNames: '',
 						tradForm: ''
 					}
-			this.resetLabaImgSrc()
 			this.hanzi = hanzi
 			this.pinyin = pinyin
 			this.lessonHint = lessonHint
 			this.ext = ext
-			this.similarChars = related.similar || []
 			if (this.rjLessonIdx != null) {
 				const station = await loadStationCharRows({
 					rjLessonIdx: this.rjLessonIdx,
 					lessonHint: lessonHint
 				})
 				this.applyStationBundle(station)
-			} else {
-				this.sameLesson = related.sameLesson || []
-				this.sameLessonRows = related.sameLessonRows || []
-				this.stationCharTotal = this.sameLesson.length
+			} else if (!this.sameLessonRows.length) {
+				this.sameLesson = []
+				this.sameLessonRows = []
+				this.stationCharTotal = 0
 			}
+			await this.refreshSimilarRows(hanzi)
 			this.refreshStationProgress()
 			this.reloadStrokePlayer()
 			try {
@@ -859,7 +858,7 @@ export default {
 						.charAt(0) === h
 			)
 			const py = hit ? String(hit.pinyin || '').replace(/\s+/g, ' ').trim() : ''
-			if (py) this.pinyin = py
+			if (py) this.pinyin = applySpellCharPatch(h, py)
 		},
 		async commitRecoCharSwitch(c) {
 			const pickSeq = ++this.recoPickSeq
@@ -903,9 +902,12 @@ export default {
 				return
 			}
 			if (entry) {
-				const py = String(entry.pinyin || this.pinyin || '')
-					.replace(/\s+/g, ' ')
-					.trim()
+				const py = applySpellCharPatch(
+					h,
+					String(entry.pinyin || this.pinyin || '')
+						.replace(/\s+/g, ' ')
+						.trim()
+				)
 				if (py) this.pinyin = py
 				if (entry.lessonHint && !this.lessonHint) this.lessonHint = entry.lessonHint
 				this.ext = {
@@ -930,18 +932,62 @@ export default {
 					tradForm: ''
 				}
 			}
-			// 相近字可异步补，失败不影响主展示
+			await this.refreshSimilarRows(h)
+			this.refreshStationProgress()
+		},
+		async refreshSimilarRows(hanzi) {
+			const h = String(hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) {
+				this.similarRows = []
+				return
+			}
 			try {
-				const related = await getDictionaryRelated(h, this.lessonHint)
+				const rows = await getSimilarShapeChars(h, 8)
+				if (
+					String(this.hanzi || '')
+						.trim()
+						.charAt(0) !== h
+				) {
+					return
+				}
+				this.similarRows = Array.isArray(rows) ? rows : []
+			} catch (_) {
 				if (
 					String(this.hanzi || '')
 						.trim()
 						.charAt(0) === h
 				) {
-					this.similarChars = related.similar || []
+					this.similarRows = []
 				}
-			} catch (_) {}
-			this.refreshStationProgress()
+			}
+		},
+		onPickSimilarChar(item) {
+			const c = String((item && item.hanzi) || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!c) return
+			const inStation = (this.sameLessonRows || []).some(
+				(r) =>
+					String(r.hanzi || '')
+						.trim()
+						.charAt(0) === c
+			)
+			if (inStation) {
+				this.onPickRecoChar(c)
+				return
+			}
+			const py = String((item && item.pinyin) || '')
+				.replace(/\s+/g, ' ')
+				.trim()
+			this.loadResultPage({
+				hanzi: c,
+				pinyin: py,
+				lessonHint: this.lessonHint
+			}).then(() => {
+				this.speakCurrentPinyin()
+			})
 		},
 		isSameStationCurrent(ch) {
 			const c = String(ch || '')
@@ -972,6 +1018,10 @@ export default {
 	display: flex;
 	flex-direction: column;
 	position: relative;
+	width: 100%;
+	max-width: 480px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 /* 顶区背景（延伸至导航栏下方） */
@@ -1097,20 +1147,20 @@ export default {
 
 .meta-rail-row--on .meta-rail-v,
 .meta-rail-row--on .meta-rail-chevron {
-	color: #e65100;
+	color: #ff6b9d;
 }
 
 .meta-rail-k {
 	font-size: 20rpx;
 	font-weight: 600;
-	color: var(--meng-text-muted, #9a9289);
+	color: #b89a8c;
 	letter-spacing: 0.04em;
 }
 
 .meta-rail-v {
 	font-size: 32rpx;
 	font-weight: 800;
-	color: var(--meng-text, #2c2419);
+	color: #5d4037;
 	line-height: 1.2;
 	text-align: center;
 	word-break: break-all;
@@ -1119,7 +1169,7 @@ export default {
 .meta-rail-v--num {
 	font-size: 34rpx;
 	font-variant-numeric: tabular-nums;
-	color: #e65100;
+	color: #ff8a65;
 }
 
 .meta-rail-v-row {
@@ -1133,14 +1183,14 @@ export default {
 .meta-rail-chevron {
 	font-size: 18rpx;
 	font-weight: 700;
-	color: #e65100;
+	color: #ff8a65;
 	line-height: 1;
 }
 
 .meta-rail-divider {
 	height: 1rpx;
 	margin: 16rpx 8rpx 12rpx;
-	background: rgba(255, 180, 120, 0.45);
+	background: rgba(255, 180, 160, 0.5);
 }
 
 .meta-rail-actions {
@@ -1158,8 +1208,8 @@ export default {
 	min-height: 72rpx;
 	padding: 10rpx 6rpx;
 	border-radius: 16rpx;
-	background: rgba(255, 244, 230, 0.9);
-	border: 1rpx solid rgba(255, 154, 69, 0.22);
+	background: #fff0f5;
+	border: 1rpx solid rgba(255, 150, 180, 0.35);
 	box-sizing: border-box;
 }
 
@@ -1169,12 +1219,12 @@ export default {
 }
 
 .meta-rail-action--on {
-	background: #ffe8f0;
-	border-color: rgba(236, 64, 122, 0.4);
+	background: #ffe0ec;
+	border-color: rgba(255, 105, 155, 0.5);
 }
 
 .meta-rail-action--on .meta-rail-action-v {
-	color: #c2185b;
+	color: #ff4081;
 }
 
 .meta-rail-action--disabled {
@@ -1184,13 +1234,13 @@ export default {
 .meta-rail-action-k {
 	font-size: 20rpx;
 	font-weight: 600;
-	color: var(--meng-text-muted, #9a9289);
+	color: #c4a99a;
 }
 
 .meta-rail-action-v {
 	font-size: 28rpx;
 	font-weight: 800;
-	color: #e65100;
+	color: #ff6b9d;
 	letter-spacing: 0.02em;
 }
 
@@ -1199,11 +1249,22 @@ export default {
 	min-width: 0;
 	display: flex;
 	flex-direction: row;
-	justify-content: center;
 	align-items: flex-start;
-	gap: 12rpx;
-	padding: 24rpx 16rpx 12rpx 8rpx;
+	justify-content: flex-start;
+	padding: 24rpx 3px 12rpx 8rpx;
 	box-sizing: border-box;
+}
+
+/* 田字格靠左，组词贴右缘，中间自动留白拉开距离 */
+.hero-cluster {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: space-between;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	gap: 24rpx;
 }
 
 .hero-center {
@@ -1212,56 +1273,71 @@ export default {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding-right: 4rpx;
 	padding-bottom: 8rpx;
 	box-sizing: border-box;
 }
 
 .hero-words {
-	flex: 1;
+	flex: 0 0 220rpx;
+	width: 220rpx;
+	max-width: 220rpx;
 	min-width: 0;
-	max-width: 200rpx;
+	margin-left: auto;
 	align-self: stretch;
 	display: flex;
 	flex-direction: column;
-	padding: 8rpx 4rpx 8rpx 8rpx;
+	align-items: flex-end;
+	padding: 4rpx 0 8rpx;
 	box-sizing: border-box;
+	text-align: right;
 }
 
 .hero-words--empty {
 	justify-content: flex-start;
-	opacity: 0.72;
+	opacity: 0.78;
 }
 
 .hero-words-title {
 	display: block;
+	width: 100%;
 	font-size: 22rpx;
-	font-weight: 700;
-	color: var(--meng-text-muted, #9a9289);
-	margin-bottom: 10rpx;
-	letter-spacing: 0.06em;
+	font-weight: 800;
+	color: #ff6b9d;
+	margin-bottom: 6rpx;
+	letter-spacing: 0.08em;
+	text-align: right;
 }
 
 .hero-words-list {
 	display: flex;
 	flex-direction: column;
-	align-items: flex-start;
-	gap: 6rpx;
+	align-items: flex-end;
+	width: 100%;
+	gap: 4rpx;
 }
 
 .hero-words-item {
 	display: block;
 	width: 100%;
-	font-size: 28rpx;
-	font-weight: 700;
-	color: var(--meng-text, #2c2419);
-	line-height: 1.35;
+	padding: 6rpx 8rpx;
+	font-size: 56rpx;
+	font-weight: normal;
+	color: #5d4037;
+	line-height: 1.3;
 	word-break: break-all;
+	text-align: right;
+	background: linear-gradient(135deg, #fff8e7 0%, #ffe8f3 100%);
+	border: 2rpx solid rgba(255, 170, 200, 0.45);
+	border-radius: 8rpx;
+	box-sizing: border-box;
 }
 
 .hero-words-empty {
-	font-size: 26rpx;
-	color: var(--meng-text-muted, #9a9289);
+	font-size: 24rpx;
+	font-weight: 600;
+	color: #c4a99a;
+	text-align: right;
+	width: 100%;
 }
 
 .hero-tianzi-wrap {
@@ -1285,62 +1361,20 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: center;
 	width: 100%;
+	padding: 12rpx 14rpx 10rpx;
 	box-sizing: border-box;
 	background: #fff8f0;
 	border-bottom: 2rpx solid #e8d5c8;
 }
 
-.tianzi-speak-btn {
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	width: 96rpx;
-	padding: 6rpx 10rpx 4rpx 4rpx;
-	background: transparent;
-	border: none;
+.tianzi-pinyin-row--playing {
+	background: #fff0e6;
 }
 
-.tianzi-speak-btn--playing .tianzi-speak-img {
-	animation: tianzi-speak-pulse 0.85s ease-in-out infinite;
-}
-
-@keyframes tianzi-speak-pulse {
-	0%,
-	100% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.06);
-	}
-}
-
-.tianzi-speak-img {
-	width: 80rpx;
-	height: 80rpx;
-	display: block;
-}
-
-.tianzi-speak-img--fallback {
+.tianzi-pinyin-row:active {
 	opacity: 0.92;
-}
-
-.tianzi-speak-label {
-	margin-top: 0;
-	font-size: 18rpx;
-	font-weight: 700;
-	color: var(--meng-tab-active-text);
-	white-space: nowrap;
-	pointer-events: none;
-}
-
-.tianzi-pinyin-edge {
-	flex: 1;
-	min-width: 0;
-	padding: 12rpx 0 10rpx 4rpx;
-	box-sizing: border-box;
 }
 
 .pinyin-edge-full {
@@ -1369,10 +1403,15 @@ export default {
 	border-right-color: rgba(66, 165, 245, 0.4);
 }
 
-/* 拼音字形：暖对比色，相对蓝线/米底更醒目 */
-.pinyin-edge-full :deep(.pflr-glyph) {
-	color: #e65100;
-	font-weight: 700;
+/* 拼音字形：暖粉对比色，常规字重 */
+.pinyin-edge-full :deep(.pflr-glyph.font-pinyin) {
+	color: #ff5722;
+	font-weight: normal;
+	font-synthesis: none;
+}
+
+.pinyin-edge-full :deep(.pflr-glyph--tone) {
+	font-weight: normal;
 }
 
 .pinyin-edge-plain {
@@ -1380,8 +1419,9 @@ export default {
 	text-align: center;
 	font-size: 52rpx;
 	line-height: 1.2;
-	font-weight: 700;
-	color: #e65100;
+	font-weight: normal;
+	font-synthesis: none;
+	color: #ff5722;
 	padding: 12rpx 8rpx;
 }
 
@@ -1550,6 +1590,70 @@ export default {
 	line-height: 1.55;
 }
 
+/* 相似字 */
+.similar-chars {
+	margin: 8rpx 28rpx 20rpx;
+	padding: 22rpx 20rpx 20rpx;
+	border-radius: 20rpx;
+	background: var(--meng-card-solid);
+	border: 1rpx solid var(--meng-border-warm, rgba(255, 200, 180, 0.45));
+	box-sizing: border-box;
+}
+
+.similar-chars-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 800;
+	color: var(--meng-text);
+	margin-bottom: 16rpx;
+	padding: 0 4rpx;
+}
+
+.similar-chars-grid {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.similar-chars-cell {
+	width: calc((100% - 36rpx) / 4);
+	min-height: 112rpx;
+	padding: 10rpx 6rpx 12rpx;
+	border-radius: 16rpx;
+	background: #fff8f2;
+	border: 2rpx solid rgba(255, 154, 69, 0.28);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.similar-chars-cell:active {
+	opacity: 0.88;
+	transform: scale(0.97);
+}
+
+.similar-chars-py {
+	font-size: 22rpx;
+	line-height: 1.2;
+	color: var(--meng-text-secondary, #7a7168);
+	margin-bottom: 4rpx;
+	text-align: center;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.similar-chars-hanzi {
+	font-size: 40rpx;
+	font-weight: 700;
+	line-height: 1.15;
+	color: var(--meng-text);
+}
+
 /* 同站字 */
 .same-station {
 	margin: 8rpx 28rpx 20rpx;
@@ -1658,49 +1762,6 @@ export default {
 
 .same-station-cell--current .same-station-learned-tag {
 	background: #ec407a;
-}
-
-/* 相近字 */
-.similar-section {
-	margin: 0 28rpx 20rpx;
-}
-
-.similar-title {
-	display: block;
-	font-size: 26rpx;
-	font-weight: 700;
-	color: var(--meng-text-secondary);
-	margin-bottom: 12rpx;
-	padding-left: 4rpx;
-}
-
-.similar-chips {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 12rpx;
-}
-
-.similar-chip {
-	min-width: 72rpx;
-	padding: 12rpx 18rpx;
-	border-radius: 16rpx;
-	background: #e8f4fc;
-	border: 2rpx solid #5c9fd6;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-sizing: border-box;
-}
-
-.similar-chip:active {
-	opacity: 0.9;
-}
-
-.similar-chip-char {
-	font-size: 36rpx;
-	font-weight: 700;
-	color: var(--meng-text);
 }
 
 .bottom-spacer {

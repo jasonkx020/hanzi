@@ -1,5 +1,6 @@
 import {
 	addCharWrongCount,
+	clearCharWrongCount,
 	markCharLearned,
 	listLearnedChars,
 	listWrongOftenChars
@@ -7,6 +8,10 @@ import {
 
 export function recordCharWrong(hanzi, delta = 1, dims) {
 	return addCharWrongCount(hanzi, delta, dims)
+}
+
+export function recordCharWrongCleared(hanzi, dims) {
+	return clearCharWrongCount(hanzi, dims)
 }
 
 export function recordCharLearned(hanzi, dims) {

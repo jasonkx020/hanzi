@@ -28,7 +28,7 @@
 							<pinyin-four-lines-row
 								v-if="pinyinTokens.length"
 								:syllables="pinyinTokens"
-								size="md"
+								size="lg"
 							/>
 							<text v-else class="home-char-showcase__py-fallback font-pinyin">{{ showcasePinyin }}</text>
 						</view>
@@ -82,7 +82,7 @@ export default {
 	mixins: [i18nPage],
 	data() {
 		return {
-			strokeSize: 128,
+			strokeSize: 156,
 			showcasePinyin: 'zì',
 			meta: {
 				radical: t('common.dash'),
@@ -193,7 +193,7 @@ export default {
 .home-char-showcase__lead {
 	display: block;
 	margin-top: 6rpx;
-	font-size: 26rpx;
+	font-size: 30rpx;
 	font-weight: 600;
 	color: var(--meng-text);
 	line-height: 1.4;
@@ -240,7 +240,7 @@ export default {
 }
 
 .home-char-showcase__hanzi {
-	font-size: 56rpx;
+	font-size: 40rpx;
 	font-weight: 800;
 	color: var(--meng-chocolate);
 	line-height: 1;
@@ -252,7 +252,7 @@ export default {
 }
 
 .home-char-showcase__py-fallback {
-	font-size: 32rpx;
+	font-size: 40rpx;
 	color: var(--meng-text);
 }
 
@@ -277,14 +277,14 @@ export default {
 
 .home-char-showcase__chip-k {
 	display: block;
-	font-size: 20rpx;
+	font-size: 22rpx;
 	color: var(--meng-text-muted);
 }
 
 .home-char-showcase__chip-v {
 	display: block;
 	margin-top: 4rpx;
-	font-size: 26rpx;
+	font-size: 32rpx;
 	font-weight: 700;
 	color: var(--meng-text);
 }

@@ -6,6 +6,7 @@
  *   cnchar 返回按字数组时用空格串联，便于在「笔顺」等页单行展示。
  *
  * 依赖 main.js 已引入的 `./utils/cnchar-setup.js`（含 cnchar-poly）；此处再挂一次同名实例，避免独立引用时遗漏插件。
+ * 库内错误读音请在 cnchar-setup 里用 setSpell 修补，勿在此硬编码覆盖。
  */
 import cnchar from './cnchar-setup.js'
 import { appendDebugLog } from './debug-console-hook.js'
