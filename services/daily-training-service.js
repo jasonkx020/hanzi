@@ -11,6 +11,7 @@ import {
 	listWrongOftenCharsForCurriculumPrefs,
 	makeProgressKey
 } from '@/utils/user-progress-storage.js'
+import { t } from '@/utils/i18n.js'
 
 /** @typedef {'weak'|'review'|'preview'|'write'} DailyReason */
 /** @typedef {'review'|'write'} DailySegmentKey */
@@ -180,8 +181,8 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 		poolSize: 0,
 		focusLessonHint: null,
 		segments: [
-			{ key: 'review', title: '复习', subtitle: '巩固易错与近期课文', items: [] },
-			{ key: 'write', title: '练字', subtitle: '按笔顺写一写', items: [] }
+			{ key: 'review', title: t('daily.seg.review'), subtitle: t('daily.seg.review.sub.empty'), items: [] },
+			{ key: 'write', title: t('daily.seg.write'), subtitle: t('daily.seg.write.sub.short'), items: [] }
 		],
 		items: [],
 		stats: { weak: 0, review: 0, write: 0 }
@@ -288,14 +289,16 @@ export async function buildDailyTrainingPlan(prefs, options = {}) {
 	const segments = [
 		{
 			key: 'review',
-			title: '复习',
-			subtitle: focusHint ? `巩固 · 学到「${focusHint}」前后` : '巩固易错与已学字',
+			title: t('daily.seg.review'),
+			subtitle: focusHint
+				? t('daily.seg.review.sub.focus', { hint: focusHint })
+				: t('daily.seg.review.sub.default'),
 			items: reviewItems
 		},
 		{
 			key: 'write',
-			title: '练字',
-			subtitle: '按笔顺写一写（写字表优先）',
+			title: t('daily.seg.write'),
+			subtitle: t('daily.seg.write.sub'),
 			items: writeItems
 		}
 	]
@@ -337,17 +340,17 @@ export function countWeakInDailyItems(items) {
 /** @param {DailyTrainingPlan} plan */
 export function formatDailyPlanHomeSummary(plan, learnedCount = 0) {
 	if (!plan.poolSize) {
-		return { desc: '暂无汉字，去萌萌识字选一站吧', btnLabel: '去认字' }
+		return { desc: t('home.daily.desc.empty'), btnLabel: t('home.daily.btn.goLearn') }
 	}
 	const { stats } = plan
 	const parts = []
-	if (stats.review + stats.weak > 0) parts.push(`复习 ${stats.review + stats.weak}`)
-	if (stats.write > 0) parts.push(`练字 ${stats.write}`)
-	const tail = parts.length ? parts.join(' · ') : '今日任务已排好'
-	const learnedBit = learnedCount > 0 ? `已学 ${learnedCount} 字 · ` : ''
+	if (stats.review + stats.weak > 0) parts.push(t('home.daily.desc.review', { n: stats.review + stats.weak }))
+	if (stats.write > 0) parts.push(t('home.daily.desc.write', { n: stats.write }))
+	const tail = parts.length ? parts.join(' · ') : t('home.daily.desc.ready')
+	const learnedBit = learnedCount > 0 ? t('home.daily.desc.learnedBit', { n: learnedCount }) : ''
 	return {
 		desc: `${learnedBit}${tail}`,
-		btnLabel: '开始练习'
+		btnLabel: t('home.daily.btn.start')
 	}
 }
 
@@ -355,13 +358,13 @@ export function formatDailyPlanHomeSummary(plan, learnedCount = 0) {
 export function dailyReasonLabel(reason) {
 	switch (reason) {
 		case 'weak':
-			return '易错'
+			return t('daily.reason.weak')
 		case 'review':
-			return '复习'
+			return t('daily.reason.review')
 		case 'preview':
-			return '预习'
+			return t('daily.reason.preview')
 		case 'write':
-			return '练字'
+			return t('daily.reason.write')
 		default:
 			return ''
 	}

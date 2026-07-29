@@ -5,7 +5,7 @@
 			<view class="meng-hero-sky-layer" />
 			<view class="tb-hero-sky" />
 			<meng-status-bar-spacer :height-px="statusBarPx" />
-			<meng-page-nav title="萌萌识字" class="tb-nav" :inset-status-bar="false">
+			<meng-page-nav :title="t('textbook.title')" class="tb-nav" :inset-status-bar="false">
 				<template #right>
 					<view class="tb-circle-btn tb-circle-btn--nav" @click="reload">
 						<text class="tb-circle-icon">🔄</text>
@@ -21,15 +21,13 @@
 							mode="aspectFit"
 							:lazy-load="false"
 						/>
-						<text class="tb-cover-tag">萌萌常用字</text>
+						<text class="tb-cover-tag">{{ t('textbook.coverTag') }}</text>
 					</view>
 					<view class="tb-hero-meta">
 						<text class="tb-hero-sub">{{ summary }}</text>
 						<view v-if="lessons.length" class="tb-stat-pill">
 							<text class="tb-stat-txt">
-								已闯 <text class="tb-stat-num">{{ clearedLevelCount }}</text> /
-								共 <text class="tb-stat-num">{{ lessons.length }}</text> 关 ·
-								<text class="tb-stat-num">{{ statSlotCount }}</text> 个字
+								{{ t('textbook.stat', { a: clearedLevelCount, b: lessons.length, c: statSlotCount }) }}
 							</text>
 						</view>
 					</view>
@@ -39,8 +37,8 @@
 
 		<view class="tb-sheet">
 		<view class="section-head">
-			<text class="section-title">一关一关认汉字</text>
-			<text class="section-hint">本关小测全部答对后解锁下一关</text>
+			<text class="section-title">{{ t('textbook.section.title') }}</text>
+			<text class="section-hint">{{ t('textbook.section.hint') }}</text>
 		</view>
 
 		<view v-if="lessons.length" class="level-path">
@@ -51,8 +49,8 @@
 						<image class="level-mascot" :src="ipCuriousSrc" mode="aspectFit" />
 					</view>
 					<view class="level-cleared-summary-main">
-						<text class="level-cleared-title">已通关 1～{{ clearedLevelCount }}</text>
-						<text class="level-cleared-sub">{{ clearedExpanded ? '收起回顾' : '点开可回顾' }}</text>
+						<text class="level-cleared-title">{{ t('textbook.cleared.summary', { n: clearedLevelCount }) }}</text>
+						<text class="level-cleared-sub">{{ clearedExpanded ? t('textbook.cleared.collapse') : t('textbook.cleared.expand') }}</text>
 					</view>
 					<text class="level-cleared-chevron">{{ clearedExpanded ? '▴' : '▾' }}</text>
 				</view>
@@ -71,7 +69,7 @@
 						</view>
 						<view class="level-card level-card--cleared">
 							<text class="level-card-title">{{ displayLessonHint(node.lesson.hint, node.index) }}</text>
-							<text class="level-card-meta">第 {{ node.index + 1 }} 关 · 已通关 · 回顾</text>
+							<text class="level-card-meta">{{ t('textbook.cleared.meta', { n: node.index + 1 }) }}</text>
 						</view>
 					</view>
 				</view>
@@ -91,18 +89,19 @@
 					<view v-if="lockedPathNode || remainingLockedHint > 0" class="level-rail-line" />
 				</view>
 				<view class="level-card level-card--current">
-					<text class="level-card-kicker">{{ allLevelsCleared ? '全部通关' : '当前关卡' }}</text>
+					<text class="level-card-kicker">{{ allLevelsCleared ? t('textbook.kicker.allDone') : t('textbook.kicker.current') }}</text>
 					<text class="level-card-title">{{
 						displayLessonHint(currentPathNode.lesson.hint, currentPathNode.index)
 					}}</text>
 					<text class="level-card-meta">
-						第 {{ currentPathNode.index + 1 }} 关 ·
-						{{ currentPathNode.lesson.count }} 个字 ·
-						{{ allLevelsCleared ? '再玩一遍' : '开始闯关' }}
+						{{ t(allLevelsCleared ? 'textbook.meta.replay' : 'textbook.meta.start', {
+							n: currentPathNode.index + 1,
+							count: currentPathNode.lesson.count
+						}) }}
 					</text>
 					<view class="level-card-cta">
 						<text class="level-card-cta-text">{{
-							allLevelsCleared ? '回顾本关' : '开始闯关'
+							allLevelsCleared ? t('textbook.cta.review') : t('textbook.cta.start')
 						}}</text>
 					</view>
 				</view>
@@ -121,27 +120,28 @@
 					<view v-if="remainingLockedHint > 0" class="level-rail-line level-rail-line--faint" />
 				</view>
 				<view class="level-card level-card--locked">
-					<text class="level-card-title">第 {{ lockedPathNode.index + 1 }} 关 · {{
-						displayLessonHint(lockedPathNode.lesson.hint, lockedPathNode.index)
-					}}</text>
-					<text class="level-card-meta">通关上一关后解锁</text>
+					<text class="level-card-title">{{ t('textbook.locked.title', {
+						n: lockedPathNode.index + 1,
+						hint: displayLessonHint(lockedPathNode.lesson.hint, lockedPathNode.index)
+					}) }}</text>
+					<text class="level-card-meta">{{ t('textbook.locked.meta') }}</text>
 				</view>
 			</view>
 
 			<view v-if="remainingLockedHint > 0" class="level-more-hint">
-				<text class="level-more-hint-text">还有 {{ remainingLockedHint }} 关等你解锁</text>
+				<text class="level-more-hint-text">{{ t('textbook.more', { n: remainingLockedHint }) }}</text>
 			</view>
 		</view>
 
 		<view v-else class="empty-box">
-			<text class="empty-title">暂时没有字卡</text>
-			<text class="empty-desc">点右上角刷新试试；若仍没有，请稍后再来。</text>
-			<button class="empty-btn" type="primary" size="mini" @click="reload">刷新</button>
+			<text class="empty-title">{{ t('textbook.empty.title') }}</text>
+			<text class="empty-desc">{{ t('textbook.empty.desc') }}</text>
+			<button class="empty-btn" type="primary" size="mini" @click="reload">{{ t('textbook.empty.btn') }}</button>
 		</view>
 
 		<view class="foot-tip">
 			<image class="foot-icon-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
-			<text class="foot-msg">和萌萌一起闯关：本关小测全部答对，就能解锁下一关。</text>
+			<text class="foot-msg">{{ t('textbook.foot') }}</text>
 		</view>
 		</view>
 	</view>
@@ -171,8 +171,10 @@ import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 import { getMengNavMetrics } from '@/utils/meng-nav-metrics.js'
 import { reLaunchHome } from '@/utils/root-nav.js'
+import i18nPage from '@/mixins/i18n-page.js'
 
 export default {
+	mixins: [i18nPage],
 	components: { MengPageNav, MengStatusBarSpacer },
 	data() {
 		return {
@@ -253,6 +255,9 @@ export default {
 		this.syncIpAssets()
 	},
 	methods: {
+		onLocaleChanged() {
+			this.patchLessonDoneBadges()
+		},
 		/**
 		 * App 端：低版本 WebView 对「/static/…」解析不稳，转为 5+ 运行时本地路径（适配 Android 5+）。
 		 * H5/小程序等无 plus 时原样返回。
@@ -310,16 +315,16 @@ export default {
 				this.patchLessonDoneBadges()
 			} catch (e) {
 				console.warn('[textbook] reload', e)
-				uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+				uni.showToast({ title: this.t('textbook.toast.loadFail'), icon: 'none' })
 			} finally {
 				this.loading = false
 			}
 		},
 		displayLessonHint(hint, index) {
 			const raw = String(hint || '').trim()
-			if (!raw) return `第 ${Number(index) + 1} 站`
+			if (!raw) return this.t('textbook.station.fallback', { n: Number(index) + 1 })
 			if (/课|课文|单元/.test(raw)) {
-				return `第 ${Number(index) + 1} 站`
+				return this.t('textbook.station.fallback', { n: Number(index) + 1 })
 			}
 			return raw
 		},
@@ -342,12 +347,12 @@ export default {
 					lesson.hint
 				)
 				const cleared = hasLessonQuizPassed(prefs, lessonKey)
-				this.$set(lesson, 'doneBadgeText', cleared ? '已通关' : '')
+				this.$set(lesson, 'doneBadgeText', cleared ? this.t('textbook.badge.cleared') : '')
 			}
 		},
 		isLessonCleared(lesson) {
 			if (!lesson) return false
-			if (lesson.doneBadgeText === '已通关') return true
+			if (lesson.doneBadgeText === this.t('textbook.badge.cleared')) return true
 			const prefs = getCurriculumPrefs()
 			const lessonKey = buildStoredLessonKey(
 				typeof lesson.rjIdx === 'number' ? lesson.rjIdx : null,
@@ -379,7 +384,7 @@ export default {
 			if (!this.isLevelUnlocked(index)) {
 				const need = Number(index)
 				uni.showToast({
-					title: need > 0 ? `先闯过第 ${need} 站哦` : '关卡未解锁',
+					title: need > 0 ? this.t('textbook.toast.unlockNeed', { n: need }) : this.t('textbook.toast.locked'),
 					icon: 'none'
 				})
 				return

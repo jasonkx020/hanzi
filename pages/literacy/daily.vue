@@ -1,6 +1,6 @@
 <template>
 	<meng-sub-page
-		title="每日一练"
+		:title="t('daily.title')"
 		:subtitle="dailyHeroSub"
 		avatar-pose="book"
 		:padded="false"
@@ -11,33 +11,33 @@
 			<view class="daily-dock-glass">
 				<view v-if="dailyBlocked" class="daily-empty">
 					<meng-avatar pose="curious" size="lg" />
-					<text class="daily-empty-title">今日练习已完成</text>
+					<text class="daily-empty-title">{{ t('daily.blocked.title') }}</text>
 					<text class="daily-empty-desc">{{ dailyBlockMessage }}</text>
 					<view v-if="showDailyAdUnlock" class="daily-cta daily-cta--ad" @click="unlockDailyByAd">
-						<text class="daily-cta-text daily-cta-text--ad">看短视频再练一轮</text>
+						<text class="daily-cta-text daily-cta-text--ad">{{ t('daily.blocked.ad') }}</text>
 					</view>
 					<view class="daily-cta" @click="goVip">
-						<text class="daily-cta-text">家长开通会员</text>
+						<text class="daily-cta-text">{{ t('daily.blocked.vip') }}</text>
 					</view>
 					<view class="daily-cta daily-cta--ghost" @click="goBackHome">
-						<text class="daily-cta-text daily-cta-text--ghost">返回首页</text>
+						<text class="daily-cta-text daily-cta-text--ghost">{{ t('daily.blocked.home') }}</text>
 					</view>
 				</view>
 				<view v-else-if="poolSize === 0" class="daily-empty">
 					<meng-avatar pose="curious" size="lg" />
-					<text class="daily-empty-title">暂无汉字可练</text>
-					<text class="daily-empty-desc">先去「萌萌识字」认几个字，再回来练一练。</text>
+					<text class="daily-empty-title">{{ t('daily.empty.title') }}</text>
+					<text class="daily-empty-desc">{{ t('daily.empty.desc') }}</text>
 					<view class="daily-cta" @click="goTextbook">
-						<text class="daily-cta-text">去萌萌识字</text>
+						<text class="daily-cta-text">{{ t('daily.empty.goTextbook') }}</text>
 					</view>
 					<view class="daily-cta daily-cta--ghost" @click="goBackHome">
-						<text class="daily-cta-text daily-cta-text--ghost">返回首页</text>
+						<text class="daily-cta-text daily-cta-text--ghost">{{ t('daily.blocked.home') }}</text>
 					</view>
 				</view>
 
 				<template v-else>
 					<view v-if="focusLessonHint" class="daily-lesson-pill">
-						<text class="daily-lesson-line clamp-1">学到：{{ focusLessonHint }}</text>
+						<text class="daily-lesson-line clamp-1">{{ t('daily.lesson.pill', { hint: focusLessonHint }) }}</text>
 					</view>
 
 					<scroll-view scroll-x class="seg-scroll" :show-scrollbar="false">
@@ -60,8 +60,8 @@
 					<text class="seg-hint">{{ activeSegmentSubtitle }}</text>
 
 					<view v-if="!segmentItems.length" class="daily-panel daily-panel-empty">
-						<text v-if="isWriteSegment">今日暂无练字推荐，可先完成复习。</text>
-						<text v-else>这一段今天没有字，请切换其他标签。</text>
+						<text v-if="isWriteSegment">{{ t('daily.seg.empty.write') }}</text>
+						<text v-else>{{ t('daily.seg.empty.other') }}</text>
 					</view>
 
 					<template v-else>
@@ -126,7 +126,7 @@
 
 									<view class="daily-char-side">
 										<view class="daily-py-quiz">
-											<text class="daily-py-quiz-prompt">哪个读音对？</text>
+											<text class="daily-py-quiz-prompt">{{ t('daily.quiz.prompt') }}</text>
 											<view v-if="pinyinChoices.length" class="daily-py-options">
 												<view
 													v-for="opt in pinyinChoices"
@@ -149,7 +149,7 @@
 													}}</text>
 												</view>
 											</view>
-											<text v-else class="daily-py-quiz-pending">读音加载中…</text>
+											<text v-else class="daily-py-quiz-pending">{{ t('daily.quiz.loading') }}</text>
 											<text v-if="pinyinQuizFeedback" class="daily-py-feedback">{{
 												pinyinQuizFeedback
 											}}</text>
@@ -179,15 +179,15 @@
 										:class="{ 'quick-pill--on': strokeAnimating }"
 										@click.stop="toggleStrokeAnimation"
 									>
-										<text>{{ strokeAnimating ? '暂停笔顺' : '笔顺动画' }}</text>
+										<text>{{ strokeAnimating ? t('daily.action.pauseStroke') : t('daily.action.playStroke') }}</text>
 									</view>
 									<view class="quick-pill quick-pill--lavender" @click.stop="onTapPlayPinyin">
-										<text>听读音</text>
+										<text>{{ t('daily.action.listen') }}</text>
 									</view>
 								</view>
 
 								<text v-if="detailFetchComplete" class="daily-meta">{{ metaLine }}</text>
-								<text v-else class="daily-meta daily-meta--pending">加载中…</text>
+								<text v-else class="daily-meta daily-meta--pending">{{ t('daily.loading') }}</text>
 
 								<view v-if="hasDetailExtra" class="daily-extra">
 									<text v-if="detailEntry.strokeShapes" class="daily-extra-line clamp-1">{{
@@ -203,7 +203,7 @@
 						</view>
 
 						<view v-else class="daily-panel daily-panel-empty">
-							<text>加载中…</text>
+							<text>{{ t('daily.loading') }}</text>
 						</view>
 					</template>
 
@@ -223,20 +223,20 @@
 				:class="{ 'foot-btn--disabled': currentIndex <= 0 }"
 				@click="goPrev"
 			>
-				<text class="foot-btn-text">上一字</text>
+				<text class="foot-btn-text">{{ t('daily.foot.prev') }}</text>
 			</view>
 			<view class="foot-btn foot-btn--soft" @click="markLearned">
-				<text class="foot-btn-text">已学</text>
+				<text class="foot-btn-text">{{ t('daily.foot.learned') }}</text>
 			</view>
 			<view class="foot-btn foot-btn--soft" @click="markWrong">
-				<text class="foot-btn-text">易错</text>
+				<text class="foot-btn-text">{{ t('daily.foot.wrong') }}</text>
 			</view>
 			<view
 				class="foot-btn foot-btn--primary"
 				:class="{ 'foot-btn--disabled': currentIndex >= segmentItems.length - 1 }"
 				@click="goNext"
 			>
-				<text class="foot-btn-text foot-btn-text--on">下一字</text>
+				<text class="foot-btn-text foot-btn-text--on">{{ t('daily.foot.next') }}</text>
 			</view>
 		</view>
 	</meng-sub-page>
@@ -246,8 +246,7 @@
 import MengSubPage from '@/components/meng-sub-page.vue'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import {
-	buildDailyTrainingPlan,
-	dailyReasonLabel
+	buildDailyTrainingPlan
 } from '@/services/daily-training-service.js'
 import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
@@ -270,7 +269,6 @@ import MengAvatar from '@/components/meng-avatar.vue'
 import { reLaunchHome } from '@/utils/root-nav.js'
 import {
 	MENG_VOICE,
-	getMengmengVoiceCopy,
 	playMengmengVoice,
 	stopMengmengVoice,
 	voiceIdForDailySegment,
@@ -283,8 +281,10 @@ import { isVipActive } from '@/utils/vip.js'
 import { shouldShowAds } from '@/utils/ad-service.js'
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { recordDailySessionComplete } from '@/utils/achievement-stats-storage.js'
+import i18nPage from '@/mixins/i18n-page.js'
 
 export default {
+	mixins: [i18nPage],
 	components: {
 		MengSubPage,
 		PinyinFourLinesRow,
@@ -326,7 +326,11 @@ export default {
 			return `${this.volumeLabel} · ${this.headSubLine}`
 		},
 		planSegments() {
-			return this.plan?.segments || []
+			return (this.plan?.segments || []).map((seg) => ({
+				...seg,
+				title: seg.key === 'write' ? this.t('daily.seg.write') : this.t('daily.seg.review'),
+				subtitle: this.segmentSubtitle(seg)
+			}))
 		},
 		segmentItems() {
 			const seg = this.planSegments.find((s) => s.key === this.activeSegment)
@@ -343,14 +347,14 @@ export default {
 			return seg?.subtitle || ''
 		},
 		headSubLine() {
-			if (!this.dateKey && !this.plan?.stats) return '复习 · 练字'
+			if (!this.dateKey && !this.plan?.stats) return this.t('daily.hero.fallback')
 			const parts = []
 			if (this.dateKey) parts.push(this.dateKey)
 			const st = this.plan?.stats
 			if (st) {
 				const bits = []
-				if (st.review + st.weak > 0) bits.push(`复习${st.review + st.weak}`)
-				if (st.write > 0) bits.push(`练字${st.write}`)
+				if (st.review + st.weak > 0) bits.push(this.t('daily.hero.stats.review', { n: st.review + st.weak }))
+				if (st.write > 0) bits.push(this.t('daily.hero.stats.write', { n: st.write }))
 				if (bits.length) parts.push(bits.join(' '))
 			}
 			return parts.join(' · ')
@@ -376,8 +380,8 @@ export default {
 			return String(it.pinyin).replace(/\s+/g, ' ').trim()
 		},
 		tipLine() {
-			if (this.isWriteSegment) return '按住田字格，按笔顺写完每一笔'
-			return '点对的拼音，再记一记这个字'
+			if (this.isWriteSegment) return this.t('daily.tip.write')
+			return this.t('daily.tip.review')
 		},
 		dailyQuizPoolItems() {
 			const items = []
@@ -402,10 +406,10 @@ export default {
 			const e = this.detailEntry
 			if (!e) return ''
 			const bits = []
-			if (e.radical) bits.push(`部首 ${e.radical}`)
+			if (e.radical) bits.push(this.t('daily.meta.radical', { r: e.radical }))
 			if (e.structure) bits.push(e.structure)
-			if (e.strokes) bits.push(`${e.strokes} 画`)
-			return bits.length ? bits.join(' · ') : '—'
+			if (e.strokes) bits.push(this.t('daily.meta.strokes', { n: e.strokes }))
+			return bits.length ? bits.join(' · ') : this.t('common.dash')
 		},
 		hasDetailExtra() {
 			const e = this.detailEntry
@@ -418,7 +422,7 @@ export default {
 			return this.segmentItems[this.currentIndex] || null
 		},
 		reasonLabel() {
-			return this.currentItem ? dailyReasonLabel(this.currentItem.reason) : ''
+			return this.currentItem ? this.t(`daily.reason.${this.currentItem.reason}`) : ''
 		},
 		isWeakReason() {
 			return this.currentItem?.reason === 'weak'
@@ -473,6 +477,22 @@ export default {
 		this.teardownMedia()
 	},
 	methods: {
+		onLocaleChanged() {
+			if (!this.pinyinChoices.length) return
+			if (this.pinyinQuizPassed) {
+				this.pinyinQuizFeedback = this.t('daily.quiz.correct')
+			} else if (this.pinyinPickId) {
+				this.pinyinQuizFeedback = this.t('daily.quiz.wrong', { py: this.pinyinCorrect })
+			} else {
+				this.pinyinQuizFeedback = this.t('daily.quiz.hint')
+			}
+		},
+		segmentSubtitle(seg) {
+			if (seg.key === 'write') return this.t('daily.seg.write.sub')
+			if (!seg.items?.length) return this.t('daily.seg.review.sub.empty')
+			if (!this.focusLessonHint) return this.t('daily.seg.review.sub.default')
+			return this.t('daily.seg.review.sub.focus', { hint: this.focusLessonHint })
+		},
 		teardownMedia() {
 			stopMengmengVoice()
 			stopLocalPinyinAudio()
@@ -514,7 +534,7 @@ export default {
 				p.toggleAnimation()
 				return
 			}
-			uni.showToast({ title: '笔顺暂不可用', icon: 'none' })
+			uni.showToast({ title: this.t('daily.toast.strokeUnavailable'), icon: 'none' })
 		},
 		goCurriculum() {
 			startTextbookLearning()
@@ -525,7 +545,7 @@ export default {
 		pickSegment(key) {
 			const seg = this.planSegments.find((s) => s.key === key)
 			if (!seg || !seg.items.length) {
-				uni.showToast({ title: '这一段今天没有字', icon: 'none' })
+				uni.showToast({ title: this.t('daily.toast.segEmpty'), icon: 'none' })
 				return
 			}
 			if (key === this.activeSegment) return
@@ -569,7 +589,7 @@ export default {
 				)
 				if (!peek.ok) {
 					this.dailyBlocked = true
-					this.dailyBlockMessage = peek.message || '免费版每日 1 轮，明日再来或由家长开通会员。'
+					this.dailyBlockMessage = peek.message || this.t('daily.blocked.defaultMsg')
 					this.plan = null
 					this.poolSize = 0
 					return
@@ -612,7 +632,7 @@ export default {
 		},
 		async goNext() {
 			if (this.isReviewSegment && this.pinyinChoices.length && !this.pinyinQuizPassed) {
-				uni.showToast({ title: '请先点选正确读音', icon: 'none' })
+				uni.showToast({ title: this.t('daily.toast.needQuiz'), icon: 'none' })
 				return
 			}
 			if (this.currentIndex >= this.segmentItems.length - 1) {
@@ -656,7 +676,7 @@ export default {
 			this.pinyinChoices = choices
 			this.pinyinQuizPassed = !choices.length
 			this.pinyinPickId = ''
-			this.pinyinQuizFeedback = choices.length ? '点一个你认为对的读音' : ''
+			this.pinyinQuizFeedback = choices.length ? this.t('daily.quiz.hint') : ''
 			if (choices.length) {
 				playMengmengVoice(MENG_VOICE.DAILY_QUIZ_PROMPT, { debounceMs: 350 }).catch(() => {})
 			}
@@ -689,11 +709,10 @@ export default {
 			await sleepMs(LESSON_AUDIO_GAP_MS)
 			if (opt.isCorrect) {
 				this.pinyinQuizPassed = true
-				this.pinyinQuizFeedback =
-					getMengmengVoiceCopy(MENG_VOICE.DAILY_QUIZ_CORRECT) || '太棒了，读对了！'
+				this.pinyinQuizFeedback = this.t('daily.quiz.correct')
 				await playMengmengVoice(MENG_VOICE.DAILY_QUIZ_CORRECT)
 			} else {
-				this.pinyinQuizFeedback = `再试试，正确是「${this.pinyinCorrect}」`
+				this.pinyinQuizFeedback = this.t('daily.quiz.wrong', { py: this.pinyinCorrect })
 				await playMengmengVoice(MENG_VOICE.DAILY_QUIZ_WRONG)
 				recordCharWrong(this.detailEntry.hanzi, 1, getCurriculumPrefs())
 			}
@@ -784,7 +803,7 @@ export default {
 					...DICTIONARY_LOCAL_PINYIN_OPTS
 				})
 				if (!ok) {
-					uni.showToast({ title: '未播放成功，请检查静音或重试', icon: 'none' })
+					uni.showToast({ title: this.t('daily.toast.playFail'), icon: 'none' })
 				}
 			} finally {
 				this.dictPinyinPlaying = false
@@ -794,13 +813,13 @@ export default {
 			const h = this.detailEntry?.hanzi || this.currentItem?.hanzi
 			if (!h) return
 			recordCharLearned(h, getCurriculumPrefs())
-			uni.showToast({ title: '已加入学过字库', icon: 'success' })
+			uni.showToast({ title: this.t('daily.toast.learnedOk'), icon: 'success' })
 		},
 		markWrong() {
 			const h = this.detailEntry?.hanzi || this.currentItem?.hanzi
 			if (!h) return
 			recordCharWrong(h, 1, getCurriculumPrefs())
-			uni.showToast({ title: '已加入易错字', icon: 'none' })
+			uni.showToast({ title: this.t('daily.toast.wrongOk'), icon: 'none' })
 		}
 	}
 }

@@ -2,7 +2,7 @@
 	<view class="page tab-page-shell dict-page tab-root-page" :style="tabPageStyle">
 		<meng-tab-hero
 			:status-bar-px="statusBarHeight"
-			title="查字"
+			:title="t('dict.title')"
 			:subtitle="dictHeroSubtitle"
 			avatar-pose="curious"
 		>
@@ -22,12 +22,12 @@
 						class="hanzi-input"
 						type="text"
 						maxlength="12"
-						placeholder="输入汉字，如「萌」"
+						:placeholder="t('dict.search.placeholder')"
 						confirm-type="search"
 						@confirm="runHanziLookup"
 					/>
 					<view class="search-go" @click="runHanziLookup">
-						<text class="search-go-text">查</text>
+						<text class="search-go-text">{{ t('dict.search.btn') }}</text>
 					</view>
 				</view>
 				<view
@@ -36,7 +36,7 @@
 					@click="toggleRadicalPanel"
 				>
 					<text class="quick-pill-emoji">📖</text>
-					<text class="quick-pill-label">部首检索</text>
+					<text class="quick-pill-label">{{ t('dict.radical.toggle') }}</text>
 				</view>
 			</view>
 
@@ -46,8 +46,8 @@
 				class="glass-card radical-hits-top"
 			>
 			<view class="radical-hits-top-head">
-				<text class="radical-hits-top-title">部首「{{ radicalFilter }}」</text>
-				<text class="radical-hits-top-count">共 {{ radicalHits.length }} 字 · 点字查看</text>
+				<text class="radical-hits-top-title">{{ t('dict.radical.hitsTitle', { r: radicalFilter }) }}</text>
+				<text class="radical-hits-top-count">{{ t('dict.radical.hitsCount', { n: radicalHits.length }) }}</text>
 			</view>
 			<view class="radical-grid radical-grid--top">
 				<view
@@ -63,7 +63,7 @@
 		</view>
 
 			<view v-if="radicalPanelOn" class="glass-card radical-panel">
-			<text class="radical-title">按部首筛选 · 全年级识字表 {{ radicalBrowseChars.length }} 字</text>
+			<text class="radical-title">{{ t('dict.radical.panelTitle', { n: radicalBrowseChars.length }) }}</text>
 			<view class="radical-chips">
 				<text
 					v-for="r in radicalOptions"
@@ -74,12 +74,12 @@
 				>{{ r }}</text>
 			</view>
 			<text v-if="radicalFilter && !radicalHits.length" class="radical-count radical-count--empty">
-				该部首暂无候选字，请换部首
+				{{ t('dict.radical.empty') }}
 			</text>
 		</view>
 
 			<view v-if="loadingEntry" class="glass-card loading-card">
-				<text class="loading-text">加载中…</text>
+				<text class="loading-text">{{ t('dict.loading') }}</text>
 			</view>
 			<view v-else-if="activeEntry" class="glass-card result-card">
 			<!-- 左：田字格动画；右：拼音与部首等（并排省纵向空间，便于一屏看完） -->
@@ -101,7 +101,7 @@
 				<view class="hero-top-right">
 					<view class="meta-compact" @click="playActiveDictionaryPinyin">
 						<view class="meta-compact-row meta-compact-row-py">
-							<text class="meta-compact-k">拼音</text>
+							<text class="meta-compact-k">{{ t('dict.meta.pinyin') }}</text>
 							<view class="meta-compact-v meta-py-wrap">
 								<view v-if="pinyinSyllableTokens.length" class="meta-py-row meta-py-rows-stack">
 									<view
@@ -121,19 +121,19 @@
 							</view>
 						</view>
 						<view class="meta-compact-row">
-							<text class="meta-compact-k">部首</text>
+							<text class="meta-compact-k">{{ t('dict.meta.radical') }}</text>
 							<text class="meta-compact-v">{{ activeEntry.radical }}</text>
 						</view>
 						<view class="meta-compact-row">
-							<text class="meta-compact-k">结构</text>
+							<text class="meta-compact-k">{{ t('dict.meta.structure') }}</text>
 							<text class="meta-compact-v">{{ activeEntry.structure }}</text>
 						</view>
 						<view class="meta-compact-row">
-							<text class="meta-compact-k">笔画</text>
+							<text class="meta-compact-k">{{ t('dict.meta.strokes') }}</text>
 							<text class="meta-compact-v">{{ activeEntry.strokes }}</text>
 						</view>
 						<view v-if="activeEntry.tradForm" class="meta-compact-row meta-compact-row-trad">
-							<text class="meta-compact-k">繁体</text>
+							<text class="meta-compact-k">{{ t('dict.meta.trad') }}</text>
 							<text class="meta-compact-v">{{ activeEntry.tradForm }}</text>
 						</view>
 						<!-- <view class="meta-compact-speak" @click.stop="playActiveDictionaryPinyin">
@@ -143,33 +143,33 @@
 				</view>
 			</view>
 			<view class="stroke-box">
-				<text class="stroke-title">笔顺分解</text>
+				<text class="stroke-title">{{ t('dict.stroke.title') }}</text>
 				<text v-if="activeEntry.strokeShapes" class="stroke-glyphs">{{ activeEntry.strokeShapes }}</text>
 				<text v-if="activeEntry.strokeNames" class="stroke-names">{{ activeEntry.strokeNames }}</text>
 				<text class="stroke-desc">{{ strokeHint }}</text>
 			</view>
 			<view v-if="activeEntry.explainText" class="explain-box">
-				<text class="explain-title">释义</text>
+				<text class="explain-title">{{ t('dict.section.explain') }}</text>
 				<text class="explain-body">{{ activeEntry.explainText }}</text>
 			</view>
 			<view class="words-box">
-				<text class="words-title">组词</text>
+				<text class="words-title">{{ t('dict.section.words') }}</text>
 				<view class="words-wrap">
 					<text v-for="(w, idx) in activeEntry.words" :key="`${w}-${idx}`" class="word-chip">{{ w }}</text>
 				</view>
 			</view>
 			<view class="card-actions">
-				<button class="notebook-btn" type="primary" @click="addToNotebook">加入生字本</button>
+				<button class="notebook-btn" type="primary" @click="addToNotebook">{{ t('dict.btn.notebook') }}</button>
 			</view>
 			</view>
 			<view v-else class="glass-card empty-card">
 				<meng-avatar class="empty-logo" pose="curious" size="md" />
-				<text class="empty-title">查一查汉字</text>
+				<text class="empty-title">{{ t('dict.empty.title') }}</text>
 				<text class="empty-desc">
-					输入汉字看笔顺动画、拼音与组词；也可按部首从当前字库里找字。
+					{{ t('dict.empty.desc') }}
 				</text>
 				<view class="empty-demo" @click="tryDemoChar">
-					<text class="empty-demo-text">试试「天」</text>
+					<text class="empty-demo-text">{{ t('dict.empty.demo') }}</text>
 				</view>
 			</view>
 
@@ -178,16 +178,16 @@
 					<meng-avatar pose="book" size="sm" />
 				</view>
 				<view class="detective-main">
-					<text class="detective-label">汉字小侦探</text>
+					<text class="detective-label">{{ t('dict.detective.label') }}</text>
 					<text class="detective-clue">{{ currentDetective.clue }}</text>
-					<text class="detective-hint">点我揭晓并查看该字</text>
+					<text class="detective-hint">{{ t('dict.detective.hint') }}</text>
 				</view>
 			</view>
 
 			<view class="glass-card advanced">
 				<view class="advanced-head" @click="showPinyinTools = !showPinyinTools">
 					<text class="advanced-toggle">
-						{{ showPinyinTools ? '收起拼音筛选' : '拼音筛选（进阶）' }}
+						{{ t(showPinyinTools ? 'dict.advanced.collapse' : 'dict.advanced.expand') }}
 					</text>
 					<text class="advanced-arrow">{{ showPinyinTools ? '▲' : '▼' }}</text>
 				</view>
@@ -197,10 +197,10 @@
 					v-model="pinyinKeyword"
 					class="pinyin-filter-input"
 					type="text"
-					placeholder="筛选拼音，如 tian"
+					:placeholder="t('dict.pinyin.placeholder')"
 					confirm-type="search"
 				/>
-				<text class="filter-tip">匹配到 {{ filteredChars.length }} 字</text>
+				<text class="filter-tip">{{ t('dict.filter.count', { n: filteredChars.length }) }}</text>
 				<view v-if="filteredChars.length" class="filter-grid">
 					<view
 						v-for="(row, i) in filteredChars"
@@ -242,6 +242,7 @@ import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { recordDictLookup } from '@/utils/achievement-stats-storage.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import i18nPage from '@/mixins/i18n-page.js'
 import MengAvatar from '@/components/meng-avatar.vue'
 import MengTabHero from '@/components/meng-tab-hero.vue'
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
@@ -255,19 +256,19 @@ import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 const DETECTIVES = [
-	{ clue: '猜一猜「艹 + 明」是什么字？', answer: '萌' },
-	{ clue: '「木 + 公」常组成？', answer: '松' },
-	{ clue: '三点水加「青」', answer: '清' },
-	{ clue: '「日 + 月」并排', answer: '明' },
-	{ clue: '「女 + 子」合成', answer: '好' },
-	{ clue: '「口 + 巴」是什么字？', answer: '吧' }
+	{ clueKey: 'dict.detective.clue1', answer: '萌' },
+	{ clueKey: 'dict.detective.clue2', answer: '松' },
+	{ clueKey: 'dict.detective.clue3', answer: '清' },
+	{ clueKey: 'dict.detective.clue4', answer: '明' },
+	{ clueKey: 'dict.detective.clue5', answer: '好' },
+	{ clueKey: 'dict.detective.clue6', answer: '吧' }
 ]
 
 /** draw-native canvas 绘制边长（与 utils/draw-native 中 length+30 为画布外边一致） */
 const DICTIONARY_STROKE_LENGTH = 148
 
 export default {
-	mixins: [tabMain],
+	mixins: [tabMain, i18nPage],
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
@@ -313,7 +314,7 @@ export default {
 			return formatGradeSemesterLabel(getCurriculumPrefs())
 		},
 		dictHeroSubtitle() {
-			return `${this.curriculumChip} · 字库 ${this.chars.length} 字`
+			return this.t('dict.hero.sub', { volume: this.curriculumChip, n: this.chars.length })
 		},
 		pinyinDisplayPlain() {
 			const t = String(this.pinyinDisplay || '').replace(/[()（）]/g, '').trim()
@@ -350,11 +351,12 @@ export default {
 		strokeHint() {
 			if (!this.activeEntry) return ''
 			const n = this.activeEntry.strokes
-			const tail =
+			return this.t(
 				this.dictStrokeReady && !this.dictAnimFallback
-					? '可看左侧动画并对照下方笔画名'
-					: '左侧动画加载中，可先对照下方笔画字形'
-			return `共 ${n} 笔 · ${tail}`
+					? 'dict.stroke.hint.ready'
+					: 'dict.stroke.hint.loading',
+				{ n }
+			)
 		},
 		dictStrokeCanvasStyle() {
 			const px = DICTIONARY_STROKE_LENGTH + 30
@@ -374,7 +376,9 @@ export default {
 			}
 		},
 		currentDetective() {
-			return DETECTIVES[this.detectiveIndex % DETECTIVES.length]
+			this.localeTick
+			const detective = DETECTIVES[this.detectiveIndex % DETECTIVES.length]
+			return { ...detective, clue: this.t(detective.clueKey) }
 		},
 		/** 经 cnchar 校验的展示用单字（与 draw/cnchar 数据同源） */
 		displayHanzi() {
@@ -576,14 +580,14 @@ export default {
 		async runHanziLookup() {
 			const ch = this.firstHanziFromInput(this.hanziInput)
 			if (!ch) {
-				uni.showToast({ title: '请输入汉字', icon: 'none' })
+				uni.showToast({ title: this.t('dict.toast.needHanzi'), icon: 'none' })
 				return
 			}
 			const g = await gateAndPromptWithAd(VIP_FEATURE.DAILY_CHARS_SOFT_CAP, {
 				quotaKey: QUOTA_KEYS.DICT_LOOKUP,
 				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DICT_LOOKUP],
-				quotaTitle: '今日查字次数已用完',
-				quotaMessage: '免费版每日可查约 18 次。开通会员后查字不限次。',
+				quotaTitle: this.t('dict.quota.title'),
+				quotaMessage: this.t('dict.quota.msg'),
 				adPlacement: AD_PLACEMENTS.DICT_EXTRA_LOOKUPS
 			})
 			if (!g.ok) return
@@ -600,7 +604,7 @@ export default {
 				const lessonHint = row ? String(row.lesson_hint || '') : ''
 				const entry = await getDictionaryEntry(c, lessonHint)
 				if (!entry) {
-					uni.showToast({ title: '未找到该字', icon: 'none' })
+					uni.showToast({ title: this.t('dict.toast.notFound'), icon: 'none' })
 					playMengmengVoice(MENG_VOICE.DICT_NOT_FOUND).catch(() => {})
 					return
 				}
@@ -637,8 +641,8 @@ export default {
 			const g = await gateAndPromptWithAd(VIP_FEATURE.DAILY_CHARS_SOFT_CAP, {
 				quotaKey: QUOTA_KEYS.DICT_LOOKUP,
 				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.DICT_LOOKUP],
-				quotaTitle: '今日查字次数已用完',
-				quotaMessage: '免费版每日可查约 18 次。开通会员后查字不限次。',
+				quotaTitle: this.t('dict.quota.title'),
+				quotaMessage: this.t('dict.quota.msg'),
 				adPlacement: AD_PLACEMENTS.DICT_EXTRA_LOOKUPS
 			})
 			if (!g.ok) return
@@ -675,7 +679,7 @@ export default {
 		addToNotebook() {
 			if (!this.activeEntry?.hanzi) return
 			recordCharLearned(this.activeEntry.hanzi, getCurriculumPrefs())
-			uni.showToast({ title: '已加入生字本（已学字库）', icon: 'success' })
+			uni.showToast({ title: this.t('dict.toast.notebookOk'), icon: 'success' })
 		},
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
@@ -684,7 +688,7 @@ export default {
 			const d = DETECTIVES[this.detectiveIndex % DETECTIVES.length]
 			this.detectiveIndex++
 			this.loadEntryForChar(d.answer)
-			uni.showToast({ title: `揭晓：${d.answer}`, icon: 'none' })
+			uni.showToast({ title: this.t('dict.toast.reveal', { char: d.answer }), icon: 'none' })
 		}
 	}
 }

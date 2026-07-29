@@ -6,6 +6,9 @@ installDebugConsoleHook()
 import App from './App'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
 import CustomTabBar from '@/custom-tab-bar/index.vue'
+import { initLocale } from '@/utils/i18n.js'
+
+initLocale()
 
 // #ifndef VUE3
 import Vue from 'vue'
@@ -23,6 +26,7 @@ app.$mount()
 // #ifdef VUE3
 import { createSSRApp } from 'vue'
 export function createApp() {
+  initLocale()
   const app = createSSRApp(App)
   app.component('MengStatusBarSpacer', MengStatusBarSpacer)
   app.component('CustomTabBar', CustomTabBar)

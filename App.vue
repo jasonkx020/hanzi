@@ -8,9 +8,13 @@ import {
 	resumePendingVipPurchaseIfAny
 } from '@/services/vip-pay-service.js'
 import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import { initLocale } from '@/utils/i18n.js'
 	export default {
 		onLaunch: function() {
 			console.log('App Launch')
+			try {
+				initLocale()
+			} catch (_) {}
 			try {
 				uni.hideTabBar({ animation: false })
 			} catch (_) {}

@@ -2,7 +2,7 @@
 	<view class="page tab-page-shell tab-root-page me-page" :style="tabPageStyle">
 		<meng-tab-hero
 			:status-bar-px="statusBarHeight"
-			title="我的萌萌"
+			:title="t('me.title')"
 			:subtitle="summary"
 			avatar-pose="wave"
 		/>
@@ -10,61 +10,68 @@
 		<view class="stat-row tab-dock-overlap">
 			<view class="stat-card">
 				<text class="stat-num">{{ learnedCount }}</text>
-				<text class="stat-label">已学字</text>
+				<text class="stat-label">{{ t('me.stat.learned') }}</text>
 			</view>
 			<view class="stat-card">
 				<text class="stat-num">{{ wrongCount }}</text>
-				<text class="stat-label">待复习</text>
+				<text class="stat-label">{{ t('me.stat.review') }}</text>
 			</view>
 		</view>
-		<view class="section-label">学习总览</view>
+		<view class="section-label">{{ t('me.section.overview') }}</view>
 		<view class="list">
 			<view class="item" @click="goReport">
-				<text>家长报告</text>
+				<text>{{ t('me.item.report') }}</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goMedals">
 				<view class="item-main">
-					<text>勋章墙</text>
+					<text>{{ t('me.item.medals') }}</text>
 					<text v-if="medalHint" class="item-subline">{{ medalHint }}</text>
 				</view>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goFamilyProfiles">
 				<view class="item-main">
-					<text>学习档案</text>
+					<text>{{ t('me.item.profiles') }}</text>
 					<text v-if="profileHint" class="item-subline">{{ profileHint }}</text>
 				</view>
 				<text class="arrow">›</text>
 			</view>
 		</view>
-		<view class="section-label">我的字库</view>
+		<view class="section-label">{{ t('me.section.chars') }}</view>
 		<view class="list">
 			<view class="item" @click="goLearned">
-				<text>我学过的字库</text>
+				<text>{{ t('me.item.learnedLib') }}</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item item-sub" @click="goWrongOften">
-				<text class="sub-indent">我经常错的</text>
+				<text class="sub-indent">{{ t('me.item.wrongOften') }}</text>
 				<text class="arrow">›</text>
 			</view>
 		</view>
-		<view class="section-label section-label-spaced">设置与工具</view>
+		<view class="section-label section-label-spaced">{{ t('me.section.settings') }}</view>
 		<view class="list list-gap">
 			<view class="item" @click="goLearned">
-				<text>识字进度</text>
+				<text>{{ t('me.item.progress') }}</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goGuardian">
-				<text>家长管理</text>
+				<text>{{ t('me.item.guardian') }}</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goVip">
-				<text>会员中心</text>
+				<text>{{ t('me.item.vip') }}</text>
 				<text class="arrow">›</text>
 			</view>
 			<view class="item" @click="goStroke">
-				<text>笔顺实验室</text>
+				<text>{{ t('me.item.strokeLab') }}</text>
+				<text class="arrow">›</text>
+			</view>
+			<view class="item" @click="pickLanguage">
+				<view class="item-main">
+					<text>{{ t('me.item.language') }}</text>
+					<text class="item-subline">{{ languageLabel }}</text>
+				</view>
 				<text class="arrow">›</text>
 			</view>
 		</view>
@@ -77,6 +84,7 @@
 import { formatCurriculumSummary, getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { getLearnedChars, getWrongChars } from '@/repositories/learning-repository.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import i18nPage from '@/mixins/i18n-page.js'
 import MengTabHero from '@/components/meng-tab-hero.vue'
 import {
 	MENG_VOICE,
@@ -93,9 +101,11 @@ import {
 import { MEDAL_LIST } from '@/data/medals.js'
 import { getActiveProfile, listLearningProfiles } from '@/utils/learning-profile-storage.js'
 import { hasFamilyPlan } from '@/utils/vip-entitlements.js'
+import { getLocaleDisplayName, listLocales, setLocale } from '@/utils/i18n.js'
+
 export default {
 	components: { MengTabHero },
-	mixins: [tabMain],
+	mixins: [tabMain, i18nPage],
 	data() {
 		return {
 			summary: '',
@@ -105,26 +115,59 @@ export default {
 			profileHint: ''
 		}
 	},
+	computed: {
+		languageLabel() {
+			void this.localeTick
+			return getLocaleDisplayName()
+		}
+	},
 	onShow() {
 		this.setTabBarIndex(2)
-		this.summary = formatCurriculumSummary(getCurriculumPrefs())
-		this.learnedCount = getLearnedChars().length
-		this.wrongCount = getWrongChars().length
-		syncWrongReviewState(this.wrongCount)
-		const { current } = getCurrentGrowthLevel()
-		const unlocked = countUnlockedMedals()
-		this.medalHint = `${formatGrowthLevelLabel(current)} · ${unlocked}/${MEDAL_LIST.length} 枚`
-		const active = getActiveProfile()
-		const n = listLearningProfiles().length
-		this.profileHint = hasFamilyPlan()
-			? `${active?.name || '档案'} · 家庭 ${n}/2`
-			: `${active?.name || '默认档案'}`
+		this.refreshMeCopy()
 		playMengmengVoiceOnce(MENG_VOICE.ME_WELCOME).catch(() => {})
 	},
 	onHide() {
 		stopMengmengVoice()
 	},
 	methods: {
+		onLocaleChanged() {
+			this.refreshMeCopy()
+		},
+		refreshMeCopy() {
+			this.summary = formatCurriculumSummary(getCurriculumPrefs())
+			this.learnedCount = getLearnedChars().length
+			this.wrongCount = getWrongChars().length
+			syncWrongReviewState(this.wrongCount)
+			const { current } = getCurrentGrowthLevel()
+			const unlocked = countUnlockedMedals()
+			this.medalHint = this.t('me.hint.medal', {
+				level: formatGrowthLevelLabel(current),
+				u: unlocked,
+				t: MEDAL_LIST.length
+			})
+			const active = getActiveProfile()
+			const n = listLearningProfiles().length
+			this.profileHint = hasFamilyPlan()
+				? this.t('me.hint.profile.family', {
+						name: active?.name || this.t('me.hint.profile.fallback'),
+						n
+					})
+				: active?.name || this.t('me.hint.profile.default')
+		},
+		pickLanguage() {
+			const locales = listLocales()
+			uni.showActionSheet({
+				itemList: locales.map((x) => x.label),
+				success: (res) => {
+					const picked = locales[res.tapIndex]
+					if (!picked) return
+					if (setLocale(picked.code)) {
+						this.localeTick += 1
+						this.refreshMeCopy()
+					}
+				}
+			})
+		},
 		goReport() {
 			uni.navigateTo({ url: '/pages/me/report' })
 		},

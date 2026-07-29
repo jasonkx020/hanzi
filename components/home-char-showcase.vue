@@ -2,7 +2,7 @@
 	<view class="home-char-showcase" @click="goCharDetail">
 		<view class="home-char-showcase__card">
 			<!-- <text class="home-char-showcase__kicker">功能示范</text> -->
-			<text class="home-char-showcase__lead">跟萌萌认字：笔顺、拼音、部首一眼看懂</text>
+			<text class="home-char-showcase__lead">{{ t('home.showcase.lead') }}</text>
 
 			<view class="home-char-showcase__main">
 				<view class="home-char-showcase__stage">
@@ -19,14 +19,11 @@
 						@ready-change="onStrokeReady"
 						@stroke-index="onStrokeIndexChange"
 					/>
-					<!-- <text v-if="currentStrokeLabel" class="home-char-showcase__stroke-line clamp-1">
-						{{ currentStrokeLabel }}
-					</text> -->
 				</view>
 
 				<view class="home-char-showcase__meta">
 					<view class="home-char-showcase__hanzi-row">
-						<text class="home-char-showcase__hanzi">拼音：</text>
+						<text class="home-char-showcase__hanzi">{{ t('home.showcase.meta.pinyin') }}</text>
 						<view class="home-char-showcase__py-wrap">
 							<pinyin-four-lines-row
 								v-if="pinyinTokens.length"
@@ -39,15 +36,15 @@
 
 					<view class="home-char-showcase__chips">
 						<view class="home-char-showcase__chip">
-							<text class="home-char-showcase__chip-k">部首</text>
+							<text class="home-char-showcase__chip-k">{{ t('home.showcase.chip.radical') }}</text>
 							<text class="home-char-showcase__chip-v">{{ meta.radical }}</text>
 						</view>
 						<view class="home-char-showcase__chip">
-							<text class="home-char-showcase__chip-k">结构</text>
+							<text class="home-char-showcase__chip-k">{{ t('home.showcase.chip.structure') }}</text>
 							<text class="home-char-showcase__chip-v">{{ meta.structure }}</text>
 						</view>
 						<view class="home-char-showcase__chip">
-							<text class="home-char-showcase__chip-k">笔画</text>
+							<text class="home-char-showcase__chip-k">{{ t('home.showcase.chip.strokes') }}</text>
 							<text class="home-char-showcase__chip-v home-char-showcase__chip-v--num">{{
 								meta.strokes
 							}}</text>
@@ -55,10 +52,10 @@
 					</view>
 
 					<view class="home-char-showcase__tags">
-						<text class="home-char-showcase__tag">静态笔顺</text>
-						<text class="home-char-showcase__tag">拼音跟读</text>
-						<text class="home-char-showcase__tag">课本同步</text>
-						<text class="home-char-showcase__tag">一字一课</text>
+						<text class="home-char-showcase__tag">{{ t('home.showcase.tag.stroke') }}</text>
+						<text class="home-char-showcase__tag">{{ t('home.showcase.tag.pinyin') }}</text>
+						<text class="home-char-showcase__tag">{{ t('home.showcase.tag.textbook') }}</text>
+						<text class="home-char-showcase__tag">{{ t('home.showcase.tag.lesson') }}</text>
 					</view>
 				</view>
 			</view>
@@ -74,20 +71,23 @@ import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { getCncharStrokeNameList } from '@/utils/stroke-order-audio.js'
 import { startTextbookLearning } from '@/modules/literacy/usecases/start-textbook-learning.js'
+import i18nPage from '@/mixins/i18n-page.js'
+import { t } from '@/utils/i18n.js'
 
 const SHOWCASE_CHAR = '字'
 
 export default {
 	name: 'HomeCharShowcase',
 	components: { HanziStrokePlayer, PinyinFourLinesRow },
+	mixins: [i18nPage],
 	data() {
 		return {
 			strokeSize: 128,
 			showcasePinyin: 'zì',
 			meta: {
-				radical: '—',
-				structure: '—',
-				strokes: '—'
+				radical: t('common.dash'),
+				structure: t('common.dash'),
+				strokes: t('common.dash')
 			},
 			strokeStarted: false,
 			strokeIndex: 0,

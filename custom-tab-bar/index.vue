@@ -27,6 +27,7 @@
 
 <script>
 import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import { t, onLocaleChange } from '@/utils/i18n.js'
 
 const TAB_SELECTED_KEY = 'meng_tab_selected'
 
@@ -45,51 +46,65 @@ function writeCachedSelected(index) {
 	} catch (_) {}
 }
 
+function buildTabList() {
+	return [
+		{
+			pagePath: '/pages/home/home',
+			iconPath: MENG_ASSETS.tab.home,
+			iconPathActive: MENG_ASSETS.tab.homeActive,
+			textKey: 'tab.home',
+			text: t('tab.home')
+		},
+		{
+			pagePath: '/pages/dictionary/index',
+			iconPath: MENG_ASSETS.tab.catalog,
+			iconPathActive: MENG_ASSETS.tab.catalogActive,
+			textKey: 'tab.dict',
+			text: t('tab.dict')
+		},
+		{
+			pagePath: '/pages/me/me',
+			iconPath: MENG_ASSETS.tab.me,
+			iconPathActive: MENG_ASSETS.tab.meActive,
+			textKey: 'tab.me',
+			text: t('tab.me')
+		}
+	]
+}
+
 export default {
 	data() {
 		return {
 			selected: readCachedSelected(),
-			list: [
-				{
-					pagePath: '/pages/home/home',
-					iconPath: MENG_ASSETS.tab.home,
-					iconPathActive: MENG_ASSETS.tab.homeActive,
-					text: '首页'
-				},
-				{
-					pagePath: '/pages/dictionary/index',
-					iconPath: MENG_ASSETS.tab.catalog,
-					iconPathActive: MENG_ASSETS.tab.catalogActive,
-					text: '查字'
-				},
-				{
-					pagePath: '/pages/me/me',
-					iconPath: MENG_ASSETS.tab.me,
-					iconPathActive: MENG_ASSETS.tab.meActive,
-					text: '我的'
-				}
-			]
+			list: buildTabList()
 		}
 	},
 	mounted() {
 		this.syncSelectedFromRoute()
+		this.refreshLabels()
 		try {
 			uni.$on('meng-tab-selected', this.onMengTabSelected)
 		} catch (_) {}
+		this._offLocale = onLocaleChange(() => this.refreshLabels())
 	},
 	beforeUnmount() {
 		try {
 			uni.$off('meng-tab-selected', this.onMengTabSelected)
 		} catch (_) {}
+		if (typeof this._offLocale === 'function') this._offLocale()
 	},
 	// #ifndef VUE3
 	beforeDestroy() {
 		try {
 			uni.$off('meng-tab-selected', this.onMengTabSelected)
 		} catch (_) {}
+		if (typeof this._offLocale === 'function') this._offLocale()
 	},
 	// #endif
 	methods: {
+		refreshLabels() {
+			this.list = buildTabList()
+		},
 		onMengTabSelected(index) {
 			this.syncSelected(index)
 		},

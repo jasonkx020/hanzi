@@ -1,13 +1,13 @@
 <template>
-	<meng-sub-page title="我经常错的" subtitle="按出错次数排序，优先复习">
+	<meng-sub-page :title="t('wrong.title')" :subtitle="t('wrong.subtitle')">
 		<view v-if="rows.length === 0" class="empty">
-			<text class="empty-title">暂无易错记录</text>
-			<text class="empty-tip">笔顺练习写错、或在生字页「记录一次出错」会增加计数；按 wrong_count 从高到低排序。</text>
+			<text class="empty-title">{{ t('wrong.empty.title') }}</text>
+			<text class="empty-tip">{{ t('wrong.empty.tip') }}</text>
 		</view>
 		<view v-else class="list-wrap">
 			<view v-if="vipUpsell" class="vip-upsell" @click="goVip">
 				<text class="vip-upsell-text">{{ vipUpsell }}</text>
-				<text class="vip-upsell-link">家长开通 ›</text>
+				<text class="vip-upsell-link">{{ t('wrong.vip.link') }}</text>
 			</view>
 			<view
 				v-for="(r, i) in visibleRows"
@@ -18,7 +18,7 @@
 				<text class="char">{{ r[COL_PROGRESS.hanzi] }}</text>
 				<view class="meta">
 					<text class="dim">{{ formatGradeSemesterLabel({ grade: r[COL_PROGRESS.grade], semester: r[COL_PROGRESS.semester] }) }}</text>
-					<text class="badge">错 {{ r[COL_PROGRESS.wrong_count] }} 次</text>
+					<text class="badge">{{ t('wrong.badge', { n: r[COL_PROGRESS.wrong_count] }) }}</text>
 				</view>
 				<text class="arrow">›</text>
 			</view>
@@ -35,8 +35,10 @@ import { listWrongOftenChars } from '@/utils/user-progress-storage.js'
 import { syncWrongReviewState } from '@/utils/achievement-stats-storage.js'
 import { FREE_WRONG_OFTEN_VISIBLE } from '@/constants/vip-quota-limits.js'
 import { isVipActive } from '@/utils/vip.js'
+import i18nPage from '@/mixins/i18n-page.js'
 
 export default {
+	mixins: [i18nPage],
 	components: { MengSubPage },
 	data() {
 		return {
@@ -51,7 +53,10 @@ export default {
 		},
 		vipUpsell() {
 			if (isVipActive() || this.rows.length <= FREE_WRONG_OFTEN_VISIBLE) return ''
-			return `免费版仅展示前 ${FREE_WRONG_OFTEN_VISIBLE} 个，共 ${this.rows.length} 个易错字`
+			return this.t('wrong.vip.upsell', {
+				limit: FREE_WRONG_OFTEN_VISIBLE,
+				total: this.rows.length
+			})
 		}
 	},
 	onShow() {

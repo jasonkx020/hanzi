@@ -2,7 +2,7 @@
 	<view class="page tab-page-shell home-page tab-root-page" :style="tabPageStyle">
 		<meng-tab-hero
 			:status-bar-px="statusBarHeight"
-			title="萌萌识字"
+			:title="t('home.brand')"
 			:banner-slides="heroBannerSlides"
 			:banner-index="heroDotIndex"
 			@avatar-error="onMascotError"
@@ -50,8 +50,8 @@
 					<image class="daily-banner-bg" :src="assets.entry.daily" mode="aspectFit" />
 					<view class="daily-banner-body">
 						<view class="daily-banner-text">
-							<text class="daily-banner-kicker">今日推荐</text>
-							<text class="daily-banner-title">每日一练</text>
+							<text class="daily-banner-kicker">{{ t('home.daily.kicker') }}</text>
+							<text class="daily-banner-title">{{ t('home.daily.title') }}</text>
 							<text class="daily-banner-desc clamp-2">{{ dailyDesc }}</text>
 						</view>
 						<view class="daily-banner-btn">
@@ -69,7 +69,7 @@
 							<image class="cta-icon-img" :src="assets.entry.strokeLab" mode="aspectFit" />
 						</view>
 						<view class="cta-text-col cta-text-col--badge">
-							<text class="cta-label">易错字</text>
+							<text class="cta-label">{{ t('home.wrong.label') }}</text>
 							<text class="cta-sub">{{ wrongEntrySub }}</text>
 						</view>
 					</view>
@@ -80,17 +80,17 @@
 						<view class="quick-icon-ring quick-icon-ring--accent">
 							<image class="quick-icon" :src="assets.entry.strokeLab" mode="aspectFit" />
 						</view>
-						<text class="quick-label">写字练习</text>
+						<text class="quick-label">{{ t('home.quick.write') }}</text>
 					</view>
 					<view class="quick-tile" @click="goGame">
 						<view class="quick-icon-ring quick-icon-ring--yellow">
 							<image class="quick-icon" :src="assets.entry.game" mode="aspectFit" />
 						</view>
-						<text class="quick-label">气球营</text>
+						<text class="quick-label">{{ t('home.quick.game') }}</text>
 					</view>
 				</view>
 
-				<meng-ad-banner placement="home_banner" mock-title="和萌萌一起，每天识字一点点" />
+				<meng-ad-banner placement="home_banner" :mock-title="t('home.ad.mockTitle')" />
 
 				<view class="dock-tip">
 					<meng-avatar pose="happy" size="xs" />
@@ -117,6 +117,7 @@ import { countLearnedCharsForCurriculumPrefs } from '@/utils/user-progress-stora
 import { getWrongChars } from '@/repositories/learning-repository.js'
 import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/daily-training-service.js'
 import tabMain from '@/mixins/tab-main-page.js'
+import i18nPage from '@/mixins/i18n-page.js'
 import MengTabHero from '@/components/meng-tab-hero.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
 import HomeCharShowcase from '@/components/home-char-showcase.vue'
@@ -133,20 +134,20 @@ const HERO_POSES = ['wave', 'book', 'happy']
 
 export default {
 	components: { MengTabHero, MengAvatar, HomeCharShowcase, MengAdBanner },
-	mixins: [tabMain],
+	mixins: [tabMain, i18nPage],
 	data() {
 		return {
 			assets: MENG_ASSETS,
 			summary: '',
 			vipActive: false,
 			encourageText: '',
-			dailyDesc: '加载今日练习…',
-			dailyBtnLabel: '开始练习',
+			dailyDesc: '',
+			dailyBtnLabel: '',
 			textbookVolumeLabel: '',
 			wrongCount: 0,
 			mascotFallback: false,
 			heroDotIndex: 0,
-			heroSlides: ['和萌萌一起认字', '边玩边练，每天进步一点点', '写一写，记一记'],
+			heroSlides: [],
 			_welcomeTimer: null,
 			_heroCarouselTimer: null,
 			_heroResumeTimer: null,
@@ -172,8 +173,8 @@ export default {
 		},
 		wrongEntrySub() {
 			const n = Number(this.wrongCount) || 0
-			if (n <= 0) return '暂无易错，继续加油'
-			return '点我巩固复习'
+			if (n <= 0) return this.t('home.wrong.sub.empty')
+			return this.t('home.wrong.sub.review')
 		}
 	},
 	watch: {
@@ -183,6 +184,15 @@ export default {
 	},
 	onReady() {
 		this.scheduleWelcomeVoice()
+	},
+	created() {
+		this.dailyDesc = this.t('home.daily.loading')
+		this.dailyBtnLabel = this.t('home.daily.btn.start')
+		this.heroSlides = [
+			this.t('home.hero.slide1'),
+			this.t('home.hero.slide2'),
+			this.t('home.hero.slide3')
+		]
 	},
 	onShow() {
 		this.setTabBarIndex(0)
@@ -205,6 +215,11 @@ export default {
 		stopMengmengVoice()
 	},
 	methods: {
+		onLocaleChanged() {
+			this._lastPlanKey = ''
+			this._lastPlanAt = 0
+			this.refresh()
+		},
 		scheduleWelcomeVoice() {
 			if (this._welcomeTimer != null) {
 				clearTimeout(this._welcomeTimer)
@@ -261,8 +276,8 @@ export default {
 			const now = Date.now()
 			const hasPlanUi =
 				this.dailyDesc &&
-				this.dailyDesc !== '加载今日练习…' &&
-				this.dailyDesc !== '今日练习加载失败，点我重试'
+				this.dailyDesc !== this.t('home.daily.loading') &&
+				this.dailyDesc !== this.t('home.daily.loadFail')
 			if (
 				hasPlanUi &&
 				this._lastPlanKey === planKey &&
@@ -272,7 +287,7 @@ export default {
 				this.heroSlides = [
 					this.dailyDesc,
 					this.encourageText,
-					`${this.textbookVolumeLabel} · 和萌萌一起认字`
+					this.t('home.hero.slide1')
 				]
 				return
 			}
@@ -286,14 +301,14 @@ export default {
 				this._lastPlanAt = Date.now()
 			} catch (e) {
 				console.warn('[home] daily plan', e)
-				this.dailyDesc = '今日练习加载失败，点我重试'
-				this.dailyBtnLabel = '重试'
+				this.dailyDesc = this.t('home.daily.loadFail')
+				this.dailyBtnLabel = this.t('home.daily.btn.retry')
 			}
 			this.encourageText = buildEncourageText({ remain: 5 })
 			this.heroSlides = [
 				this.dailyDesc,
 				this.encourageText,
-				`${this.textbookVolumeLabel} · 和萌萌一起认字`
+				this.t('home.hero.slide1')
 			]
 			this.heroDotIndex = 0
 		},

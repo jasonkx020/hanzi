@@ -1,7 +1,7 @@
 <template>
 	<meng-sub-page
-		title="萌萌的气球营"
-		subtitle="听一听、配对闯关，收集小星星"
+		:title="t('game.title')"
+		:subtitle="t('game.subtitle')"
 		:show-avatar="false"
 		:padded="false"
 		:overlap-body="false"
@@ -10,19 +10,19 @@
 		<view v-if="phase === 'lobby'" class="lobby">
 			<image class="lobby-mascot" src="/static/mengmeng/ip/balloon.png" mode="aspectFit" />
 			<text class="lobby-balloon" aria-hidden="true">🎈</text>
-			<text class="lobby-title">萌萌的气球营</text>
-			<text class="lobby-lead">听一听、把汉字和拼音配一对，帮萌萌收集小星星～</text>
-			<text class="lobby-sub">字都来自萌萌常用字；下面可以优先带上「常错的字」多练几遍。</text>
+			<text class="lobby-title">{{ t('game.lobby.title') }}</text>
+			<text class="lobby-lead">{{ t('game.lobby.lead') }}</text>
+			<text class="lobby-sub">{{ t('game.lobby.sub') }}</text>
 
 			<view class="lobby-switch-row">
-				<text class="lobby-switch-label">常错字优先进字池</text>
+				<text class="lobby-switch-label">{{ t('game.lobby.preferWrong') }}</text>
 				<switch :checked="preferWrongChars" color="#ec407a" @change="onPreferWrongChange" />
 			</view>
 
-			<button class="lobby-btn" type="default" :loading="starting" @click="startRun('hear')">听一听 · 升气球（3关）</button>
-			<button class="lobby-btn lobby-btn-sec" type="default" :loading="starting" @click="startRun('pair')">星星配对 · 汉字配拼音（4对）</button>
-			<button class="lobby-btn lobby-btn-mix" type="default" :loading="starting" @click="startRun('mixed')">轮换闯关（听2+配1）</button>
-			<button class="lobby-ghost" type="default" @click="goHome">回识字首页</button>
+			<button class="lobby-btn" type="default" :loading="starting" @click="startRun('hear')">{{ t('game.lobby.btn.hear') }}</button>
+			<button class="lobby-btn lobby-btn-sec" type="default" :loading="starting" @click="startRun('pair')">{{ t('game.lobby.btn.pair') }}</button>
+			<button class="lobby-btn lobby-btn-mix" type="default" :loading="starting" @click="startRun('mixed')">{{ t('game.lobby.btn.mixed') }}</button>
+			<button class="lobby-ghost" type="default" @click="goHome">{{ t('game.lobby.home') }}</button>
 		</view>
 
 		<!-- 耳朵捉字 -->
@@ -30,8 +30,8 @@
 			<view class="play-head">
 				<image class="play-mascot-img" src="/static/mengmeng/logo-icon.png" mode="aspectFit" />
 				<view class="play-head-text">
-					<text class="play-tag">气球关</text>
-					<text class="play-step">第 {{ qIndex + 1 }} / {{ totalQ }} 关</text>
+					<text class="play-tag">{{ t('game.play.tag') }}</text>
+					<text class="play-step">{{ t('game.play.step', { a: qIndex + 1, b: totalQ }) }}</text>
 				</view>
 			</view>
 			<view class="balloon-track">
@@ -44,7 +44,7 @@
 			</view>
 
 			<view v-if="hearPinyinShow" class="play-hear-pinyin" :class="{ 'play-hear-pinyin--reading': hearLocked }">
-				<text class="play-hear-pinyin-label">正在读的拼音</text>
+				<text class="play-hear-pinyin-label">{{ t('game.play.pinyinLabel') }}</text>
 				<pinyin-four-lines-row
 					class="play-hear-pflr"
 					:syllables="hearPinyinTokens"
@@ -53,7 +53,7 @@
 				/>
 			</view>
 
-			<button class="hear-btn" type="default" :disabled="hearLocked" @click="onHearAgain">再听一遍</button>
+			<button class="hear-btn" type="default" :disabled="hearLocked" @click="onHearAgain">{{ t('game.play.hearAgain') }}</button>
 
 			<view class="opts" :class="optionColClass">
 				<button
@@ -68,8 +68,8 @@
 				</button>
 			</view>
 
-			<text class="play-hint">{{ hearLocked ? '听一听中，听完再选哦～' : '先听一听，再点你听到的那个字' }}</text>
-			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
+			<text class="play-hint">{{ hearLocked ? t('game.play.hint.locked') : t('game.play.hint.idle') }}</text>
+			<button class="play-ghost" type="default" @click="backToLobby">{{ t('game.play.back') }}</button>
 		</view>
 
 		<!-- 星星配对（点选连线） -->
@@ -77,11 +77,11 @@
 			<view class="play-head">
 				<text class="play-mascot">⭐</text>
 				<view class="play-head-text">
-					<text class="play-tag pair-tag">星星配对</text>
-					<text class="play-step">点左边的字，再点右边拼音，连成一条线</text>
+					<text class="play-tag pair-tag">{{ t('game.pair.tag') }}</text>
+					<text class="play-step">{{ t('game.pair.step') }}</text>
 				</view>
 			</view>
-			<text class="pair-progress">已配好 {{ pairMatched }} / {{ pairTarget }} 对</text>
+			<text class="pair-progress">{{ t('game.pair.progress', { a: pairMatched, b: pairTarget }) }}</text>
 
 			<view id="pair-board" class="pair-board">
 				<canvas
@@ -94,7 +94,7 @@
 				/>
 				<view class="pair-columns">
 					<view class="pair-col">
-						<text class="pair-col-hd">汉字</text>
+						<text class="pair-col-hd">{{ t('game.pair.col.hanzi') }}</text>
 						<view
 							v-for="(cell, i) in pairLeft"
 							:id="'pair-L-' + i"
@@ -111,7 +111,7 @@
 					</view>
 					<view class="pair-mid" />
 					<view class="pair-col">
-						<text class="pair-col-hd">拼音</text>
+						<text class="pair-col-hd">{{ t('game.pair.col.pinyin') }}</text>
 						<view
 							v-for="(cell, i) in pairRight"
 							:id="'pair-R-' + i"
@@ -135,8 +135,8 @@
 				</view>
 			</view>
 
-			<text class="play-hint">点字再点拼音，连线配对；配错了红线会闪一下哦</text>
-			<button class="play-ghost" type="default" @click="backToLobby">回营地</button>
+			<text class="play-hint">{{ t('game.pair.hint') }}</text>
+			<button class="play-ghost" type="default" @click="backToLobby">{{ t('game.play.back') }}</button>
 		</view>
 
 		<!-- 结算模态框（先播提示音再弹出） -->
@@ -147,12 +147,12 @@
 		>
 			<view class="done-modal-panel" @click.stop>
 				<text class="done-icon" aria-hidden="true">{{ doneIcon }}</text>
-				<text class="done-title">这一轮玩完啦</text>
+				<text class="done-title">{{ t('game.done.title') }}</text>
 				<text class="done-score">{{ doneScoreLine }}</text>
 				<text class="done-msg">{{ doneEncourage }}</text>
-				<button class="done-btn" type="default" @click="onDoneReplay">再玩一轮</button>
-				<button class="done-primary" type="primary" @click="onDoneGoHome">回识字首页</button>
-				<button class="done-ghost" type="default" @click="onDoneBackLobby">回营地</button>
+				<button class="done-btn" type="default" @click="onDoneReplay">{{ t('game.done.replay') }}</button>
+				<button class="done-primary" type="primary" @click="onDoneGoHome">{{ t('game.done.home') }}</button>
+				<button class="done-ghost" type="default" @click="onDoneBackLobby">{{ t('game.done.lobby') }}</button>
 			</view>
 		</view>
 	</meng-sub-page>
@@ -180,6 +180,7 @@ import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { reLaunchHome } from '@/utils/root-nav.js'
 import { recordGameLevelClear } from '@/utils/achievement-stats-storage.js'
 import { createLegacyCanvasContext, flushLegacyCanvasDraw } from '@/utils/uni-legacy-canvas.js'
+import i18nPage from '@/mixins/i18n-page.js'
 
 const STORAGE_PREFER_WRONG = 'literacy_camp_prefer_wrong_v1'
 const ROUND_HEAR = 3
@@ -224,6 +225,7 @@ function uniquePoolRows(rows) {
 }
 
 export default {
+	mixins: [i18nPage],
 	components: {
 		MengSubPage,
 		PinyinFourLinesRow
@@ -302,28 +304,28 @@ export default {
 			return '🎈🎈🎈'
 		},
 		doneScoreLine() {
-			if (this.lastRunMode === 'pair') return `配对了 ${this.score} 组汉字与拼音`
+			if (this.lastRunMode === 'pair') return this.t('game.done.score.pair', { n: this.score })
 			if (this.lastRunMode === 'mixed') {
 				const h = this.mixedHearScore
 				const p = Math.max(0, this.score - h)
-				return `听音答对 ${h} 题 · 配对 ${p} 组`
+				return this.t('game.done.score.mixed', { h, p })
 			}
-			return `点亮了 ${this.score} 颗游戏星星`
+			return this.t('game.done.score.hear', { n: this.score })
 		},
 		doneEncourage() {
 			if (this.lastRunMode === 'pair') {
-				if (this.score >= this.pairTarget) return '汉字和拼音都对上啦，真棒！'
-				if (this.score >= 2) return '很不错，多玩几次就更快啦～'
-				return '慢慢来，字音会越来越熟的～'
+				if (this.score >= this.pairTarget) return this.t('game.done.encourage.pair.full')
+				if (this.score >= 2) return this.t('game.done.encourage.pair.mid')
+				return this.t('game.done.encourage.pair.low')
 			}
 			if (this.lastRunMode === 'mixed') {
 				const max = 2 + MIXED_PAIR_PAIRS
-				if (this.score >= max && this.mixedHearScore >= 2) return '闯关小能手，萌萌给你点赞！'
-				return '轮换闯关完成啦，下次再来～'
+				if (this.score >= max && this.mixedHearScore >= 2) return this.t('game.done.encourage.mixed.full')
+				return this.t('game.done.encourage.mixed.ok')
 			}
-			if (this.score >= this.totalQ) return '全点亮啦，小耳朵真厉害！'
-			if (this.score >= 2) return '很棒啦，下次试试全点亮～'
-			return '多玩几轮就会更熟，萌萌陪你～'
+			if (this.score >= this.totalQ) return this.t('game.done.encourage.hear.full')
+			if (this.score >= 2) return this.t('game.done.encourage.hear.mid')
+			return this.t('game.done.encourage.hear.low')
 		}
 	},
 	created() {
@@ -334,7 +336,7 @@ export default {
 		} catch (_) {}
 	},
 	onLoad() {
-		uni.setNavigationBarTitle({ title: '萌萌的气球营' })
+		uni.setNavigationBarTitle({ title: this.t('game.title') })
 	},
 	onUnload() {
 		this._openingDoneModal = false
@@ -346,6 +348,9 @@ export default {
 		this.stopGameAudio()
 	},
 	methods: {
+		onLocaleChanged() {
+			uni.setNavigationBarTitle({ title: this.t('game.title') })
+		},
 		clearPairLineTimers() {
 			if (this._pairBadTimer != null) {
 				clearTimeout(this._pairBadTimer)
@@ -632,8 +637,8 @@ export default {
 			const g = await gateAndPromptWithAd(VIP_FEATURE.GAME_UNLIMITED, {
 				quotaKey: QUOTA_KEYS.GAME_SESSION,
 				quotaLimit: VIP_QUOTA_LIMITS[QUOTA_KEYS.GAME_SESSION],
-				quotaTitle: '今日气球营次数已用完',
-				quotaMessage: '免费版每日可闯关 2 次。开通会员后不限次。',
+				quotaTitle: this.t('game.quota.title'),
+				quotaMessage: this.t('game.quota.msg'),
 				adPlacement: AD_PLACEMENTS.GAME_EXTRA_SESSION
 			})
 			if (!g.ok) return
@@ -649,7 +654,7 @@ export default {
 				this.pool = await this.buildPool()
 				if (this.pool.length < MIN_GAME_POOL) {
 					uni.showToast({
-						title: '字库加载失败，请稍后重试',
+						title: this.t('game.toast.poolFail'),
 						icon: 'none',
 						duration: 2800
 					})
@@ -659,13 +664,13 @@ export default {
 					this.startHearRound(ROUND_HEAR)
 				} else if (mode === 'pair') {
 					if (this.pool.length < ROUND_PAIR) {
-						uni.showToast({ title: '汉字不够配对啦，稍后再来', icon: 'none' })
+						uni.showToast({ title: this.t('game.toast.pairShortage'), icon: 'none' })
 						return
 					}
 					this.startPairRound(ROUND_PAIR)
 				} else {
 					if (this.pool.length < MIXED_PAIR_PAIRS) {
-						uni.showToast({ title: '生字不够闯关啦', icon: 'none' })
+						uni.showToast({ title: this.t('game.toast.mixedShortage'), icon: 'none' })
 						return
 					}
 					this.segmentPlan = shuffle([
@@ -678,7 +683,7 @@ export default {
 				}
 			} catch (e) {
 				console.warn('[game] startRun', e)
-				uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+				uni.showToast({ title: this.t('game.toast.loadFail'), icon: 'none' })
 				this.phase = 'lobby'
 			} finally {
 				this.starting = false
@@ -772,7 +777,7 @@ export default {
 			const cell = this.pairRight[i]
 			if (!cell || cell.done) return
 			if (this.pickLIdx == null) {
-				uni.showToast({ title: '先点左边的汉字哦', icon: 'none' })
+				uni.showToast({ title: this.t('game.toast.pickLeftFirst'), icon: 'none' })
 				return
 			}
 			this.pickRIdx = i
@@ -805,7 +810,7 @@ export default {
 					this.finishPairPhase()
 				}
 			} else {
-				uni.showToast({ title: '这个字和这条拼音不是一对哦', icon: 'none' })
+				uni.showToast({ title: this.t('game.toast.pairWrong'), icon: 'none' })
 				this.pairBadLink = { lIdx: li, rIdx: ri }
 				this.pickLIdx = null
 				this.pickRIdx = null
@@ -979,7 +984,7 @@ export default {
 				this.hearLocked = true
 				this.stopGameAudio()
 				const hanzi = this.targetHanzi
-				uni.showToast({ title: '再听一遍', icon: 'none' })
+				uni.showToast({ title: this.t('game.toast.retryHear'), icon: 'none' })
 				this.retryHearTimer = setTimeout(() => {
 					this.retryHearTimer = null
 					if (this.phase !== 'play' || this.targetHanzi !== hanzi) return
@@ -989,7 +994,7 @@ export default {
 			}
 			this.stopGameAudio()
 			addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
-			uni.showToast({ title: `是「${this.targetHanzi}」`, icon: 'none' })
+			uni.showToast({ title: this.t('game.toast.reveal', { char: this.targetHanzi }), icon: 'none' })
 			this.optDisabled = true
 			this.hearLocked = true
 			setTimeout(() => {
