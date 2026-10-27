@@ -10,6 +10,7 @@
     "book:merge-full": "node scripts/merge-renjiao-textbook-full.mjs",
     "book:rebuild-grade5-up-catalog": "node scripts/rebuild-grade5-up-catalog.mjs",
     "assets:resize-mengmeng": "python scripts/resize-mengmeng-assets.py",
+    "assets:optimize-images": "python scripts/optimize-static-images.py",
     "assets:remove-watermark": "python scripts/remove-doubao-watermark.py",
     "assets:mengmeng": "python scripts/resize-mengmeng-assets.py && python scripts/remove-doubao-watermark.py",
     "copyright:list": "node scripts/generate-soft-copyright-list.mjs",

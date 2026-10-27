@@ -15,13 +15,11 @@ import {
 
 export const MENG_ASSETS = {
 	heroBg: '/static/mengmeng/hero-bg.png',
-	pageSoftBg: '/static/mengmeng/bg/page-soft.png',
 	logo: '/static/mengmeng/logo.png',
 	logoIcon: '/static/mengmeng/logo-icon.png',
 	/** 喇叭萌萌 · 听读音按钮 */
 	laba: '/static/mengmeng/laba.png',
 	appIcon: '/static/mengmeng/app-icon.png',
-	reference: '/static/mengmeng/reference/mengmeng-master.png',
 	ip: {
 		book: '/static/mengmeng/ip/book.png',
 		happy: '/static/mengmeng/ip/happy.png',

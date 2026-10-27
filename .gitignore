@@ -2,3 +2,5 @@ node_modules/
 unpackage/
 .hbuilderx/
 .DS_Store
+# 原图备份勿打进安装包
+static/mengmeng/_source-2048/
