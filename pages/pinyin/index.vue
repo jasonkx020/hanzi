@@ -185,13 +185,10 @@
 					<text class="vowel-block-title">{{ block.title }}</text>
 					<view class="tone-kid-tip">
 						<text class="tone-kid-tip-emoji">🎼</text>
-						<text class="tone-kid-tip-text">左边是「没声调」的拼音；右边四格分别是平平、上扬、拐弯、下落，点格子听一听</text>
+						<text class="tone-kid-tip-text">上面是「没声调」的原形四线格；下一行四格口诀：一声平、二声扬、三声拐弯、四声降，点格子听一听</text>
 					</view>
 					<view class="tone-wrap">
 						<view class="tone-header-row">
-							<view class="tone-stem-head">
-								<text class="tone-stem-head-k">原形</text>
-							</view>
 							<view
 								v-for="meta in toneColumnMeta"
 								:key="block.key + '-th-' + meta.tone"
@@ -199,8 +196,9 @@
 								:style="toneHeadCellStyle(meta)"
 							>
 								<text class="tone-head-symbol" :style="{ color: meta.color }">{{ meta.symbol }}</text>
-								<text class="tone-head-label">{{ meta.label }}</text>
-								<text class="tone-head-kid" :style="{ color: meta.color }">{{ meta.kidLabel }}</text>
+								<text class="tone-head-label" :style="{ color: meta.color }"
+									>{{ meta.label }}{{ meta.kidLabel }}</text
+								>
 							</view>
 						</view>
 						<view
@@ -217,16 +215,32 @@
 								:id="autoReadScrollIdForToneRow(block.key, rowIdx)"
 								class="tone-data-row-inner"
 							>
-								<view
-									class="tone-stem-chip"
-									:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
-								>
-									<text class="tone-stem-chip-symbol font-pinyin">{{ row.stemLabel }}</text>
+								<view class="tone-stem-row">
+									<view
+										class="tone-stem-chip"
+										:style="{ backgroundColor: row.cat.bg, borderColor: row.cat.bd }"
+									>
+										<pinyin-four-lines-row
+											class="tone-stem-pflr"
+											size="compact"
+											interactive
+											:auto-wrap="false"
+											shrink-to-fit
+											:cell-height-rpx="88"
+											:syllables="[row.stemLabel]"
+											font-class="font-pinyin-step"
+											@cell-click="onToneStemClick(row)"
+										/>
+									</view>
+									<text class="tone-stem-tag">原形</text>
 								</view>
 								<view class="pinyin-homework-wrap tone-pflr-wrap">
 									<pinyin-four-lines-row
 										size="tone"
 										interactive
+										:auto-wrap="false"
+										shrink-to-fit
+										:cell-height-rpx="168"
 										:scroll-anchor-id="autoReadScrollIdForToneRow(block.key, rowIdx)"
 										:highlight-column-index="autoReadToneHighlightCol(block.key, rowIdx)"
 										:syllables="toneRowDisplays(row)"
@@ -1165,6 +1179,15 @@ export default {
 			if (!cell || cell.disabled) return
 			this.handleCellSpeak(cell.play, { asNeutral: cell.asNeutral })
 		},
+		onToneStemClick(row) {
+			const play =
+				String(row?.bareStem || '').trim() ||
+				String(row?.stemLabel || '')
+					.trim()
+					.replace(/ü/g, 'v')
+			if (!play) return
+			this.handleCellSpeak(play, { asNeutral: true })
+		},
 		handleCellSpeak(symbol, opts = {}) {
 			const text = String(symbol || '').trim()
 			if (!text) return
@@ -1694,7 +1717,7 @@ export default {
 }
 
 .pinyin-content :deep(.pflr--tone) {
-	--pfl-cell-h: 156rpx;
+	--pfl-cell-h: 168rpx;
 }
 
 .pinyin-footer {
@@ -1865,16 +1888,6 @@ export default {
 .tone-data-row.pinyin-chunk-anchor {
 	flex-direction: column;
 	align-items: stretch;
-}
-
-.tone-data-row-inner {
-	width: 100%;
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	flex-direction: row;
-	align-items: stretch;
-	box-sizing: border-box;
 }
 .pinyin-scroll {
 	width: 100%;
@@ -2125,38 +2138,15 @@ export default {
 	margin-bottom: 0;
 }
 
-.tone-header-row,
-.tone-data-row {
+.tone-header-row {
 	display: flex;
 	flex-direction: row;
 	align-items: stretch;
 	width: 100%;
 	box-sizing: border-box;
-}
-
-.tone-header-row {
 	margin-bottom: 12rpx;
 	padding: 0 2rpx;
-}
-
-.tone-stem-head,
-.tone-stem-chip {
-	flex-shrink: 0;
-	width: 108rpx;
-	box-sizing: border-box;
-}
-
-.tone-stem-head {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 8rpx 6rpx;
-}
-
-.tone-stem-head-k {
-	font-size: 22rpx;
-	font-weight: 800;
-	color: #8a8278;
+	gap: 8rpx;
 }
 
 .tone-head-cell {
@@ -2168,7 +2158,7 @@ export default {
 	justify-content: center;
 	text-align: center;
 	padding: 12rpx 6rpx;
-	margin-left: 8rpx;
+	margin-left: 0;
 	border-radius: 18rpx;
 	border-width: 3rpx;
 	border-style: solid;
@@ -2185,47 +2175,65 @@ export default {
 	margin-top: 4rpx;
 	font-size: 24rpx;
 	font-weight: 800;
-	color: #3d3832;
-	line-height: 1.2;
-}
-
-.tone-head-kid {
-	margin-top: 2rpx;
-	font-size: 20rpx;
-	font-weight: 700;
 	line-height: 1.2;
 }
 
 .tone-data-row {
-	margin-bottom: 14rpx;
+	display: block;
+	width: 100%;
+	margin-bottom: 20rpx;
+	box-sizing: border-box;
 }
 
 .tone-data-row:last-child {
 	margin-bottom: 0;
 }
 
+.tone-data-row-inner {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	width: 100%;
+	gap: 12rpx;
+}
+
+.tone-stem-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 12rpx;
+	padding: 0 4rpx;
+}
+
 .tone-stem-chip {
+	flex-shrink: 0;
+	min-width: 160rpx;
+	max-width: 46%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 156rpx;
-	margin-right: 8rpx;
-	padding: 10rpx 8rpx;
+	padding: 10rpx 12rpx;
 	border-radius: 18rpx;
 	border-width: 3rpx;
 	border-style: solid;
+	box-sizing: border-box;
 	box-shadow: 0 6rpx 14rpx rgba(44, 36, 25, 0.06);
 }
 
-.tone-stem-chip-symbol {
-	font-size: 40rpx;
-	font-weight: 700;
-	color: #2c4a5c;
-	line-height: 1.1;
+.tone-stem-pflr {
+	width: 100%;
+	min-width: 0;
+}
+
+.tone-stem-tag {
+	font-size: 22rpx;
+	font-weight: 800;
+	color: #8a8278;
 }
 
 .tone-pflr-wrap {
-	flex: 1;
+	width: 100%;
 	min-width: 0;
 }
 

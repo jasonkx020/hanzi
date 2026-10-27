@@ -11,7 +11,10 @@ import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 
 /**
  * 进入写字练习（笔顺书写测验）
- * @param {{ hanzi?: string }} [options]
+ * @param {{ hanzi?: string, fromLesson?: boolean, deferNavigate?: boolean }} [options]
+ * fromLesson：本课模式（通常配合 putLessonWriteTransfer）
+ * deferNavigate：仅做门禁，由调用方自行 navigate（本课页先 gate 再写 transfer）
+ * @returns {Promise<boolean>}
  */
 export async function startWritePractice(options = {}) {
 	const g = await gateAndPromptWithAd(VIP_FEATURE.STROKE_UNLIMITED, {
@@ -21,9 +24,15 @@ export async function startWritePractice(options = {}) {
 		quotaMessage: '免费版每日可练 3 个字。开通会员后写字练习不限次。',
 		adPlacement: AD_PLACEMENTS.WRITE_EXTRA_CHARS
 	})
-	if (!g.ok) return
+	if (!g.ok) return false
+	if (options.deferNavigate) return true
+	if (options.fromLesson) {
+		uni.navigateTo({ url: '/pages/literacy/write-practice?from=lesson' })
+		return true
+	}
 	const raw = String(options.hanzi || '').trim()
 	const pure = raw.match(/[\u4e00-\u9fff]/)?.[0] || ''
 	const q = pure ? `?hanzi=${encodeURIComponent(pure)}` : ''
 	uni.navigateTo({ url: `/pages/literacy/write-practice${q}` })
+	return true
 }

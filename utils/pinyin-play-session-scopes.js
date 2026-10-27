@@ -13,6 +13,7 @@ export const PINYIN_PLAY_SCOPES = Object.freeze({
 	GLOBAL: 'global',
 	LESSON_CARD: 'lesson-card',
 	LESSON_QUIZ: 'lesson-quiz',
+	LESSON_PINYIN_QUIZ: 'lesson-pinyin-quiz',
 	DICT_RESULT: 'dict-result',
 	PINYIN_INDEX: 'pinyin-index',
 	GAME_HEAR: 'game-hear'

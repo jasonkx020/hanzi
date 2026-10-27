@@ -85,7 +85,7 @@
 						<text class="lesson-title">{{ lesson.hint }}</text>
 						<text v-if="lesson.doneBadgeText" class="lesson-done-badge">{{ lesson.doneBadgeText }}</text>
 					</view>
-					<text class="lesson-meta">{{ lesson.count }} 个字 · 去学习</text>
+					<text class="lesson-meta">{{ lessonMetaText(lesson) }}</text>
 				</view>
 				<text class="lesson-arrow">›</text>
 			</view>
@@ -193,6 +193,7 @@ import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
 	buildLiteracyOnlyCharRowsFromRenjiaoItem,
+	buildLessonPinyinItemsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
@@ -344,10 +345,12 @@ export default {
 					this.lessons = syncLessons.map((item, idx) => {
 						const charRows = buildLessonCharRowsFromRenjiaoItem(item)
 						const litRows = buildLiteracyOnlyCharRowsFromRenjiaoItem(item)
+						const pinyinItems = buildLessonPinyinItemsFromRenjiaoItem(item)
 						const learnCheckKeys = this.collectLessonLearnCharKeys(litRows)
 						return {
 							hint: String(item.title || `第${idx + 1}课`),
 							count: charRows.length,
+							pinyinCount: pinyinItems.length,
 							rjIdx: idx,
 							learnCheckKeys,
 							doneBadgeKind: learnCheckKeys.length ? 'literacy' : '',
@@ -469,6 +472,13 @@ export default {
 		},
 		goHome() {
 			uni.switchTab({ url: '/pages/home/home' })
+		},
+		lessonMetaText(lesson) {
+			const chars = Number(lesson && lesson.count) || 0
+			const py = Number(lesson && lesson.pinyinCount) || 0
+			if (chars > 0 && py > 0) return `${chars} 个字 · ${py} 个拼音 · 去学习`
+			if (py > 0) return `${py} 个拼音 · 去学习`
+			return `${chars} 个字 · 去学习`
 		},
 		openLesson(lesson) {
 			if (this.curriculumPickerRequired) {

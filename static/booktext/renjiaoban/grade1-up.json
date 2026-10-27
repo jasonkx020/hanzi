@@ -345,7 +345,21 @@
 		"content": "\nā  á  ǎ  à\nō  ó  ǒ  ò\nē  é  ě  è",
 		"literacy_chars": [],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ā",
+			"á",
+			"ǎ",
+			"à",
+			"ō",
+			"ó",
+			"ǒ",
+			"ò",
+			"ē",
+			"é",
+			"ě",
+			"è"
+		]
 	},
 	{
 		"unit": 2,
@@ -358,7 +372,21 @@
 		"content": "\nī  í  ǐ  ì\nū  ú  ǔ  ù\nǖ  ǘ  ǚ  ǜ",
 		"literacy_chars": [],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ī",
+			"í",
+			"ǐ",
+			"ì",
+			"ū",
+			"ú",
+			"ǔ",
+			"ù",
+			"ǖ",
+			"ǘ",
+			"ǚ",
+			"ǜ"
+		]
 	},
 	{
 		"unit": 2,
@@ -380,7 +408,13 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"b",
+			"p",
+			"m",
+			"f"
+		]
 	},
 	{
 		"unit": 2,
@@ -410,7 +444,13 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"d",
+			"t",
+			"n",
+			"l"
+		]
 	},
 	{
 		"unit": 2,
@@ -495,7 +535,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"g",
+			"k",
+			"h"
+		]
 	},
 	{
 		"unit": 3,
@@ -525,7 +570,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"j",
+			"q",
+			"x"
+		]
 	},
 	{
 		"unit": 3,
@@ -555,7 +605,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"zi",
+			"ci",
+			"si"
+		]
 	},
 	{
 		"unit": 3,
@@ -585,7 +640,13 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"zhi",
+			"chi",
+			"shi",
+			"ri"
+		]
 	},
 	{
 		"unit": 3,
@@ -615,7 +676,14 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"y",
+			"w",
+			"yi",
+			"wu",
+			"yu"
+		]
 	},
 	{
 		"unit": 3,
@@ -704,7 +772,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ai",
+			"ei",
+			"ui"
+		]
 	},
 	{
 		"unit": 4,
@@ -734,7 +807,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ao",
+			"ou",
+			"iu"
+		]
 	},
 	{
 		"unit": 4,
@@ -768,7 +846,12 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ie",
+			"üe",
+			"er"
+		]
 	},
 	{
 		"unit": 4,
@@ -798,7 +881,14 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"an",
+			"en",
+			"in",
+			"un",
+			"ün"
+		]
 	},
 	{
 		"unit": 4,
@@ -828,7 +918,13 @@
 			}
 		],
 		"writing_chars": [],
-		"word_terms": []
+		"word_terms": [],
+		"pinyin_items": [
+			"ang",
+			"eng",
+			"ing",
+			"ong"
+		]
 	},
 	{
 		"unit": 4,

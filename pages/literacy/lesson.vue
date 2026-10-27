@@ -14,9 +14,13 @@
 			<meng-status-bar-spacer :height-px="statusBarPx" />
 			<meng-page-nav :title="lessonNavTitle" class="lesson-nav" :inset-status-bar="false" />
 			<view class="lesson-hero-card">
-				<text class="lesson-grade-chip">{{ gradeSemesterLabel }}</text>
-				<text class="lesson-title">{{ hint }}</text>
-				<view class="lesson-progress-row">
+				<view class="lesson-hero-top">
+					<text class="lesson-grade-chip">{{ gradeSemesterLabel }}</text>
+					<text class="lesson-progress-num">{{ progressNumText }}</text>
+				</view>
+				<view class="lesson-title-row">
+					<text class="lesson-title">{{ hint }}</text>
+					<text class="lesson-stars-paren">(</text>
 					<view class="stars">
 						<text
 							v-for="n in 5"
@@ -25,53 +29,101 @@
 							:class="n <= starFilled ? 'star-on' : 'star-off'"
 						>★</text>
 					</view>
-					<text class="lesson-progress-num">已学 {{ learnedCount }}/{{ totalChars }} 字</text>
+					<text class="lesson-stars-paren">)</text>
 				</view>
-				<text v-if="quizPassedForLesson" class="lesson-quiz-badge">本课小测已通过</text>
+				<view
+					v-if="quizPassedForLesson || pinyinQuizPassedForLesson"
+					class="lesson-progress-row"
+				>
+					<text v-if="quizPassedForLesson" class="lesson-quiz-badge">小测已通过</text>
+					<text v-if="pinyinQuizPassedForLesson" class="lesson-quiz-badge lesson-quiz-badge--pinyin">拼音已通过</text>
+				</view>
 			</view>
 		</view>
 
 		<view class="lesson-sheet">
-		<view class="mode-row">
-			<view class="mode-tile mode-tile--dictation" @click="onDictation">
-				<text class="mode-emoji">✏️</text>
-				<text class="mode-label">听写</text>
+			<view v-if="lessonPinyinChunks.length" class="pinyin-block">
+				<text class="pinyin-block-title">本课字母</text>
+				<view
+					v-for="(chunk, ci) in lessonPinyinChunks"
+					:key="'py-chunk-' + ci"
+					class="pinyin-homework-wrap"
+				>
+					<pinyin-four-lines-row
+						size="grid"
+						interactive
+						font-class="font-pinyin-step"
+						:syllables="chunk"
+						@cell-click="onLessonPinyinCell"
+					/>
+				</view>
 			</view>
-			<view class="mode-tile mode-tile--quiz" @click="onMiniQuiz">
-				<text class="mode-emoji">⭐</text>
-				<text class="mode-label">小测</text>
+
+			<view v-if="lessonChars.length" class="card-grid-wrap">
+				<view
+					v-for="(row, i) in lessonChars"
+					:key="row.id != null ? row.id : i"
+					class="cell"
+					:class="cellClassList(row)"
+				>
+					<view v-if="isLearned(row.hanzi)" class="cell-learned-badge" aria-label="已学">
+						<text class="cell-learned-badge-icon">✓</text>
+					</view>
+					<view class="cell-py-row" @tap.stop="onCellPyTap(row)">
+						<text class="cell-py-hint">拼音 · 点读</text>
+						<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
+					</view>
+					<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
+						<text class="cell-char">{{ row.hanzi }}</text>
+					</view>
+				</view>
+			</view>
+
+			<view v-else-if="!lessonPinyinItems.length" class="empty-lesson">
+				<text class="empty-text">本课暂无生字数据，请在「课本同步学」或教材设置中检查课次与字库。</text>
+			</view>
+
+			<view class="meng-tip">
+				<meng-avatar pose="happy" size="xs" />
+				<text class="meng-tip-msg">{{ followTipText }}</text>
 			</view>
 		</view>
 
-		<view v-if="lessonChars.length" class="card-grid-wrap">
-			<view
-				v-for="(row, i) in lessonChars"
-				:key="row.id != null ? row.id : i"
-				class="cell"
-				:class="cellClassList(row)"
-			>
-				<view v-if="isLearned(row.hanzi)" class="cell-learned-badge" aria-label="已学">
-					<text class="cell-learned-badge-icon">✓</text>
-				</view>
-				<view class="cell-py-row" @tap.stop="onCellPyTap(row)">
-					<text class="cell-py-hint">拼音 · 点读</text>
-					<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
-				</view>
-				<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
-					<text class="cell-char">{{ row.hanzi }}</text>
+		<view v-if="showModeRow" class="lesson-practice-card">
+			<text class="lesson-practice-title">本课练习</text>
+			<view class="mode-row">
+				<template v-if="lessonChars.length">
+					<view class="mode-tile mode-tile--dictation" @click="onDictation">
+						<text class="mode-emoji">✏️</text>
+						<text class="mode-label">听写</text>
+					</view>
+					<view class="mode-tile mode-tile--write" @click="onWritePractice">
+						<text class="mode-emoji">✍️</text>
+						<text class="mode-label">写字</text>
+					</view>
+					<view class="mode-tile mode-tile--quiz" @click="onMiniQuiz">
+						<text class="mode-emoji">⭐</text>
+						<text class="mode-label">小测</text>
+					</view>
+				</template>
+				<view
+					v-if="canPinyinQuiz"
+					class="mode-tile mode-tile--pinyin-quiz"
+					@click="onPinyinQuiz"
+				>
+					<text class="mode-emoji">🔤</text>
+					<text class="mode-label">拼音小测</text>
 				</view>
 			</view>
 		</view>
 
-		<view v-else class="empty-lesson">
-			<text class="empty-text">本课暂无生字数据，请在「课本同步学」或教材设置中检查课次与字库。</text>
-		</view>
-
-		<view class="meng-tip">
-			<meng-avatar pose="happy" size="xs" />
-			<text class="meng-tip-msg">{{ followTipText }}</text>
-		</view>
-		</view>
+		<lesson-char-drawer
+			:visible="charDrawerVisible"
+			:hanzi="charDrawerHanzi"
+			:pinyin="charDrawerPinyin"
+			@close="closeCharDrawer"
+			@detail="onCharDrawerDetail"
+		/>
 	</view>
 </template>
 
@@ -80,22 +132,34 @@ import { COL_PROGRESS, TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schem
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
+	buildLessonPinyinItemsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
-	loadRenjiaoTextbookTexts
+	loadRenjiaoTextbookTexts,
+	collectPriorLessonPinyinSymbols
 } from '@/utils/renjiao-textbook-loader.js'
+import { chunkHomeworkSymbols } from '@/utils/pinyin-homework-chunk.js'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 import {
 	putLessonQuizTransfer,
-	putLessonDictationTransfer
+	putLessonDictationTransfer,
+	putLessonWriteTransfer,
+	putLessonPinyinQuizTransfer
 } from '@/utils/lesson-mode-session.js'
-import { buildStoredLessonKey, hasLessonQuizPassed } from '@/utils/user-lesson-progress-storage.js'
+import { startWritePractice } from '@/modules/literacy/usecases/start-write-practice.js'
+import {
+	buildStoredLessonKey,
+	hasLessonQuizPassed,
+	hasLessonPinyinQuizPassed
+} from '@/utils/user-lesson-progress-storage.js'
+import { orderedUniqueSymbols } from '@/utils/lesson-pinyin-quiz-plan.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
 import { playOpusForDisplayPinyin } from '@/utils/play-pinyin-local-audio.js'
 import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 import { speakChinese } from '@/utils/speak-hanzi.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import LessonCharDrawer from '@/components/lesson-char-drawer.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
@@ -108,6 +172,7 @@ export default {
 	pinyinPlayScope: PINYIN_PLAY_SCOPES.LESSON_CARD,
 	components: {
 		PinyinFourLinesRow,
+		LessonCharDrawer,
 		MengAvatar,
 		MengPageNav,
 		MengStatusBarSpacer
@@ -117,6 +182,8 @@ export default {
 			statusBarPx: 44,
 			hint: '课次字卡',
 			lessonChars: [],
+			/** 本课字母/音节点读项 */
+			lessonPinyinItems: [],
 			learnedCount: 0,
 			totalChars: 0,
 			/** 人教 JSON 课次下标，与课本同步学列表一致 */
@@ -124,7 +191,12 @@ export default {
 			/** 人教 JSON 该篇 content */
 			rjContent: '',
 			/** 本课是否曾达到小测通关线（课级 storage，与「已学」字计数独立） */
-			quizPassedForLesson: false
+			quizPassedForLesson: false,
+			/** 本课拼音小测是否通关 */
+			pinyinQuizPassedForLesson: false,
+			charDrawerVisible: false,
+			charDrawerHanzi: '',
+			charDrawerPinyin: ''
 		}
 	},
 	computed: {
@@ -140,7 +212,34 @@ export default {
 			if (!t) return 0
 			return Math.min(5, Math.round((this.learnedCount / t) * 5))
 		},
+		progressNumText() {
+			if (this.totalChars > 0) return `已学 ${this.learnedCount}/${this.totalChars} 字`
+			if (this.lessonPinyinItems.length) {
+				return `本课 ${this.lessonPinyinItems.length} 个拼音`
+			}
+			return '已学 0/0 字'
+		},
+		lessonPinyinChunks() {
+			const list = Array.isArray(this.lessonPinyinItems) ? this.lessonPinyinItems : []
+			if (!list.length) return []
+			const rows = chunkHomeworkSymbols(list, { maxPerRow: 4, padToMaxPerRow: false })
+			return rows.map((row) => row.filter((s) => s != null && String(s).trim()))
+		},
+		canPinyinQuiz() {
+			return orderedUniqueSymbols(this.lessonPinyinItems).length >= 2
+		},
+		showModeRow() {
+			return !!(this.lessonChars.length || this.canPinyinQuiz)
+		},
 		followTipText() {
+			if (this.lessonPinyinItems.length && !this.lessonChars.length) {
+				return this.canPinyinQuiz
+					? '点四线格听读音；点「拼音小测」检查掌握'
+					: '点四线格听字母读音'
+			}
+			if (this.lessonPinyinItems.length) {
+				return '点字母格听读音；点汉字看详解'
+			}
 			return '点汉字看详解；点拼音格听读音'
 		}
 	},
@@ -157,6 +256,9 @@ export default {
 		playMengmengVoiceOnce(MENG_VOICE.LESSON_START, `meng_voice_lesson_${lessonKey}`).catch(
 			() => {}
 		)
+	},
+	onHide() {
+		this.closeCharDrawer()
 	},
 	methods: {
 		refreshStatusBarPx() {
@@ -183,7 +285,22 @@ export default {
 			return list
 		},
 		onCellCharTap(row) {
-			this.openChar(row)
+			const hanzi = String(row && row.hanzi ? row.hanzi : '').trim().charAt(0)
+			if (!hanzi) return
+			this.charDrawerHanzi = hanzi
+			this.charDrawerPinyin = this.pyShow(row)
+			this.charDrawerVisible = true
+		},
+		closeCharDrawer() {
+			this.charDrawerVisible = false
+		},
+		onCharDrawerDetail(payload) {
+			const hanzi = String(payload && payload.hanzi ? payload.hanzi : this.charDrawerHanzi).trim()
+			const pinyin = String(
+				payload && payload.pinyin != null ? payload.pinyin : this.charDrawerPinyin
+			).trim()
+			this.closeCharDrawer()
+			this.openChar({ hanzi, pinyin })
 		},
 		onCellPyTap(row) {
 			this.onTapSpeakPinyin(row)
@@ -205,6 +322,7 @@ export default {
 				const item = syncLessons[this.rjLessonIdx]
 				if (!item) {
 					this.lessonChars = []
+					this.lessonPinyinItems = []
 					this.totalChars = 0
 					this.rjContent = ''
 					this.hint = '课次字卡'
@@ -214,15 +332,26 @@ export default {
 				this.hint = String(item.title || '课次字卡')
 				this.rjContent = String(item.content != null ? item.content : '').trim()
 				this.lessonChars = buildLessonCharRowsFromRenjiaoItem(item)
+				this.lessonPinyinItems = buildLessonPinyinItemsFromRenjiaoItem(item)
 				this.totalChars = this.lessonChars.length
 				this.setLessonNavTitle()
 				return
 			}
 			this.rjContent = ''
+			this.lessonPinyinItems = []
 			const rows = await queryCurriculumChars(getCurriculumPrefs())
 			this.lessonChars = rows.filter((r) => String(r.lesson_hint || '未分课次') === this.hint)
 			this.totalChars = this.lessonChars.length
 			this.setLessonNavTitle()
+		},
+		async onLessonPinyinCell(payload) {
+			const py = payload && payload.syllable != null ? String(payload.syllable).trim() : ''
+			if (!py) return
+			logHanziSpeak('lesson.pinyin_item.tap', { py })
+			const ok = await this._pyPlay.run(({ isCancelled }) =>
+				playOpusForDisplayPinyin(py, { isCancelled })
+			)
+			logHanziSpeak('lesson.pinyin_item.play_done', { py, ok })
 		},
 		setLessonNavTitle() {
 			const t = this.hint.length > 16 ? `${this.hint.slice(0, 15)}…` : this.hint
@@ -248,15 +377,14 @@ export default {
 		},
 		refreshLessonQuizBadge() {
 			const p = getCurriculumPrefs()
+			const dims = {
+				textbook_version_id: p.textbook_version_id,
+				grade: p.grade,
+				semester: p.semester
+			}
 			const lk = buildStoredLessonKey(this.rjLessonIdx, this.hint)
-			this.quizPassedForLesson = hasLessonQuizPassed(
-				{
-					textbook_version_id: p.textbook_version_id,
-					grade: p.grade,
-					semester: p.semester
-				},
-				lk
-			)
+			this.quizPassedForLesson = hasLessonQuizPassed(dims, lk)
+			this.pinyinQuizPassedForLesson = hasLessonPinyinQuizPassed(dims, lk)
 		},
 		isLearned(hanzi) {
 			const h = String(hanzi || '').trim().charAt(0)
@@ -285,8 +413,12 @@ export default {
 		openChar(row) {
 			const p = getCurriculumPrefs()
 			const lesson = encodeURIComponent(this.hint || '')
-			const py = this.pyShow(row)
-			const pyQ = py && py !== '-' ? `&pinyin=${encodeURIComponent(py)}` : ''
+			const pyRaw =
+				row && row.pinyin != null && String(row.pinyin).trim()
+					? String(row.pinyin).trim()
+					: this.pyShow(row)
+			const py = pyRaw && pyRaw !== '-' ? pyRaw : ''
+			const pyQ = py ? `&pinyin=${encodeURIComponent(py)}` : ''
 			const url = `/pages/char/detail?hanzi=${encodeURIComponent(row.hanzi || '')}&grade=${p.grade}&semester=${encodeURIComponent(p.semester)}&lesson=${lesson}${pyQ}`
 			uni.navigateTo({ url })
 		},
@@ -337,6 +469,65 @@ export default {
 			if (this.rjLessonIdx != null) q = `rjLesson=${encodeURIComponent(String(this.rjLessonIdx))}`
 			else q = `hint=${encodeURIComponent(this.hint || '')}`
 			uni.navigateTo({ url: `/pages/literacy/lesson-quiz?${q}` })
+		},
+		async onPinyinQuiz() {
+			const symbols = orderedUniqueSymbols(this.lessonPinyinItems)
+			if (symbols.length < 2) {
+				uni.showToast({ title: '本课至少需要 2 个拼音', icon: 'none' })
+				return
+			}
+			let priorSymbols = []
+			if (this.rjLessonIdx != null) {
+				try {
+					const prefs = getCurriculumPrefs()
+					const rows = await loadRenjiaoTextbookTexts({
+						grade: prefs.grade,
+						semester: prefs.semester
+					})
+					const syncLessons = filterRenjiaoTextbookSyncLessons(rows)
+					priorSymbols = collectPriorLessonPinyinSymbols(syncLessons, this.rjLessonIdx)
+				} catch (e) {
+					console.warn('[lesson] prior pinyin for quiz', e)
+					priorSymbols = []
+				}
+			}
+			putLessonPinyinQuizTransfer({
+				lessonTitle: this.hint,
+				rjLessonIdx: this.rjLessonIdx,
+				symbols,
+				priorSymbols
+			})
+			let q = ''
+			if (this.rjLessonIdx != null) q = `rjLesson=${encodeURIComponent(String(this.rjLessonIdx))}`
+			else q = `hint=${encodeURIComponent(this.hint || '')}`
+			uni.navigateTo({ url: `/pages/literacy/lesson-pinyin-quiz?${q}` })
+		},
+		async onWritePractice() {
+			if (!this.lessonChars.length) {
+				uni.showToast({ title: '本课暂无生字', icon: 'none' })
+				return
+			}
+			const seen = new Set()
+			const rows = []
+			for (const r of this.lessonChars) {
+				const hanzi = String(r.hanzi || '').trim().match(/[\u4e00-\u9fff]/)?.[0] || ''
+				if (!hanzi || seen.has(hanzi)) continue
+				seen.add(hanzi)
+				rows.push({ hanzi, pinyin: this.pyShow(r) })
+			}
+			if (!rows.length) {
+				uni.showToast({ title: '本课暂无生字', icon: 'none' })
+				return
+			}
+			// 先门禁再写入 transfer，避免配额失败后残留传参
+			const ok = await startWritePractice({ fromLesson: true, deferNavigate: true })
+			if (!ok) return
+			putLessonWriteTransfer({
+				lessonTitle: this.hint,
+				rjLessonIdx: this.rjLessonIdx,
+				rows
+			})
+			uni.navigateTo({ url: '/pages/literacy/write-practice?from=lesson' })
 		}
 	}
 }
@@ -352,7 +543,7 @@ export default {
 
 .lesson-hero {
 	position: relative;
-	padding: 0 20rpx 36rpx;
+	padding: 0 20rpx 22rpx;
 	box-sizing: border-box;
 	overflow: hidden;
 }
@@ -369,7 +560,7 @@ export default {
 	left: 0;
 	right: 0;
 	top: 0;
-	height: 220rpx;
+	height: 160rpx;
 	background: rgba(255, 255, 255, 0);
 	pointer-events: none;
 }
@@ -377,34 +568,57 @@ export default {
 .lesson-hero-card {
 	position: relative;
 	z-index: 1;
-	padding: 22rpx 22rpx 20rpx;
-	border-radius: 32rpx;
+	padding: 14rpx 18rpx 12rpx;
+	border-radius: 24rpx;
 	background: rgba(255, 255, 255, 0.9);
 	border: 2rpx solid rgba(255, 255, 255, 0.95);
 	box-shadow:
-		0 12rpx 40rpx rgba(255, 150, 180, 0.14),
-		0 8rpx 24rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
+		0 8rpx 28rpx rgba(255, 150, 180, 0.12),
+		0 6rpx 16rpx var(--meng-shadow, rgba(44, 36, 25, 0.05));
+}
+
+.lesson-hero-top {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12rpx;
+	margin-bottom: 6rpx;
 }
 
 .lesson-grade-chip {
 	display: inline-flex;
-	padding: 8rpx 18rpx;
-	margin-bottom: 12rpx;
+	flex-shrink: 0;
+	padding: 4rpx 12rpx;
 	border-radius: 999rpx;
-	font-size: 22rpx;
+	font-size: 20rpx;
 	font-weight: 600;
 	color: #c44d6a;
 	background: #ffd4f0;
-	border: 2rpx solid rgba(255, 120, 160, 0.35);
+	border: 1rpx solid rgba(255, 120, 160, 0.35);
+}
+
+.lesson-title-row {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 2rpx 4rpx;
 }
 
 .lesson-title {
-	display: block;
-	font-size: 36rpx;
+	font-size: 32rpx;
 	font-weight: 800;
 	color: var(--meng-text, #2c2419);
-	line-height: 1.35;
-	letter-spacing: 1rpx;
+	line-height: 1.25;
+	letter-spacing: 0.5rpx;
+}
+
+.lesson-stars-paren {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: var(--meng-text-secondary, #6d5e52);
+	line-height: 1.25;
 }
 
 .lesson-progress-row {
@@ -412,22 +626,24 @@ export default {
 	flex-direction: row;
 	align-items: center;
 	flex-wrap: wrap;
-	margin-top: 16rpx;
+	gap: 8rpx;
+	margin-top: 8rpx;
 }
 
 .lesson-progress-num {
-	font-size: 24rpx;
+	font-size: 22rpx;
 	color: var(--meng-text-secondary, #6d5e52);
 	font-weight: 600;
 	flex: 1;
 	min-width: 0;
+	text-align: right;
 }
 
 .lesson-quiz-badge {
 	display: inline-flex;
-	margin-top: 12rpx;
-	padding: 6rpx 16rpx;
-	font-size: 22rpx;
+	margin: 0;
+	padding: 2rpx 10rpx;
+	font-size: 18rpx;
 	font-weight: 700;
 	color: #2e7d32;
 	background: #d4f0dc;
@@ -435,12 +651,22 @@ export default {
 	border: 1rpx solid rgba(111, 186, 125, 0.4);
 }
 
+.lesson-quiz-badge--pinyin {
+	color: #1565c0;
+	background: #d4eefc;
+	border-color: rgba(30, 136, 229, 0.35);
+}
+
+.mode-tile--pinyin-quiz {
+	background: #64b5f6;
+}
+
 .lesson-sheet {
 	position: relative;
 	z-index: 2;
-	margin: -32rpx 20rpx 0;
-	padding: 22rpx 20rpx 24rpx;
-	border-radius: 36rpx 36rpx 28rpx 28rpx;
+	margin: -16rpx 20rpx 0;
+	padding: 18rpx 18rpx 20rpx;
+	border-radius: 28rpx;
 	background: rgba(255, 255, 255, 0.88);
 	border: 2rpx solid rgba(255, 255, 255, 0.95);
 	box-shadow:
@@ -484,12 +710,35 @@ export default {
 	line-height: 1.45;
 }
 
+.lesson-practice-card {
+	position: relative;
+	z-index: 2;
+	margin: 12rpx 20rpx 24rpx;
+	padding: 14rpx 16rpx 16rpx;
+	border-radius: 24rpx;
+	background: rgba(255, 255, 255, 0.92);
+	border: 2rpx solid rgba(255, 255, 255, 0.95);
+	box-shadow:
+		0 8rpx 28rpx rgba(255, 150, 180, 0.1),
+		0 12rpx 32rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
+	box-sizing: border-box;
+}
+
+.lesson-practice-title {
+	display: block;
+	margin-bottom: 10rpx;
+	font-size: 26rpx;
+	font-weight: 800;
+	color: var(--meng-text, #2c2419);
+	letter-spacing: 0.5rpx;
+}
+
 .mode-row {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
 	gap: 12rpx;
-	margin-bottom: 22rpx;
+	margin-bottom: 0;
 }
 
 .mode-tile {
@@ -498,10 +747,10 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 18rpx 8rpx 16rpx;
-	border-radius: 24rpx;
+	padding: 12rpx 6rpx 10rpx;
+	border-radius: 18rpx;
 	box-shadow:
-		0 8rpx 20rpx rgba(44, 36, 25, 0.08),
+		0 6rpx 14rpx rgba(44, 36, 25, 0.08),
 		inset 0 2rpx 0 rgba(255, 255, 255, 0.45);
 }
 
@@ -514,17 +763,22 @@ export default {
 	background: #7eb8ff;
 }
 
+.mode-tile--write {
+	background: #e8a070;
+}
+
 .mode-tile--quiz {
 	background: #ffd060;
 }
 
 .mode-emoji {
-	font-size: 36rpx;
-	margin-bottom: 6rpx;
+	font-size: 30rpx;
+	margin-bottom: 2rpx;
+	line-height: 1.1;
 }
 
 .mode-label {
-	font-size: 24rpx;
+	font-size: 22rpx;
 	font-weight: 800;
 	color: rgba(255, 255, 255, 0.95);
 	text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.12);
@@ -630,6 +884,30 @@ export default {
 }
 
 
+.pinyin-block {
+	margin-bottom: 24rpx;
+}
+
+.pinyin-block-title {
+	display: block;
+	font-size: 28rpx;
+	font-weight: 800;
+	color: var(--meng-text, #3d3832);
+	margin-bottom: 14rpx;
+}
+
+.pinyin-homework-wrap {
+	margin-bottom: 14rpx;
+	padding: 8rpx 6rpx;
+	border-radius: 18rpx;
+	background: rgba(255, 255, 255, 0.92);
+	box-sizing: border-box;
+}
+
+.pinyin-homework-wrap:last-child {
+	margin-bottom: 0;
+}
+
 .empty-lesson {
 	padding: 40rpx 24rpx;
 	background: #fff0f5;
@@ -666,14 +944,17 @@ export default {
 }
 
 .stars {
-	display: flex;
+	display: inline-flex;
 	flex-direction: row;
-	margin-right: 14rpx;
+	flex-shrink: 0;
+	align-items: baseline;
+	margin: 0 1rpx;
 }
 
 .star {
-	font-size: 30rpx;
-	margin-right: 4rpx;
+	font-size: 22rpx;
+	margin-right: 1rpx;
+	line-height: 1;
 	line-height: 1;
 }
 

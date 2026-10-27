@@ -90,6 +90,15 @@ export default {
 			type: Boolean,
 			default: true
 		},
+		/**
+		 * 闲置展示：preview=挂 NORMAL 整字；blank=只标记 ready，等 playAnimation 再挂
+		 * （避免「整字一闪再笔顺」）
+		 */
+		idleMode: {
+			type: String,
+			default: 'preview',
+			validator: (v) => ['preview', 'blank'].includes(String(v || ''))
+		},
 		/** 为 true 时不显示组件内笔画提示（由父页自行布局） */
 		hideStrokeHint: {
 			type: Boolean,
@@ -148,6 +157,12 @@ export default {
 		},
 		effectiveNarrator() {
 			return this.narrator || getAudioNarrator()
+		},
+		isBlankIdle() {
+			return String(this.idleMode || '') === 'blank'
+		},
+		attachDelayMs() {
+			return this.isBlankIdle ? 16 : 48
 		}
 	},
 	watch: {
@@ -293,7 +308,13 @@ export default {
 			this.refreshStrokeNames()
 			this.strokeReady = true
 			this.animFallback = false
+			/** blank：不挂预览，直接 ready，等 playAnimation */
+			if (this.isBlankIdle) {
+				this.$emit('ready-change', true)
+				return
+			}
 			const token = ++this.mountGen
+			const delay = this.attachDelayMs
 			const attach = () => {
 				this.attachTimer = null
 				if (token !== this.mountGen) return
@@ -301,7 +322,7 @@ export default {
 			}
 			this.$nextTick(() => {
 				this.$nextTick(() => {
-					this.attachTimer = setTimeout(attach, 48)
+					this.attachTimer = setTimeout(attach, delay)
 				})
 			})
 		},
@@ -374,9 +395,10 @@ export default {
 				if (token !== this.mountGen) return
 				this.mountAnimationWriter(ch)
 			}
+			const delay = this.attachDelayMs
 			this.$nextTick(() => {
 				this.$nextTick(() => {
-					this.attachTimer = setTimeout(attach, 48)
+					this.attachTimer = setTimeout(attach, delay)
 				})
 			})
 		},
@@ -410,6 +432,11 @@ export default {
 			this.destroyWriterOnly()
 			const ch = this.displayChar
 			if (ch && ch !== '—') {
+				if (this.isBlankIdle) {
+					this.strokeReady = true
+					this.$emit('ready-change', true)
+					return
+				}
 				this.remount()
 			}
 		},

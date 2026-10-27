@@ -89,7 +89,7 @@
 				<text class="loading-text">加载中…</text>
 			</view>
 			<view v-else-if="activeEntry" class="glass-card result-card">
-			<!-- 左：田字格动画；右：拼音与部首等（并排省纵向空间，便于一屏看完） -->
+			<!-- 左：田字格动画；右：拼音与结构等（并排省纵向空间，便于一屏看完） -->
 			<view class="hero-top-row">
 				<view class="hero-top-left" @click="playActiveDictionaryPinyin">
 					<view class="tianzi-wrap-cnchar" :style="dictStrokeWrapStyle">
@@ -126,10 +126,6 @@
 								</view>
 								<text v-else class="meta-py-fallback font-pinyin">{{ pinyinDisplayPlain }}</text>
 							</view>
-						</view>
-						<view class="meta-compact-row">
-							<text class="meta-compact-k">部首</text>
-							<text class="meta-compact-v">{{ activeEntry.radical }}</text>
 						</view>
 						<view class="meta-compact-row">
 							<text class="meta-compact-k">结构</text>

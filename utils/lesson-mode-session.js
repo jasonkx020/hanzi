@@ -100,3 +100,68 @@ export function takeLessonDictationTransfer() {
 		return null
 	}
 }
+
+/**
+ * 本课写字练习传参（结构同 quiz）。
+ * @param {object} payload
+ * @param {string} [payload.lessonTitle]
+ * @param {number|null} [payload.rjLessonIdx]
+ * @param {Array<{ hanzi: string, pinyin?: string }>} payload.rows
+ */
+export function putLessonWriteTransfer(payload) {
+	try {
+		uni.setStorageSync(STORAGE_KEY, {
+			type: 'write',
+			payload: payload || {},
+			at: Date.now()
+		})
+	} catch (e) {
+		console.warn('[lesson-mode-session] putLessonWriteTransfer', e)
+	}
+}
+
+/** @returns {null | { lessonTitle?: string, rjLessonIdx?: number|null, rows: Array<{ hanzi: string, pinyin?: string }> }} */
+export function takeLessonWriteTransfer() {
+	try {
+		const o = uni.getStorageSync(STORAGE_KEY)
+		uni.removeStorageSync(STORAGE_KEY)
+		if (!o || o.type !== 'write' || !o.payload) return null
+		return o.payload
+	} catch (e) {
+		console.warn('[lesson-mode-session] takeLessonWriteTransfer', e)
+		return null
+	}
+}
+
+/**
+ * 本课拼音小测传参。
+ * @param {object} payload
+ * @param {string} [payload.lessonTitle]
+ * @param {number|null} [payload.rjLessonIdx]
+ * @param {string[]} payload.symbols 本课（全面覆盖）
+ * @param {string[]} [payload.priorSymbols] 前面课次拼音（随机混入）
+ */
+export function putLessonPinyinQuizTransfer(payload) {
+	try {
+		uni.setStorageSync(STORAGE_KEY, {
+			type: 'pinyin_quiz',
+			payload: payload || {},
+			at: Date.now()
+		})
+	} catch (e) {
+		console.warn('[lesson-mode-session] putLessonPinyinQuizTransfer', e)
+	}
+}
+
+/** @returns {null | { lessonTitle?: string, rjLessonIdx?: number|null, symbols: string[], priorSymbols?: string[] }} */
+export function takeLessonPinyinQuizTransfer() {
+	try {
+		const o = uni.getStorageSync(STORAGE_KEY)
+		uni.removeStorageSync(STORAGE_KEY)
+		if (!o || o.type !== 'pinyin_quiz' || !o.payload) return null
+		return o.payload
+	} catch (e) {
+		console.warn('[lesson-mode-session] takeLessonPinyinQuizTransfer', e)
+		return null
+	}
+}

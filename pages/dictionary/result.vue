@@ -22,13 +22,9 @@
 		</meng-page-nav>
 
 		<scroll-view scroll-y class="page-scroll">
-			<!-- 左缘：部首/结构/笔画；右侧区域：田字格居中 -->
+			<!-- 左缘：结构/笔画；右侧区域：田字格居中 -->
 			<view class="hero-section">
 				<view class="hero-meta-col">
-					<view class="meta-side-card">
-						<text class="meta-side-k">部首</text>
-						<text class="meta-side-v">{{ ext.radical || '—' }}</text>
-					</view>
 					<view class="meta-side-card">
 						<text class="meta-side-k">结构</text>
 						<text class="meta-side-v">{{ ext.structure || '—' }}</text>

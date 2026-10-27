@@ -23,6 +23,7 @@
 			class="pinyin-lab-cell__pflr"
 			:syllables="syllableList"
 			:size="rowSize"
+			:font-class="fontClass"
 			:auto-wrap="false"
 			:interactive="interactive"
 			:sheet-bg="resolvedBg"
@@ -47,6 +48,12 @@ export default {
 		syllables: { type: Array, default: null },
 		/** compact | md | grid | tone */
 		size: { type: String, default: '' },
+		/** 与首页四线格一致：默认 step 书写体 */
+		fontClass: {
+			type: String,
+			default: 'font-pinyin-step',
+			validator: (v) => ['font-pinyin', 'font-pinyin-step', 'pinyin', 'step'].includes(String(v || ''))
+		},
 		/** 用于配色：声母 | 韵母 | 整体认读 | 音调 */
 		categoryTab: { type: String, default: '' },
 		sheetBg: { type: String, default: '' },

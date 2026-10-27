@@ -253,6 +253,13 @@
 			}
 		},
 		{
+			"path": "pages/literacy/lesson-pinyin-quiz",
+			"style": {
+				"navigationBarTitleText": "拼音小测",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/literacy/lesson-dictation",
 			"style": {
 				"navigationBarTitleText": "听写",

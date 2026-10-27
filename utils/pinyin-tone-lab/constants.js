@@ -23,10 +23,10 @@ export const TONE_BODY_GESTURES = [
 ]
 
 export const TONE_META = [
-	{ tone: 1, label: '一声', kidLabel: '平平的', symbol: '→', color: '#5B9BD5' },
-	{ tone: 2, label: '二声', kidLabel: '往上扬', symbol: '↑', color: '#70AD47' },
+	{ tone: 1, label: '一声', kidLabel: '平', symbol: '→', color: '#5B9BD5' },
+	{ tone: 2, label: '二声', kidLabel: '扬', symbol: '↗', color: '#70AD47' },
 	{ tone: 3, label: '三声', kidLabel: '拐弯', symbol: '∨', color: '#FFC000' },
-	{ tone: 4, label: '四声', kidLabel: '往下落', symbol: '↓', color: '#ED7D31' }
+	{ tone: 4, label: '四声', kidLabel: '降', symbol: '↘', color: '#ED7D31' }
 ]
 
 /** P0 听辨 / 配对用的音节池（单韵母 + 常见音节） */

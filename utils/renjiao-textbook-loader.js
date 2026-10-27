@@ -24,7 +24,9 @@ const TEXTBOOK_EXTRA_KEYS = [
 	/** 与同册写字表该课组对齐 */
 	'writing_chars',
 	/** 与同册词语表该课组对齐（hanzi 可为多字词） */
-	'word_terms'
+	'word_terms',
+	/** 本课字母/音节点读项（一年级汉语拼音课） */
+	'pinyin_items'
 ]
 
 function buildFileName(grade, semester) {
@@ -155,23 +157,66 @@ function normalizeCharPairList(x) {
 }
 
 /**
- * 是否含课本同步用的识字表 / 写字表（不含词语表 word_terms）
+ * 是否含课本同步用的识字表 / 写字表 / 拼音字母项（不含词语表 word_terms）
  * @param {Record<string, unknown>} item loadRenjiaoTextbookTexts 返回的单条
  */
 export function renjiaoLessonHasSyncChars(item) {
 	if (!item || typeof item !== 'object') return false
 	const lit = normalizeCharPairList(item.literacy_chars)
 	const wri = normalizeCharPairList(item.writing_chars)
-	return lit.length > 0 || wri.length > 0
+	const py = buildLessonPinyinItemsFromRenjiaoItem(item)
+	return lit.length > 0 || wri.length > 0 || py.length > 0
 }
 
 /**
- * 只保留有识字或写字条目的课文（顺序与 JSON 一致）
+ * 只保留有识字、写字或拼音字母项的课文（顺序与 JSON 一致）
  * @param {Array<Record<string, unknown>>} rows
  */
 export function filterRenjiaoTextbookSyncLessons(rows) {
 	if (!Array.isArray(rows)) return []
 	return rows.filter(renjiaoLessonHasSyncChars)
+}
+
+/**
+ * 本课拼音字母/音节点读列表
+ * @param {Record<string, unknown>} item
+ * @returns {string[]}
+ */
+export function buildLessonPinyinItemsFromRenjiaoItem(item) {
+	if (!item || typeof item !== 'object') return []
+	const raw = item.pinyin_items
+	if (!Array.isArray(raw)) return []
+	const out = []
+	const seen = Object.create(null)
+	for (const x of raw) {
+		const s = String(x == null ? '' : x).trim()
+		if (!s || seen[s]) continue
+		seen[s] = 1
+		out.push(s)
+	}
+	return out
+}
+
+/**
+ * 同步课列表中、当前课次之前各课的拼音项（去重保序）
+ * @param {Array<Record<string, unknown>>} syncLessons filterRenjiaoTextbookSyncLessons 结果
+ * @param {number} currentIdx 当前课在 syncLessons 中的下标
+ * @returns {string[]}
+ */
+export function collectPriorLessonPinyinSymbols(syncLessons, currentIdx) {
+	const idx = Math.floor(Number(currentIdx))
+	if (!Array.isArray(syncLessons) || !Number.isFinite(idx) || idx <= 0) return []
+	const seen = Object.create(null)
+	const out = []
+	for (let i = 0; i < idx; i++) {
+		const items = buildLessonPinyinItemsFromRenjiaoItem(syncLessons[i])
+		for (const s of items) {
+			if (!s || seen[s]) continue
+			seen[s] = 1
+			out.push(s)
+		}
+	}
+	return out
 }
 
 /**

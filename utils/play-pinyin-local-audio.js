@@ -211,8 +211,9 @@ export async function sleepUnlessCancelled(ms, isCancelled) {
 }
 
 /**
- * 先试无调 opus，再试一声（可选）；任一成功返回 true。
- * @param {boolean} useTone1Fallback 整体认读 / 拼读练习等与格子逻辑一致
+ * 先试「符号原形」opus，再可选试一声（显式开启时）。
+ * 展示拼音点读请用 playOpusForDisplayPinyin（禁止降级）；本函数仅乐园格子等显式兼容入口。
+ * @param {boolean} useTone1Fallback 是否允许一声替补
  */
 export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, opts = {}) {
 	const tryUrls = []
@@ -292,10 +293,9 @@ export async function playToneGridCell(symbol, opts = {}) {
 }
 
 /**
- * 用户当前看到的拼音串：拆音节后按 `/static/pinyin/{音节}.opus` 查找播放；
- * 带调文件不存在时再试无声调 + 一声替补；仍失败则静默结束（不 TTS）。
+ * 仅播与展示一致的精确音节 opus；失败/中止不降级到无调或一声（宁可不播，不播错调）；不 TTS。
  * @param {string} displayPinyin 与界面展示一致（如 pyShow）
- * @param {{ gapMs?: number, narrator?: string }} [opts]
+ * @param {{ gapMs?: number, narrator?: string, isCancelled?: () => boolean }} [opts]
  * @returns {Promise<boolean>} 是否至少有一段成功播放
  */
 export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
@@ -310,34 +310,42 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
 		const sym = String(tokens[i] || '').trim()
 		if (!sym) continue
-		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-		let played = false
 		const path = getLocalPinyinAudioPath(sym)
-		try {
-			await playPinyinLocalAudio(path, { timeoutMs: 3200 })
-			played = true
-			logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path })
-		} catch (e) {
-			if (isPinyinPlayAborted(e)) {
-				if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-			} else {
-			logHanziSpeak('lesson.display_pinyin.exact_fail', {
-				sym,
-				path,
-				err: e && (e.errMsg || e.message || String(e))
-			})
+		if (!path) {
+			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym, reason: 'empty_path' })
+			continue
+		}
+		let played = false
+		let aborted = false
+		for (let attempt = 0; attempt < 2 && !played && !aborted; attempt++) {
+			if (typeof isCancelled === 'function' && isCancelled()) return anyOk
+			try {
+				await playPinyinLocalAudio(path, { timeoutMs: 3200 })
+				played = true
+				logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path, attempt })
+			} catch (e) {
+				if (isPinyinPlayAborted(e)) {
+					aborted = true
+					logHanziSpeak('lesson.display_pinyin.exact_aborted', { sym, path, attempt })
+					break
+				}
+				logHanziSpeak('lesson.display_pinyin.exact_fail', {
+					sym,
+					path,
+					attempt,
+					err: e && (e.errMsg || e.message || String(e))
+				})
+				if (attempt === 0) {
+					if (!(await sleepUnlessCancelled(60, isCancelled))) return anyOk
+				}
 			}
 		}
-		if (!played) {
+		if (aborted) {
 			if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-			played = await playLocalPinyinNeutralThenTone1(sym, true, {
-				skipTonedExact: true,
-				isCancelled
-			})
-			if (played) logHanziSpeak('lesson.display_pinyin.fallback_neutral_ok', { sym })
+			continue
 		}
 		if (!played) {
-			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym })
+			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym, path })
 		}
 		if (played) anyOk = true
 		if (i < tokens.length - 1 && gapMs > 0) {
@@ -374,11 +382,15 @@ function buildLocalAudioSrcCandidates(src) {
 	return out
 }
 
-export function playPinyinLocalAudio(src, opts = {}) {
+export async function playPinyinLocalAudio(src, opts = {}) {
 	if (!src) return Promise.reject(new Error('empty src'))
 	const candidates = buildLocalAudioSrcCandidates(src)
 	if (!candidates.length) return Promise.reject(new Error('empty src'))
+	const hadActive = !!_activePlay || !!_inner || !!_chainAbort
 	stopLocalPinyinAudio()
+	/** 刚停播时稍等再起播，避免 Android stop/destroy 与 play 竞态 */
+	const coolMs = opts.postStopDelayMs != null ? opts.postStopDelayMs : hadActive ? 56 : 0
+	if (coolMs > 0) await sleep(coolMs)
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
 	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 3200
@@ -462,7 +474,8 @@ export function playPinyinLocalAudioSequence(symbols, opts = {}) {
 	if (!list.length) return Promise.resolve(false)
 
 	const gapMs = opts.gapMs != null ? opts.gapMs : 0
-	const useTone1Fallback = opts.useTone1Fallback !== false
+	/** 默认禁止一声/无调降级；显式 true 才替补（笔画连读等少数场景慎用） */
+	const useTone1Fallback = opts.useTone1Fallback === true
 	const isCancelled = opts.isCancelled
 
 	stopLocalPinyinAudio()

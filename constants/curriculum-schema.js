@@ -15,7 +15,9 @@ export const STORAGE_KEYS = {
 	/** 与 TABLE_USER_CHAR_PROGRESS 字段一致的对象映射 JSON */
 	USER_CHAR_PROGRESS: 'user_char_progress_v1',
 	/** 课级缓存：小测通过时间、最佳成绩等（见 user-lesson-progress-storage.js） */
-	USER_LESSON_PROGRESS: 'user_lesson_progress_v1'
+	USER_LESSON_PROGRESS: 'user_lesson_progress_v1',
+	/** 拼音小测错题计数（见 user-pinyin-wrong-storage.js） */
+	USER_PINYIN_WRONG: 'user_pinyin_wrong_v1'
 }
 
 /** 教材版本标识 — 对应字段 textbook_version_id */

@@ -47,8 +47,8 @@
 
 	<meng-sub-page
 		v-else
-		title="写字练习"
-		subtitle="按笔顺在田字格里写"
+		:title="pageTitle"
+		:subtitle="pageSubtitle"
 		avatar-pose="happy"
 		:overlap-body="false"
 	>
@@ -56,24 +56,39 @@
 				<view class="char-badge">
 					<text class="char-badge-text">{{ displayChar }}</text>
 				</view>
+				<view v-if="pinyinTokens.length" class="pinyin-beside">
+					<pinyin-four-lines-row :syllables="pinyinTokens" size="xl" />
+				</view>
 				<view class="hero-meta">
-					<view v-if="pinyinTokens.length" class="pinyin-row">
-						<pinyin-four-lines-row :syllables="pinyinTokens" size="md" />
-					</view>
 					<text class="progress-line">第 {{ currentStrokeNo }} / {{ strokeTotal }} 笔</text>
-					<view class="hint-row">
-						<text class="hint-line">
-							{{ completed ? '全部笔画正确，太棒了！' : (currentStrokeGuidance || '请按笔顺写…') }}
-						</text>
-						<view
-							v-if="!completed && currentStrokeLabel"
-							class="hint-speak"
-							@click.stop="playCurrentStrokeAudio"
-						>
-							<text class="hint-speak-icon">🔊</text>
-							<text class="hint-speak-text">听笔画</text>
-						</view>
+					<text class="hint-line">
+						{{ completed ? '全部笔画正确，太棒了！' : (currentStrokeGuidance || '请按笔顺写…') }}
+					</text>
+					<view
+						v-if="!completed && currentStrokeLabel"
+						class="hint-speak"
+						@click.stop="playCurrentStrokeAudio"
+					>
+						<text class="hint-speak-icon">🔊</text>
+						<text class="hint-speak-text">听笔画</text>
 					</view>
+				</view>
+			</view>
+
+			<view v-if="allWords.length" class="write-words-block">
+				<view class="write-words-chips">
+					<text
+						v-for="(w, i) in displayWords"
+						:key="'ww-' + wordsPage + '-' + i"
+						class="write-word-chip"
+					>{{ w }}</text>
+				</view>
+				<view
+					v-if="canRefreshWords"
+					class="write-words-more"
+					@click.stop="refreshWordsBatch"
+				>
+					<text class="write-words-more-text">换一批</text>
 				</view>
 			</view>
 
@@ -132,20 +147,24 @@
 					<text class="tool-caption">从第一笔重来</text>
 				</view>
 				<view class="tool-cell">
-					<button class="tool-btn tool-btn--primary" size="mini" @click="nextChar">换一字</button>
-					<text class="tool-caption">练别的生字</text>
+					<button class="tool-btn tool-btn--primary" size="mini" @click="nextChar">
+						{{ lessonMode ? '下一字' : '换一字' }}
+					</button>
+					<text class="tool-caption">{{ lessonMode ? '本课下一个字' : '练别的生字' }}</text>
 				</view>
 			</view>
 
 		<view class="input-card">
-			<text class="input-label">想练哪个字？输入一个汉字后点确定</text>
+			<text class="input-label">{{
+				lessonMode ? '指定本课某个字练（须为本课生字）' : '想练哪个字？输入一个汉字后点确定'
+			}}</text>
 			<view class="input-row">
 				<input
 					v-model="inputHanzi"
 					class="hanzi-input"
 					type="text"
 					maxlength="8"
-					placeholder="例如：人、大、国"
+					:placeholder="lessonMode ? '输入本课生字' : '例如：人、大、国'"
 					confirm-type="done"
 					@confirm="applyHanzi"
 				/>
@@ -178,6 +197,7 @@ import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
 import { recordStrokePractice } from '@/utils/achievement-stats-storage.js'
 import { buildWritePracticeCharPool } from '@/utils/write-practice-char-pool.js'
+import { takeLessonWriteTransfer } from '@/utils/lesson-mode-session.js'
 import {
 	MENG_VOICE,
 	playMengmengVoice,
@@ -188,12 +208,15 @@ import {
 import { LESSON_AUDIO_GAP_MS, sleepMs } from '@/utils/lesson-mode-audio.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
+import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
 
 const CANVAS_LENGTH_FULL = 200
 const CANVAS_LENGTH_COMPACT = 200
 /** 整字读音播完后，再过多久才播笔画名 / 闪笔画 */
 const CHAR_TO_STROKE_AUDIO_GAP_MS = 2000
 const CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT = 600
+/** 组词每屏展示条数 */
+const WORDS_PAGE_SIZE = 4
 
 export default {
 	components: { MengSubPage, PinyinFourLinesRow },
@@ -245,10 +268,35 @@ export default {
 			charPool: [],
 			poolIndex: 0,
 			wrongAddedAt: 0,
-			mountPending: false
+			/** 当前字本轮是否已记入易错（避免一笔加一次） */
+			wrongCountedForChar: false,
+			autoNextTimer: null,
+			mountPending: false,
+			/** 本课写字：固定字表，不走全书换字池 */
+			lessonMode: false,
+			lessonTitle: '',
+			/** @type {Record<string, string>} */
+			lessonPinyinMap: {},
+			/** 当前字组词（来自字典详情） */
+			charWords: [],
+			wordsGen: 0,
+			/** 组词分页：换一批 */
+			wordsPage: 0
 		}
 	},
 	computed: {
+		pageTitle() {
+			return this.lessonMode ? '本课写字' : '写字练习'
+		},
+		pageSubtitle() {
+			if (this.lessonMode) {
+				const n = this.charPool.length
+				const title = String(this.lessonTitle || '').trim()
+				if (title) return `${title} · ${n} 字`
+				return n > 0 ? `本课写字 · ${n} 字` : '本课写字练习'
+			}
+			return '按笔顺在田字格里写'
+		},
 		displayChar() {
 			const c = String(this.hanzi || '').trim().charAt(0)
 			return c || '—'
@@ -304,10 +352,63 @@ export default {
 		},
 		charToStrokeGapMs() {
 			return this.compact ? CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT : CHAR_TO_STROKE_AUDIO_GAP_MS
+		},
+		/** 当前字全部可用组词（去重） */
+		allWords() {
+			const raw = this.charWords
+			if (!Array.isArray(raw) || !raw.length) return []
+			const out = []
+			const seen = Object.create(null)
+			for (const w of raw) {
+				const k = String(w || '').trim()
+				if (!k || k === '暂无组词' || seen[k]) continue
+				seen[k] = 1
+				out.push(k)
+			}
+			return out
+		},
+		/** 当前页组词（每页 WORDS_PAGE_SIZE 个） */
+		displayWords() {
+			const list = this.allWords
+			if (!list.length) return []
+			const pages = Math.max(1, Math.ceil(list.length / WORDS_PAGE_SIZE))
+			const page = ((Number(this.wordsPage) % pages) + pages) % pages
+			const start = page * WORDS_PAGE_SIZE
+			return list.slice(start, start + WORDS_PAGE_SIZE)
+		},
+		canRefreshWords() {
+			return this.allWords.length > WORDS_PAGE_SIZE
 		}
 	},
 	onLoad(query) {
 		if (this.compact) return
+		const fromLesson = String(query?.from || '') === 'lesson'
+		if (fromLesson) {
+			const payload = takeLessonWriteTransfer()
+			const rows = Array.isArray(payload?.rows) ? payload.rows : []
+			const seen = new Set()
+			const pool = []
+			const pyMap = {}
+			for (const r of rows) {
+				const h = String(r?.hanzi || '').match(/[\u4e00-\u9fff]/)?.[0] || ''
+				if (!h || seen.has(h)) continue
+				seen.add(h)
+				pool.push(h)
+				const py = String(r?.pinyin || '').trim()
+				if (py && py !== '-') pyMap[h] = py
+			}
+			if (pool.length) {
+				this.lessonMode = true
+				this.lessonTitle = String(payload?.lessonTitle || '').trim()
+				this.lessonPinyinMap = pyMap
+				this.charPool = pool
+				this.poolIndex = 0
+				this.hanzi = pool[0]
+				this.inputHanzi = pool[0]
+				return
+			}
+			uni.showToast({ title: '本课暂无生字', icon: 'none' })
+		}
 		const from = query?.hanzi ? decodeURIComponent(query.hanzi) : ''
 		const pure = String(from || '').match(/[\u4e00-\u9fff]/)?.[0]
 		if (pure) {
@@ -339,14 +440,22 @@ export default {
 		}).catch(() => {})
 	},
 	onUnload() {
+		this.clearAutoNextTimer()
 		this.stopAllPracticeAudio()
 		stopMengmengVoice()
 	},
 	onHide() {
+		this.clearAutoNextTimer()
 		this.stopAllPracticeAudio()
 		stopMengmengVoice()
 	},
 	methods: {
+		clearAutoNextTimer() {
+			if (this.autoNextTimer != null) {
+				clearTimeout(this.autoNextTimer)
+				this.autoNextTimer = null
+			}
+		},
 		curriculumDims() {
 			const p = getCurriculumPrefs()
 			const g = Number(p.grade)
@@ -370,11 +479,21 @@ export default {
 			})
 		},
 		async bootstrap() {
-			await this.loadCharPool()
+			if (!this.lessonMode) {
+				await this.loadCharPool()
+			} else {
+				const py = this.lessonPinyinMap[this.displayChar]
+				this.refreshMeta(py)
+				this.mountTestWriter()
+				this.loadCharWords(this.displayChar)
+				return
+			}
 			this.refreshMeta()
 			this.mountTestWriter()
+			this.loadCharWords(this.displayChar)
 		},
 		async loadCharPool(excludeChar) {
+			if (this.lessonMode) return
 			try {
 				this.charPool = await buildWritePracticeCharPool({
 					excludeChar: excludeChar != null ? excludeChar : this.displayChar,
@@ -385,7 +504,15 @@ export default {
 			}
 		},
 		refreshMeta(externalPinyin) {
-			const pyIn = String(externalPinyin != null ? externalPinyin : this.initialPinyin || '')
+			const fromLesson =
+				this.lessonMode && this.lessonPinyinMap[this.displayChar]
+					? this.lessonPinyinMap[this.displayChar]
+					: ''
+			const pyIn = String(
+				externalPinyin != null
+					? externalPinyin
+					: fromLesson || this.initialPinyin || ''
+			)
 				.replace(/\s+/g, ' ')
 				.trim()
 			if (pyIn) {
@@ -403,6 +530,7 @@ export default {
 		applyChar(hanzi, pinyin) {
 			const pure = String(hanzi || '').match(/[\u4e00-\u9fff]/)?.[0]
 			if (!pure) return
+			this.clearAutoNextTimer()
 			this.mountPending = true
 			this.stopAllPracticeAudio()
 			this.hanzi = pure
@@ -410,8 +538,37 @@ export default {
 			this.history = []
 			this.completed = false
 			this.activeStroke = 0
+			this.wrongCountedForChar = false
+			this.charWords = []
+			this.wordsPage = 0
 			this.refreshMeta(pinyin)
 			this.mountTestWriter()
+			this.loadCharWords(pure)
+		},
+		async loadCharWords(hanzi) {
+			if (this.compact) return
+			const pure = String(hanzi || '').trim().charAt(0)
+			if (!pure) {
+				this.charWords = []
+				this.wordsPage = 0
+				return
+			}
+			const gen = ++this.wordsGen
+			try {
+				const entry = await getDictionaryEntry(pure)
+				if (gen !== this.wordsGen || this.displayChar !== pure) return
+				this.charWords = Array.isArray(entry?.words) ? entry.words : []
+				this.wordsPage = 0
+			} catch (_) {
+				if (gen !== this.wordsGen || this.displayChar !== pure) return
+				this.charWords = []
+				this.wordsPage = 0
+			}
+		},
+		refreshWordsBatch() {
+			if (!this.canRefreshWords) return
+			const pages = Math.ceil(this.allWords.length / WORDS_PAGE_SIZE)
+			this.wordsPage = (Number(this.wordsPage) + 1) % pages
 		},
 		pushHistory(text) {
 			this.history = [...this.history, text].slice(-12)
@@ -678,10 +835,17 @@ export default {
 						)
 					}
 				}
-				const now = Date.now()
-				if (now - this.wrongAddedAt > 300) {
-					addCharWrongCount(this.displayChar, 1, this.curriculumDims())
-					this.wrongAddedAt = now
+				// 写错：本字本轮只记入易错一次，避免一笔加一次
+				if (!this.wrongCountedForChar) {
+					const now = Date.now()
+					if (now - this.wrongAddedAt > 300) {
+						addCharWrongCount(this.displayChar, 1, this.curriculumDims())
+						this.wrongAddedAt = now
+						this.wrongCountedForChar = true
+						if (!this.compact) {
+							uni.showToast({ title: '已加入易错字', icon: 'none', duration: 1200 })
+						}
+					}
 				}
 				return
 			}
@@ -698,6 +862,12 @@ export default {
 					this.feedbackType = 'ok'
 					this.feedbackText = '全部笔画写对了，笔顺正确！'
 					this.pushHistory('✓ 全部通过')
+					// 写对后稍作停留，自动进入下一字
+					this.clearAutoNextTimer()
+					this.autoNextTimer = setTimeout(() => {
+						this.autoNextTimer = null
+						this.nextChar()
+					}, 1100)
 				}
 			}
 		},
@@ -846,9 +1016,11 @@ export default {
 			this.mountDemoWriter()
 		},
 		resetPractice() {
+			this.clearAutoNextTimer()
 			this.stopPracticePlayback()
 			this.completed = false
 			this.activeStroke = 0
+			this.wrongCountedForChar = false
 			if (!this.compact) {
 				this.feedbackText = '已重置，先听字音再写第一笔'
 				this.feedbackType = ''
@@ -870,17 +1042,48 @@ export default {
 				uni.showToast({ title: '请输入汉字', icon: 'none' })
 				return
 			}
+			if (this.lessonMode && !this.charPool.includes(pure)) {
+				uni.showToast({ title: '请输入本课生字', icon: 'none' })
+				return
+			}
+			this.clearAutoNextTimer()
 			this.stopAllPracticeAudio()
 			this.hanzi = pure
 			this.inputHanzi = pure
 			this.history = []
-			this.refreshMeta()
-			await this.loadCharPool(pure)
+			this.wrongCountedForChar = false
+			this.charWords = []
+			this.wordsPage = 0
+			if (this.lessonMode) {
+				const idx = this.charPool.indexOf(pure)
+				if (idx >= 0) this.poolIndex = idx
+				this.refreshMeta(this.lessonPinyinMap[pure])
+			} else {
+				this.refreshMeta()
+				await this.loadCharPool(pure)
+			}
 			this.mountTestWriter()
+			this.loadCharWords(pure)
 		},
 		async nextChar() {
+			this.clearAutoNextTimer()
 			this.stopAllPracticeAudio()
 			this.canvasReady = false
+			this.wrongCountedForChar = false
+			if (this.lessonMode) {
+				if (!this.charPool.length) return
+				this.poolIndex = (Number(this.poolIndex) + 1) % this.charPool.length
+				const next = this.charPool[this.poolIndex]
+				this.hanzi = next
+				this.inputHanzi = next
+				this.history = []
+				this.charWords = []
+				this.wordsPage = 0
+				this.refreshMeta(this.lessonPinyinMap[next])
+				this.mountTestWriter()
+				this.loadCharWords(next)
+				return
+			}
 			const prev = this.displayChar
 			await this.loadCharPool(prev)
 			if (!this.charPool.length) {
@@ -891,8 +1094,11 @@ export default {
 			this.hanzi = this.charPool[0]
 			this.inputHanzi = this.hanzi
 			this.history = []
+			this.charWords = []
+			this.wordsPage = 0
 			this.refreshMeta()
 			this.mountTestWriter()
+			this.loadCharWords(this.hanzi)
 		},
 		pickCanvasTouch(e) {
 			if (!e) return null
@@ -999,7 +1205,7 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 24rpx;
+	gap: 16rpx;
 	padding: 24rpx;
 	margin-bottom: 20rpx;
 	border-radius: 28rpx;
@@ -1008,8 +1214,8 @@ export default {
 }
 
 .char-badge {
-	width: 120rpx;
-	height: 120rpx;
+	width: 132rpx;
+	height: 132rpx;
 	border-radius: 24rpx;
 	background: #ffe8f0;
 	border: 2rpx solid rgba(255, 180, 200, 0.4);
@@ -1020,19 +1226,74 @@ export default {
 }
 
 .char-badge-text {
-	font-size: 72rpx;
+	font-size: 80rpx;
 	font-weight: 800;
 	color: var(--meng-text);
 	line-height: 1;
 }
 
-.hero-meta {
+.pinyin-beside {
 	flex: 1;
 	min-width: 0;
 }
 
-.pinyin-row {
-	margin-bottom: 8rpx;
+.hero-meta {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 10rpx;
+	flex-shrink: 0;
+	max-width: 42%;
+	min-width: 0;
+}
+
+.write-words-block {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+	padding: 14rpx 16rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 252, 248, 0.95);
+	border: 1rpx solid rgba(235, 227, 216, 0.85);
+}
+
+.write-words-chips {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 10rpx;
+	overflow: hidden;
+}
+
+.write-word-chip {
+	flex-shrink: 0;
+	padding: 8rpx 18rpx;
+	border-radius: 999rpx;
+	font-size: 26rpx;
+	font-weight: 600;
+	color: var(--meng-text);
+	background: #fff;
+	border: 1rpx solid rgba(200, 190, 175, 0.55);
+}
+
+.write-words-more {
+	flex-shrink: 0;
+	padding: 8rpx 16rpx;
+	border-radius: 999rpx;
+	background: rgba(255, 240, 248, 0.95);
+	border: 1rpx solid rgba(255, 160, 190, 0.5);
+}
+
+.write-words-more-text {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #c44d6a;
+	line-height: 1.2;
 }
 
 .progress-line {
@@ -1040,20 +1301,10 @@ export default {
 	font-size: 26rpx;
 	font-weight: 700;
 	color: #c44d6a;
-	margin-bottom: 6rpx;
-}
-
-.hint-row {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 12rpx;
 }
 
 .hint-line {
-	flex: 1;
-	min-width: 200rpx;
+	display: block;
 	font-size: 24rpx;
 	color: var(--meng-text-secondary);
 	line-height: 1.45;

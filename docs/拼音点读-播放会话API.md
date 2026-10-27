@@ -49,7 +49,7 @@ await this._pyPlay.run(playFn, { when: () => this.phase !== 'play' })
 
 ## 音频策略
 
-- **仅本地 opus**：`/static/pinyin/{音节}.opus`，无调 → 一声替补；**不使用拼音 TTS**。
+- **仅本地 opus**：`/static/pinyin/{音节}.opus`，与界面展示音节 **精确一致**（含声调）；失败则不播，**禁止**无调/一声自动降级；**不使用拼音 TTS**。
 - 课文全文朗读（`speakChinese`）与「我的」列表点汉字仍为独立能力，不走本 API。
 
 ## 单测

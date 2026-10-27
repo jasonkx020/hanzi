@@ -9,7 +9,7 @@
 	<view class="home-char-showcase" @click="goCharDetail">
 		<view class="home-char-showcase__card">
 			<!-- <text class="home-char-showcase__kicker">功能示范</text> -->
-			<text class="home-char-showcase__lead">一个「字」看懂：笔顺、拼音、部首与笔画</text>
+			<text class="home-char-showcase__lead">一个「字」看懂：笔顺、拼音、结构与笔画</text>
 
 			<view class="home-char-showcase__main">
 				<view class="home-char-showcase__stage">
@@ -46,10 +46,6 @@
 					</view>
 
 					<view class="home-char-showcase__chips">
-						<view class="home-char-showcase__chip">
-							<text class="home-char-showcase__chip-k">部首</text>
-							<text class="home-char-showcase__chip-v">{{ meta.radical }}</text>
-						</view>
 						<view class="home-char-showcase__chip">
 							<text class="home-char-showcase__chip-k">结构</text>
 							<text class="home-char-showcase__chip-v">{{ meta.structure }}</text>
@@ -97,7 +93,6 @@ export default {
 			strokeSize: 128,
 			showcasePinyin: 'zì',
 			meta: {
-				radical: '—',
 				structure: '—',
 				strokes: '—'
 			},
@@ -141,7 +136,6 @@ export default {
 						spellDisplayString(SHOWCASE_CHAR, 'tone', 'poly', 'low') ||
 						'zì'
 					this.meta = {
-						radical: entry.radical || '—',
 						structure: entry.structure || '—',
 						strokes: entry.strokes != null && entry.strokes !== '' ? entry.strokes : '—'
 					}

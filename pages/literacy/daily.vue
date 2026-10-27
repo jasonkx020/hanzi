@@ -402,7 +402,6 @@ export default {
 			const e = this.detailEntry
 			if (!e) return ''
 			const bits = []
-			if (e.radical) bits.push(`部首 ${e.radical}`)
 			if (e.structure) bits.push(e.structure)
 			if (e.strokes) bits.push(`${e.strokes} 画`)
 			return bits.length ? bits.join(' · ') : '—'

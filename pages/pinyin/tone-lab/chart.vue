@@ -45,6 +45,9 @@
 						<pinyin-four-lines-row
 							size="tone"
 							interactive
+							:auto-wrap="false"
+							shrink-to-fit
+							:cell-height-rpx="116"
 							:sheet-bg="row.cat.bg"
 							:sheet-bd="row.cat.bd"
 							:syllables="toneRowDisplays(row)"

@@ -23,11 +23,15 @@
 
 				'pflr--auto-wrap': autoWrap,
 
+				'pflr--shrink-fit': shrinkToFit,
+
 				'pflr--interactive-mode': interactive
 
 			}
 
 		]"
+
+		:style="fitRootStyle"
 
 	>
 
@@ -145,6 +149,24 @@ import {
 
 /** 手机 / App 端 text 行盒下沉，需相对桌面 H5 略上移才能贴第三线（基线） */
 
+const PFLR_CELL_H_RPX = {
+
+	compact: 88,
+
+	grid: 144,
+
+	tone: 116,
+
+	md: 58,
+
+	lg: 80,
+
+	xl: 116
+
+}
+
+
+
 function detectPinyinMetricShift() {
 
 	try {
@@ -189,6 +211,11 @@ export default {
 
 			_layoutPass: 0,
 
+			/** shrinkToFit：相对基准格高的缩放（1=不缩） */
+
+			fitScale: 1,
+
+			_shrinkPass: 0
 
 		}
 
@@ -292,6 +319,30 @@ export default {
 
 			default: ''
 
+		},
+
+		/**
+
+		 * 单行均分格子时，字形溢出则自动缩小 --pfl-cell-h，保证不换行不叠字
+
+		 */
+
+		shrinkToFit: {
+
+			type: Boolean,
+
+			default: false
+
+		},
+
+		/** shrinkToFit 基准格高（rpx）；0 则用 size 默认值；首页 tone 可传 168 */
+
+		cellHeightRpx: {
+
+			type: Number,
+
+			default: 0
+
 		}
 
 	},
@@ -330,6 +381,10 @@ export default {
 
 				this._layoutPass = 0
 
+				this.fitScale = 1
+
+				this._shrinkPass = 0
+
 				this.scheduleMeasure()
 
 			},
@@ -339,6 +394,10 @@ export default {
 		},
 
 		size() {
+
+			this.fitScale = 1
+
+			this._shrinkPass = 0
 
 			this.scheduleMeasure()
 
@@ -460,6 +519,26 @@ export default {
 
 		},
 
+		fitBaseCellHRpx() {
+
+			const forced = Number(this.cellHeightRpx)
+
+			if (Number.isFinite(forced) && forced > 0) return forced
+
+			return PFLR_CELL_H_RPX[this.size] || PFLR_CELL_H_RPX.md
+
+		},
+
+		fitRootStyle() {
+
+			if (!this.shrinkToFit) return {}
+
+			const h = Math.max(48, Math.round(this.fitBaseCellHRpx * this.fitScale))
+
+			return { '--pfl-cell-h': h + 'rpx' }
+
+		},
+
 		effectiveMaxUnitsPerRow() {
 
 			if (!this.autoWrap) return 99
@@ -522,7 +601,7 @@ export default {
 
 		scheduleMeasure() {
 
-			if (!this.autoWrap) return
+			if (!this.autoWrap && !this.shrinkToFit) return
 
 			if (this._measureTimer != null) clearTimeout(this._measureTimer)
 
@@ -530,9 +609,75 @@ export default {
 
 				this._measureTimer = null
 
-				this.measureLayout()
+				if (this.shrinkToFit) this.measureShrinkToFit()
+
+				else this.measureLayout()
 
 			}, 120)
+
+		},
+
+		measureShrinkToFit() {
+
+			if (!this.shrinkToFit || this._shrinkPass >= 8) return
+
+			const query = uni.createSelectorQuery().in(this)
+
+			query.select('.pflr').boundingClientRect()
+
+			query.selectAll('.pflr-cell:not(.pflr-cell--empty)').boundingClientRect()
+
+			query.selectAll('.pflr-glyphs-row').boundingClientRect()
+
+			query.exec((res) => {
+
+				if (!res || !res.length) return
+
+				const root = res[0]
+
+				const cells = res[1] || []
+
+				const glyphs = res[2] || []
+
+				if (root && root.width > 0) this.containerWidthPx = root.width
+
+				if (!cells.length || !glyphs.length) return
+
+				let worst = 1
+
+				const n = Math.min(cells.length, glyphs.length)
+
+				for (let i = 0; i < n; i++) {
+
+					const cell = cells[i]
+
+					const row = glyphs[i]
+
+					if (!cell || !row || !row.width || !cell.width) continue
+
+					const ratio = (row.width + 8) / cell.width
+
+					if (ratio > worst) worst = ratio
+
+				}
+
+				this._shrinkPass += 1
+
+				if (worst > 1.02 && this.fitScale > 0.5) {
+
+					const next = Math.max(0.5, (this.fitScale / worst) * 0.97)
+
+					if (next < this.fitScale - 0.01) {
+
+						this.fitScale = next
+
+						this.$nextTick(() => this.scheduleMeasure())
+
+					}
+
+				}
+
+			})
 
 		},
 
@@ -944,7 +1089,7 @@ export default {
 
 .pflr-glyph--tone {
 
-	font-size: 1.08em;
+	font-size: 1em;
 
 	line-height: 1;
 
@@ -1112,7 +1257,7 @@ export default {
 
 	--pfl-cell-h: 116rpx;
 
-	--pfl-tone-mark-scale: 1.14;
+	--pfl-tone-mark-scale: 1;
 
 }
 
@@ -1132,7 +1277,7 @@ export default {
 
 .pflr--tone .pflr-glyph {
 
-	font-size: calc(var(--pfl-cell-h) * 48 / 58);
+	font-size: calc(var(--pfl-cell-h) * 56 / 72);
 
 }
 
@@ -1140,7 +1285,7 @@ export default {
 
 .pflr--tone .pflr-glyph--tone {
 
-	font-size: calc(var(--pfl-cell-h) * 48 / 58 * var(--pfl-tone-mark-scale));
+	font-size: calc(var(--pfl-cell-h) * 56 / 72 * var(--pfl-tone-mark-scale));
 
 }
 

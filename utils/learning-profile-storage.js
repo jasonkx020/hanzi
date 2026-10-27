@@ -82,6 +82,13 @@ export function getUserLessonProgressStorageKey() {
 		: `${STORAGE_KEYS.USER_LESSON_PROGRESS}__${id}`
 }
 
+export function getUserPinyinWrongStorageKey() {
+	const id = getActiveProfileId()
+	return id === DEFAULT_PROFILE_ID
+		? STORAGE_KEYS.USER_PINYIN_WRONG
+		: `${STORAGE_KEYS.USER_PINYIN_WRONG}__${id}`
+}
+
 /**
  * 切换活跃档案（会恢复该档案保存的教材偏好）
  * @param {string} profileId
