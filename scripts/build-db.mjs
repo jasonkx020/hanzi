@@ -44,6 +44,11 @@ function main() {
 	fs.mkdirSync(path.dirname(outPath), { recursive: true })
 	fs.writeFileSync(outPath, JSON.stringify(rows))
 	console.log('[build-curriculum] wrote', outPath, 'rows:', rows.length, '(textbook seed only; MOE300 from preschool-bridge.json at runtime)')
+
+	const mpPath = path.join(root, 'static', 'curriculum', 'hanzi_curriculum_seed.json')
+	fs.mkdirSync(path.dirname(mpPath), { recursive: true })
+	fs.copyFileSync(outPath, mpPath)
+	console.log('[build-curriculum] copied for mp-weixin', mpPath)
 }
 
 main()

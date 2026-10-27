@@ -1,6 +1,7 @@
 node_modules/
 static/hanzi-writer-data/
 unpackage/
+dist-mp-cdn/
 .hbuilderx/
 .DS_Store
 data/raw/

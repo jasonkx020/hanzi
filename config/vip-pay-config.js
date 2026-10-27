@@ -16,8 +16,13 @@ export const VIP_PAY_API_BASE_URL = ''
 
 export const VIP_PAY_REQUEST_TIMEOUT_MS = 20000
 
-/** 未配置 apiBaseUrl 时是否允许演示支付（上线请设为 false） */
+/** 未配置 apiBaseUrl 时是否允许演示支付。小程序提审包关闭演示。 */
+// #ifdef MP-WEIXIN
+export const VIP_PAY_ALLOW_MOCK_FALLBACK = false
+// #endif
+// #ifndef MP-WEIXIN
 export const VIP_PAY_ALLOW_MOCK_FALLBACK = true
+// #endif
 
 /** App 启动时是否拉取服务端会员到期时间 */
 export const VIP_PAY_SYNC_ON_LAUNCH = true

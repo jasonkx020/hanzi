@@ -1,6 +1,6 @@
 import { renjiaoTextbookJsonFile } from '@/constants/renjiao-textbook-filenames.js'
 import { TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
-import { readAppStaticText } from '@/utils/read-app-static-text.js'
+import { readPackagedText } from '@/utils/read-packaged-text.js'
 
 const STATIC_BOOKTEXT_ROOT = '/static/booktext/renjiaoban/'
 
@@ -218,11 +218,10 @@ function mapLessonRow(it) {
 }
 
 function requestText(url) {
+	if (typeof url === 'string' && url.startsWith('/static/')) {
+		return readPackagedText(url)
+	}
 	return new Promise((resolve, reject) => {
-		if (typeof plus !== 'undefined' && plus.io && typeof url === 'string' && url.startsWith('/static/')) {
-			readAppStaticText(url).then(resolve).catch(reject)
-			return
-		}
 		uni.request({
 			url,
 			method: 'GET',

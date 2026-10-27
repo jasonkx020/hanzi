@@ -50,7 +50,14 @@ export function resolveStatusBarPx(explicit) {
 		if (top <= 0) {
 			const plat = String(s.platform || s.osName || '').toLowerCase()
 			if (plat.includes('ios')) top = 44
-			else if (plat.includes('android')) top = 28
+			else if (
+				plat.includes('android') ||
+				plat.includes('ohos') ||
+				plat.includes('harmonyos') ||
+				plat.includes('harmony')
+			) {
+				top = 28
+			}
 		}
 	} catch (_) {}
 

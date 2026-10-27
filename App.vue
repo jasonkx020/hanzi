@@ -10,6 +10,12 @@ import {
 import { ensurePreschoolCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { initLocale } from '@/utils/i18n.js'
 	export default {
+		onShareAppMessage() {
+			return {
+				title: '萌萌识字',
+				path: '/pages/home/home'
+			}
+		},
 		onLaunch: function() {
 			console.log('App Launch')
 			try {

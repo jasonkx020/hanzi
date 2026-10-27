@@ -2,6 +2,9 @@
  * 萌萌语音提示（static/voice/mengmeng/{id}.opus）
  */
 import { resolveAppStaticLogicalUrl } from '@/utils/resolve-app-static-url.js'
+import { isMpWeixin } from '@/utils/uni-platform.js'
+import { mengVoiceRemoteUrl } from '@/utils/static-asset.js'
+import { ensureDownloaded } from '@/utils/mp-file-cache.js'
 
 let _ctx = null
 let _gen = 0
@@ -169,7 +172,7 @@ function destroyCtx() {
  * @param {{ debounceMs?: number, minGapMs?: number, allowRepeat?: boolean }} [opts]
  * @returns {Promise<boolean>} 是否开始播放且未被打断（onEnded 为 true，onError 为 false）
  */
-function playMengmengVoiceInner(id, opts = {}) {
+async function playMengmengVoiceInner(id, opts = {}) {
 	const voiceId = String(id || '').trim()
 	if (!voiceId) return Promise.resolve(false)
 
@@ -182,7 +185,16 @@ function playMengmengVoiceInner(id, opts = {}) {
 	}
 
 	const myGen = ++_gen
-	const src = resolveAppStaticLogicalUrl(`/static/voice/mengmeng/${voiceId}.opus`)
+	const ext = isMpWeixin() ? 'mp3' : 'opus'
+	let src = resolveAppStaticLogicalUrl(`/static/voice/mengmeng/${voiceId}.${ext}`)
+	if (isMpWeixin()) {
+		const remote = mengVoiceRemoteUrl(voiceId)
+		if (remote) {
+			try {
+				src = await ensureDownloaded(remote, `voice_${voiceId}.mp3`)
+			} catch (_) {}
+		}
+	}
 
 	return new Promise((resolve) => {
 		const run = () => {

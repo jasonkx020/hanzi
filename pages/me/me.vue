@@ -76,7 +76,7 @@
 			</view>
 		</view>
 		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏 -->
-		<custom-tab-bar />
+		<meng-tab-bar />
 	</view>
 </template>
 
@@ -102,9 +102,10 @@ import { MEDAL_LIST } from '@/data/medals.js'
 import { getActiveProfile, listLearningProfiles } from '@/utils/learning-profile-storage.js'
 import { hasFamilyPlan } from '@/utils/vip-entitlements.js'
 import { getLocaleDisplayName, listLocales, setLocale } from '@/utils/i18n.js'
+import MengTabBar from '@/components/meng-tab-bar.vue'
 
 export default {
-	components: { MengTabHero },
+	components: { MengTabHero, MengTabBar },
 	mixins: [tabMain, i18nPage],
 	data() {
 		return {
@@ -169,16 +170,16 @@ export default {
 			})
 		},
 		goReport() {
-			uni.navigateTo({ url: '/pages/me/report' })
+			uni.navigateTo({ url: '/pkg/me/report' })
 		},
 		goMedals() {
-			uni.navigateTo({ url: '/pages/me/medals' })
+			uni.navigateTo({ url: '/pkg/me/medals' })
 		},
 		goFamilyProfiles() {
-			uni.navigateTo({ url: '/pages/me/family-profiles' })
+			uni.navigateTo({ url: '/pkg/me/family-profiles' })
 		},
 		goCurriculum() {
-			uni.navigateTo({ url: '/pages/me/learned' })
+			uni.navigateTo({ url: '/pkg/me/learned' })
 		},
 		goGuardian() {
 			uni.navigateTo({ url: '/pages/settings/guardian' })
@@ -191,10 +192,10 @@ export default {
 			uni.navigateTo({ url: '/pages/tools/stroke' })
 		},
 		goLearned() {
-			uni.navigateTo({ url: '/pages/me/learned' })
+			uni.navigateTo({ url: '/pkg/me/learned' })
 		},
 		goWrongOften() {
-			uni.navigateTo({ url: '/pages/me/wrong-often' })
+			uni.navigateTo({ url: '/pkg/me/wrong-often' })
 		}
 	}
 }

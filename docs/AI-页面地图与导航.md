@@ -208,7 +208,7 @@ pages/catalog/catalog：未在 pages.json 注册，仅代码内可跳转（与 t
 | **用途** | **无 UI 中转**：`onLoad` 读取 query 后立即 `redirectTo` 查字结果页，避免栈内重复建设详情。 |
 | **主要元素** | 空白占位 `view`（满足渲染要求）。 |
 | **典型进入** | `lesson` / `daily` / `learned` / `wrong-often` 带 `hanzi` 等参数 `navigateTo`。 |
-| **典型离开** | `redirectTo` → `/pages/dictionary/result?hanzi&pinyin&lesson...`。 |
+| **典型离开** | `redirectTo` → `/pkg/dictionary/result?hanzi&pinyin&lesson...`。 |
 
 ---
 

@@ -10,7 +10,9 @@ import {
 	resolveAppStaticAbsoluteUrl,
 	resolveAppStaticLogicalUrl
 } from '@/utils/resolve-app-static-url.js'
-import { isAppPlus } from '@/utils/uni-platform.js'
+import { isAppPlus, isMpWeixin } from '@/utils/uni-platform.js'
+import { pinyinRemoteUrl } from '@/utils/static-asset.js'
+import { ensureDownloaded } from '@/utils/mp-file-cache.js'
 
 /** ü */
 const U_UML = '\u00fc'
@@ -189,18 +191,22 @@ function normPinyinFileStem(symbol) {
 		.normalize('NFC')
 }
 
-/** 演示读音：/static/pinyin/{stem}.opus（文件名与界面一致，使用拉丁 a / 带调 a） */
+function pinyinAudioExt() {
+	return isMpWeixin() ? 'mp3' : 'opus'
+}
+
+/** 演示读音：App/H5 为 opus；微信小程序为 mp3（优先 CDN 缓存） */
 export function getLocalPinyinAudioPath(symbol) {
 	const stem = normPinyinFileStem(symbol)
 	if (!stem) return ''
-	return `/static/pinyin/${stem}.opus`
+	return `/static/pinyin/${stem}.${pinyinAudioExt()}`
 }
 
-/** 一声版文件名（带调字母），用于整体认读 / 拼读练习在无调 opus 缺失时的替补 */
+/** 一声版文件名（带调字母），用于整体认读 / 拼读练习在无调文件缺失时的替补 */
 export function getLocalPinyinTone1AudioPath(symbol) {
 	const stem = normPinyinFileStem(applyToneToSyllableStem(symbol, 1))
 	if (!stem) return ''
-	return `/static/pinyin/${stem}.opus`
+	return `/static/pinyin/${stem}.${pinyinAudioExt()}`
 }
 
 /** @param {number} ms */
@@ -381,9 +387,20 @@ function resolveLocalAudioSrc(src) {
  * @param {string} src 如 /static/pinyin/a.opus
  * @returns {Promise<void>}
  */
-export function playPinyinLocalAudio(src, opts = {}) {
+export async function playPinyinLocalAudio(src, opts = {}) {
 	if (!src) return Promise.reject(new Error('empty src'))
-	const candidates = resolveLocalAudioSrcCandidates(src)
+	let candidates = resolveLocalAudioSrcCandidates(src)
+	if (isMpWeixin()) {
+		const m = String(src).match(/\/static\/pinyin\/(.+)\.(?:mp3|opus)$/i)
+		const stem = m ? decodeURIComponent(m[1]) : ''
+		const remote = stem ? pinyinRemoteUrl(stem) : ''
+		if (remote) {
+			try {
+				const cached = await ensureDownloaded(remote, `pinyin_${stem}.mp3`)
+				if (cached) candidates = [cached, ...candidates]
+			} catch (_) {}
+		}
+	}
 	if (!candidates.length) return Promise.reject(new Error('empty src'))
 
 	const tryAt = (idx) => {

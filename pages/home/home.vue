@@ -107,7 +107,7 @@
 				</view>
 		</view>
 		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏，避免 custom:true 切页闪烁 -->
-		<custom-tab-bar />
+		<meng-tab-bar />
 	</view>
 </template>
 
@@ -125,6 +125,7 @@ import { buildDailyTrainingPlan, formatDailyPlanHomeSummary } from '@/services/d
 import tabMain from '@/mixins/tab-main-page.js'
 import i18nPage from '@/mixins/i18n-page.js'
 import MengTabHero from '@/components/meng-tab-hero.vue'
+import MengTabBar from '@/components/meng-tab-bar.vue'
 import MengAvatar from '@/components/meng-avatar.vue'
 import HomeCharShowcase from '@/components/home-char-showcase.vue'
 import MengAdBanner from '@/components/meng-ad-banner.vue'
@@ -139,7 +140,7 @@ import {
 const HERO_POSES = ['wave', 'book', 'happy']
 
 export default {
-	components: { MengTabHero, MengAvatar, HomeCharShowcase, MengAdBanner },
+	components: { MengTabHero, MengTabBar, MengAvatar, HomeCharShowcase, MengAdBanner },
 	mixins: [tabMain, i18nPage],
 	data() {
 		return {
@@ -334,14 +335,14 @@ export default {
 			uni.navigateTo({ url: '/pages/vip/vip' })
 		},
 		goSettings() {
-			uni.navigateTo({ url: '/pages/me/learned' })
+			uni.navigateTo({ url: '/pkg/me/learned' })
 		},
 		goWritePractice() {
 			playMengmengVoice(MENG_VOICE.HOME_STROKE_LAB, { debounceMs: 200 }).catch(() => {})
 			void startWritePractice()
 		},
 		goWrongOften() {
-			uni.navigateTo({ url: '/pages/me/wrong-often' })
+			uni.navigateTo({ url: '/pkg/me/wrong-often' })
 		},
 		goGame() {
 			startLiteracyGame()

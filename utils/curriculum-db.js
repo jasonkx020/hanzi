@@ -3,9 +3,12 @@
  * 「幼小衔接·课标300基本字」来自 static/booktext/renjiaoban/preschool-bridge.json（课本同步学另走 loader；此处供字库/游戏等扁平行）。
  */
 
+// #ifndef MP-WEIXIN
 import CURRICULUM_ROWS from '@/constants/hanzi_curriculum_seed.json'
 import YOU_XIAO_XIANJIE_BOOK from '../static/booktext/renjiaoban/preschool-bridge.json'
+// #endif
 import { flattenLessonsFromMergedBook } from '@/utils/renjiao-textbook-loader.js'
+import { readPackagedText } from '@/utils/read-packaged-text.js'
 import {
 	COL,
 	LIST_TYPE,
@@ -14,15 +17,55 @@ import {
 } from '@/constants/curriculum-schema.js'
 import { buildCurriculumWhere, getCurriculumPrefs, orderBySortOrderAsc } from '@/utils/curriculum-storage.js'
 
-const rows = Array.isArray(CURRICULUM_ROWS) ? CURRICULUM_ROWS : []
+let rows = []
+// #ifndef MP-WEIXIN
+rows = Array.isArray(CURRICULUM_ROWS) ? CURRICULUM_ROWS : []
+// #endif
+
+let youxiaoxianjieBook = null
+// #ifndef MP-WEIXIN
+youxiaoxianjieBook = YOU_XIAO_XIANJIE_BOOK
+// #endif
+
+let curriculumReady = null
+
+function parseJsonText(raw) {
+	if (raw && typeof raw === 'object') return raw
+	return JSON.parse(String(raw || ''))
+}
+
+/** 小程序不把 1.4MB 课表打进主包 JS，改为读 static 文件 */
+export function ensureCurriculumData() {
+	// #ifndef MP-WEIXIN
+	return Promise.resolve()
+	// #endif
+	// #ifdef MP-WEIXIN
+	if (rows.length && youxiaoxianjieBook) return Promise.resolve()
+	if (!curriculumReady) {
+		curriculumReady = (async () => {
+			const seedRaw = await readPackagedText('/static/curriculum/hanzi_curriculum_seed.json')
+			const bookRaw = await readPackagedText('/static/booktext/renjiaoban/preschool-bridge.json')
+			const seed = parseJsonText(seedRaw)
+			rows = Array.isArray(seed) ? seed : []
+			youxiaoxianjieBook = parseJsonText(bookRaw)
+			moeRowsFromYouxiaoxianjieBook = buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook()
+		})().catch((err) => {
+			curriculumReady = null
+			throw err
+		})
+	}
+	return curriculumReady
+	// #endif
+}
 
 const MOE_SOURCE_URL =
 	'http://www.moe.gov.cn/srcsite/A26/s8001/202204/t20220420_619921.html'
 
 function getYouxiaoxianjieLessons() {
-	if (Array.isArray(YOU_XIAO_XIANJIE_BOOK)) return YOU_XIAO_XIANJIE_BOOK
-	if (YOU_XIAO_XIANJIE_BOOK && YOU_XIAO_XIANJIE_BOOK.book_catalog) {
-		return flattenLessonsFromMergedBook(YOU_XIAO_XIANJIE_BOOK)
+	const book = youxiaoxianjieBook
+	if (Array.isArray(book)) return book
+	if (book && book.book_catalog) {
+		return flattenLessonsFromMergedBook(book)
 	}
 	return []
 }
@@ -62,13 +105,14 @@ function buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook() {
 	return out
 }
 
-const moeRowsFromYouxiaoxianjieBook = buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook()
+let moeRowsFromYouxiaoxianjieBook = buildMoeBasicCurriculumRowsFromYouxiaoxianjieBook()
 
 /**
  * 按当前教材偏好筛选生字行
  * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function queryCurriculumChars(prefs) {
+	await ensureCurriculumData()
 	const p = prefs || getCurriculumPrefs()
 	const tv = p.textbook_version_id
 	const grade = Number(p.grade)
@@ -102,6 +146,7 @@ export async function queryCurriculumChars(prefs) {
  * @returns {Promise<Array<Record<string, unknown>>>}
  */
 export async function queryAllShiziCurriculumChars() {
+	await ensureCurriculumData()
 	const seen = new Set()
 	const out = []
 	for (const r of rows) {

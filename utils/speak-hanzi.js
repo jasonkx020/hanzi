@@ -81,8 +81,10 @@ export function speakHanzi(text) {
 	// #ifdef APP-PLUS
 	if (tryPlusSpeech(s)) return
 	// #endif
+	// #ifndef MP-WEIXIN
 	if (tryCncharVoice(s)) return
 	uni.showToast({ title: `「${s}」`, icon: 'none' })
+	// #endif
 }
 
 /**
@@ -96,6 +98,8 @@ export function speakChinese(text) {
 	// #ifdef APP-PLUS
 	if (tryPlusSpeech(s)) return
 	// #endif
+	// #ifndef MP-WEIXIN
 	if (tryCncharVoice(s)) return
 	uni.showToast({ title: '暂无法朗读本段', icon: 'none' })
+	// #endif
 }

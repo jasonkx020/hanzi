@@ -26,7 +26,9 @@
 
 			<button class="save-btn" type="primary" @click="goLearned">查看我学过的字</button>
 			<button class="link-btn" type="default" @click="goMengmeng">去萌萌识字</button>
+			<!-- #ifndef MP-WEIXIN -->
 			<button class="debug-btn" type="default" @click="goDebugConsole">调试：查看 JS 日志</button>
+			<!-- #endif -->
 		</view>
 	</meng-sub-page>
 </template>
@@ -54,7 +56,7 @@ export default {
 	},
 	methods: {
 		goLearned() {
-			uni.navigateTo({ url: '/pages/me/learned' })
+			uni.navigateTo({ url: '/pkg/me/learned' })
 		},
 		goMengmeng() {
 			startTextbookLearning()

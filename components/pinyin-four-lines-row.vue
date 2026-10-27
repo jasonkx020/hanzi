@@ -93,8 +93,10 @@ import { getPinyinSymbolCategory } from '@/utils/pinyin-pep-category.js'
 function detectPinyinMetricShift() {
 	try {
 		const sys = uni.getSystemInfoSync()
-		const p = String(sys.platform || '').toLowerCase()
-		if (p === 'android' || p === 'ios') return true
+		const p = String(sys.platform || sys.osName || '').toLowerCase()
+		if (p === 'android' || p === 'ios' || p === 'ohos' || p === 'harmonyos' || p === 'harmony') {
+			return true
+		}
 		// 开发者工具模拟器
 		if (p === 'devtools') return true
 		// H5：桌面浏览器 platform 多为 windows/mac/linux，窄屏多为手机浏览器

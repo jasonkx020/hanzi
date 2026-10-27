@@ -215,7 +215,7 @@
 			</view>
 		</view>
 		<!-- 原生 tabBar 启动即隐藏；各端统一挂载自定义栏 -->
-		<custom-tab-bar />
+		<meng-tab-bar />
 	</view>
 </template>
 
@@ -253,6 +253,7 @@ import {
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
+import MengTabBar from '@/components/meng-tab-bar.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 const DETECTIVES = [
@@ -272,7 +273,8 @@ export default {
 	components: {
 		PinyinFourLinesRow,
 		MengAvatar,
-		MengTabHero
+		MengTabHero,
+		MengTabBar
 	},
 	data() {
 		return {

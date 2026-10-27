@@ -8,7 +8,7 @@
 /**
  * 兼容旧链接：字卡中间页已并入查字详情（关卡学习页）。
  * /pages/literacy/lesson?rjLesson=N | ?hint=…
- * → /pages/dictionary/result?rjLesson=N | ?lesson=…
+ * → /pkg/dictionary/result?rjLesson=N | ?lesson=…
  */
 function buildResultUrl(query) {
 	const q = query || {}
@@ -16,7 +16,7 @@ function buildResultUrl(query) {
 	if (rjRaw != null && rjRaw !== '') {
 		const n = Number(rjRaw)
 		if (Number.isFinite(n) && n >= 0) {
-			return `/pages/dictionary/result?rjLesson=${encodeURIComponent(String(n))}`
+			return `/pkg/dictionary/result?rjLesson=${encodeURIComponent(String(n))}`
 		}
 	}
 	const hint = q.hint ? decodeURIComponent(q.hint) : q.lesson ? decodeURIComponent(q.lesson) : ''
@@ -25,7 +25,7 @@ function buildResultUrl(query) {
 	if (hint) parts.push(`lesson=${encodeURIComponent(hint)}`)
 	if (hanzi) parts.push(`hanzi=${encodeURIComponent(hanzi)}`)
 	if (q.pinyin) parts.push(`pinyin=${encodeURIComponent(decodeURIComponent(q.pinyin))}`)
-	return `/pages/dictionary/result${parts.length ? `?${parts.join('&')}` : ''}`
+	return `/pkg/dictionary/result${parts.length ? `?${parts.join('&')}` : ''}`
 }
 
 export default {

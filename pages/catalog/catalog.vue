@@ -57,7 +57,7 @@ export default {
 			this.lessons = Object.values(map)
 		},
 		openLesson(lesson) {
-			uni.navigateTo({ url: `/pages/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}` })
+			uni.navigateTo({ url: `/pkg/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}` })
 		},
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })

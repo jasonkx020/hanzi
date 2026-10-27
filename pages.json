@@ -27,13 +27,6 @@
 			}
 		},
 		{
-			"path": "pages/learn/session",
-			"style": {
-				"navigationBarTitleText": "学习",
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path": "pages/me/me",
 			"style": {
 				"navigationBarTitleText": "我的",
@@ -45,156 +38,144 @@
 					"background": "#F6F3EC"
 				}
 			}
-		},
-		{
-			"path": "pages/me/learned",
-			"style": {
-				"navigationBarTitleText": "我学过的字库",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/me/wrong-often",
-			"style": {
-				"navigationBarTitleText": "我经常错的",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/char/detail",
-			"style": {
-				"navigationBarTitleText": "生字",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/settings/curriculum",
-			"style": {
-				"navigationBarTitleText": "识字进度",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/vip/vip",
-			"style": {
-				"navigationBarTitleText": "会员中心",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/tools/stroke",
-			"style": {
-				"navigationBarTitleText": "笔顺实验室",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/tools/component-map",
-			"style": {
-				"navigationBarTitleText": "偏旁导图",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/textbook",
-			"style": {
-				"navigationBarTitleText": "萌萌识字",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/lesson",
-			"style": {
-				"navigationBarTitleText": "字卡",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/lesson-quiz",
-			"style": {
-				"navigationBarTitleText": "小测验",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/lesson-dictation",
-			"style": {
-				"navigationBarTitleText": "听写",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/char",
-			"style": {
-				"navigationBarTitleText": "单字学习",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/daily",
-			"style": {
-				"navigationBarTitleText": "每日一练",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/write-practice",
-			"style": {
-				"navigationBarTitleText": "写字练习",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/literacy/game",
-			"style": {
-				"navigationBarTitleText": "萌萌的气球营",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/dictionary/result",
-			"style": {
-				"navigationBarTitleText": "查询详情结果",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/me/report",
-			"style": {
-				"navigationBarTitleText": "家长报告",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/me/medals",
-			"style": {
-				"navigationBarTitleText": "勋章墙",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/me/family-profiles",
-			"style": {
-				"navigationBarTitleText": "学习档案",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/settings/guardian",
-			"style": {
-				"navigationBarTitleText": "家长管理",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/debug/console",
-			"style": {
-				"navigationBarTitleText": "调试日志",
-				"navigationBarBackgroundColor": "#252526",
-				"navigationBarTextStyle": "white"
-			}
 		}
 	],
+	"subPackages": [
+		{
+			"root": "pages/literacy",
+			"pages": [
+				{
+					"path": "textbook",
+					"style": { "navigationBarTitleText": "萌萌识字", "navigationStyle": "custom" }
+				},
+				{
+					"path": "lesson",
+					"style": { "navigationBarTitleText": "字卡", "navigationStyle": "custom" }
+				},
+				{
+					"path": "lesson-quiz",
+					"style": { "navigationBarTitleText": "小测验", "navigationStyle": "custom" }
+				},
+				{
+					"path": "lesson-dictation",
+					"style": { "navigationBarTitleText": "听写", "navigationStyle": "custom" }
+				},
+				{
+					"path": "char",
+					"style": { "navigationBarTitleText": "单字学习", "navigationStyle": "custom" }
+				},
+				{
+					"path": "daily",
+					"style": { "navigationBarTitleText": "每日一练", "navigationStyle": "custom" }
+				},
+				{
+					"path": "write-practice",
+					"style": { "navigationBarTitleText": "写字练习", "navigationStyle": "custom" }
+				},
+				{
+					"path": "game",
+					"style": { "navigationBarTitleText": "萌萌的气球营", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pkg/dictionary",
+			"pages": [
+				{
+					"path": "result",
+					"style": { "navigationBarTitleText": "查询详情结果", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pages/tools",
+			"pages": [
+				{
+					"path": "stroke",
+					"style": { "navigationBarTitleText": "笔顺实验室", "navigationStyle": "custom" }
+				},
+				{
+					"path": "component-map",
+					"style": { "navigationBarTitleText": "偏旁导图", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pages/vip",
+			"pages": [
+				{
+					"path": "vip",
+					"style": { "navigationBarTitleText": "会员中心", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pkg/me",
+			"pages": [
+				{
+					"path": "learned",
+					"style": { "navigationBarTitleText": "我学过的字库", "navigationStyle": "custom" }
+				},
+				{
+					"path": "wrong-often",
+					"style": { "navigationBarTitleText": "我经常错的", "navigationStyle": "custom" }
+				},
+				{
+					"path": "report",
+					"style": { "navigationBarTitleText": "家长报告", "navigationStyle": "custom" }
+				},
+				{
+					"path": "medals",
+					"style": { "navigationBarTitleText": "勋章墙", "navigationStyle": "custom" }
+				},
+				{
+					"path": "family-profiles",
+					"style": { "navigationBarTitleText": "学习档案", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pages/settings",
+			"pages": [
+				{
+					"path": "curriculum",
+					"style": { "navigationBarTitleText": "识字进度", "navigationStyle": "custom" }
+				},
+				{
+					"path": "guardian",
+					"style": { "navigationBarTitleText": "家长管理", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pages/learn",
+			"pages": [
+				{
+					"path": "session",
+					"style": { "navigationBarTitleText": "学习", "navigationStyle": "custom" }
+				}
+			]
+		},
+		{
+			"root": "pages/char",
+			"pages": [
+				{
+					"path": "detail",
+					"style": { "navigationBarTitleText": "生字", "navigationStyle": "custom" }
+				}
+			]
+		}
+	],
+	"preloadRule": {
+		"pages/home/home": {
+			"network": "all",
+			"packages": ["pages/literacy"]
+		},
+		"pages/dictionary/index": {
+			"network": "all",
+			"packages": ["pkg/dictionary"]
+		}
+	},
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "萌萌识字",
@@ -233,20 +214,20 @@
 			{
 				"pagePath": "pages/home/home",
 				"text": "首页",
-				"iconPath": "static/tab/home.png",
-				"selectedIconPath": "static/tab/home-active.png"
+				"iconPath": "static/tabbar/home.png",
+				"selectedIconPath": "static/tabbar/home-active.png"
 			},
 			{
 				"pagePath": "pages/dictionary/index",
 				"text": "查字",
-				"iconPath": "static/tab/catalog.png",
-				"selectedIconPath": "static/tab/catalog-active.png"
+				"iconPath": "static/tabbar/catalog.png",
+				"selectedIconPath": "static/tabbar/catalog-active.png"
 			},
 			{
 				"pagePath": "pages/me/me",
 				"text": "我的",
-				"iconPath": "static/tab/me.png",
-				"selectedIconPath": "static/tab/me-active.png"
+				"iconPath": "static/tabbar/me.png",
+				"selectedIconPath": "static/tabbar/me-active.png"
 			}
 		]
 	},

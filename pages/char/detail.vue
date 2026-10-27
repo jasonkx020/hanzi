@@ -10,7 +10,7 @@ export default {
 		const pinyin = query.pinyin ? decodeURIComponent(query.pinyin) : ''
 		const lesson = query.lesson ? decodeURIComponent(query.lesson) : ''
 		uni.redirectTo({
-			url: `/pages/dictionary/result?hanzi=${encodeURIComponent(hanzi)}&pinyin=${encodeURIComponent(pinyin)}&lesson=${encodeURIComponent(lesson)}`
+			url: `/pkg/dictionary/result?hanzi=${encodeURIComponent(hanzi)}&pinyin=${encodeURIComponent(pinyin)}&lesson=${encodeURIComponent(lesson)}`
 		})
 	}
 }

@@ -26,7 +26,7 @@
 </template>
 
 <script>
-import { MENG_ASSETS } from '@/utils/mengmeng-assets.js'
+import { MENG_ASSETS, resolveMengAssetUrl } from '@/utils/mengmeng-assets.js'
 import { t, onLocaleChange } from '@/utils/i18n.js'
 
 const TAB_SELECTED_KEY = 'meng_tab_selected'
@@ -50,22 +50,22 @@ function buildTabList() {
 	return [
 		{
 			pagePath: '/pages/home/home',
-			iconPath: MENG_ASSETS.tab.home,
-			iconPathActive: MENG_ASSETS.tab.homeActive,
+			iconPath: resolveMengAssetUrl(MENG_ASSETS.tab.home),
+			iconPathActive: resolveMengAssetUrl(MENG_ASSETS.tab.homeActive),
 			textKey: 'tab.home',
 			text: t('tab.home')
 		},
 		{
 			pagePath: '/pages/dictionary/index',
-			iconPath: MENG_ASSETS.tab.catalog,
-			iconPathActive: MENG_ASSETS.tab.catalogActive,
+			iconPath: resolveMengAssetUrl(MENG_ASSETS.tab.catalog),
+			iconPathActive: resolveMengAssetUrl(MENG_ASSETS.tab.catalogActive),
 			textKey: 'tab.dict',
 			text: t('tab.dict')
 		},
 		{
 			pagePath: '/pages/me/me',
-			iconPath: MENG_ASSETS.tab.me,
-			iconPathActive: MENG_ASSETS.tab.meActive,
+			iconPath: resolveMengAssetUrl(MENG_ASSETS.tab.me),
+			iconPathActive: resolveMengAssetUrl(MENG_ASSETS.tab.meActive),
 			textKey: 'tab.me',
 			text: t('tab.me')
 		}
@@ -134,7 +134,7 @@ export default {
 			uni.switchTab({
 				url,
 				fail: (err) => {
-					console.warn('[custom-tab-bar] switchTab', err)
+					console.warn('[meng-tab-bar] switchTab', err)
 					this.syncSelectedFromRoute()
 				}
 			})

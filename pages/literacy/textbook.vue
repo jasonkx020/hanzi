@@ -394,12 +394,12 @@ export default {
 		openLesson(lesson) {
 			if (typeof lesson.rjIdx === 'number') {
 				uni.navigateTo({
-					url: `/pages/dictionary/result?rjLesson=${lesson.rjIdx}`
+					url: `/pkg/dictionary/result?rjLesson=${lesson.rjIdx}`
 				})
 				return
 			}
 			uni.navigateTo({
-				url: `/pages/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}`
+				url: `/pkg/dictionary/result?lesson=${encodeURIComponent(lesson.hint)}`
 			})
 		}
 	}

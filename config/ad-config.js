@@ -7,11 +7,21 @@
 /** 总开关（关闭后全站不展示、不弹激励） */
 export const AD_ENABLED = true
 
-/** 未配置 unitId 时是否用演示弹窗模拟激励视频 */
+/** 未配置 unitId 时是否用演示弹窗模拟激励视频。小程序提审关闭。 */
+// #ifdef MP-WEIXIN
+export const AD_MOCK_REWARDED_WHEN_NO_UNIT = false
+// #endif
+// #ifndef MP-WEIXIN
 export const AD_MOCK_REWARDED_WHEN_NO_UNIT = true
+// #endif
 
-/** 未配置 unitId 时首页是否展示占位 Banner（教育推荐样式） */
+/** 未配置 unitId 时首页是否展示占位 Banner。小程序提审关闭。 */
+// #ifdef MP-WEIXIN
+export const AD_MOCK_BANNER_WHEN_NO_UNIT = false
+// #endif
+// #ifndef MP-WEIXIN
 export const AD_MOCK_BANNER_WHEN_NO_UNIT = true
+// #endif
 
 /**
  * 微信小程序激励视频广告位（mp-weixin）

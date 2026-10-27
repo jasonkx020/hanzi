@@ -166,7 +166,7 @@ export default {
 			return this.unlockedGrades.includes(Number(grade))
 		},
 		goFamilyProfiles() {
-			uni.navigateTo({ url: '/pages/me/family-profiles' })
+			uni.navigateTo({ url: '/pkg/me/family-profiles' })
 		},
 		async buy(planId) {
 			if (this.paying) return

@@ -1,0 +1,7 @@
+{
+	"description": "覆盖开发者工具默认的「过滤无依赖文件」，避免 tabBar 图标被误判为未找到。",
+	"setting": {
+		"ignoreDevUnusedFiles": false,
+		"ignoreUploadUnusedFiles": false
+	}
+}

@@ -9,7 +9,8 @@ import {
 export const MENG_ASSETS = {
 	heroBg: '/static/mengmeng/hero-bg.png',
 	pageSoftBg: '/static/mengmeng/bg/page-soft.png',
-	logo: '/static/mengmeng/logo.png',
+	/** 横幅 logo：仓库根 static/logo.png（mengmeng/logo.png 由压图脚本同步生成） */
+	logo: '/static/logo.png',
 	logoIcon: '/static/mengmeng/logo-icon.png',
 	/** 喇叭萌萌 · 听读音按钮 */
 	laba: '/static/mengmeng/laba.png',

@@ -169,7 +169,7 @@ export default {
 			const h = firstComponentHanzi(ch)
 			if (!h) return
 			uni.navigateTo({
-				url: `/pages/dictionary/result?hanzi=${encodeURIComponent(h)}`
+				url: `/pkg/dictionary/result?hanzi=${encodeURIComponent(h)}`
 			})
 		}
 	}

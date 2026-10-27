@@ -19,7 +19,11 @@ const _rewardedCache = new Map()
 
 export function shouldShowAds() {
 	if (!AD_ENABLED) return false
-	return !isVipActive()
+	if (isVipActive()) return false
+	// #ifdef MP-WEIXIN
+	if (!getRewardedAdUnitId() && !getBannerAdUnitId()) return false
+	// #endif
+	return true
 }
 
 export function getRewardedAdUnitId() {

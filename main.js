@@ -5,7 +5,7 @@ installDebugConsoleHook()
 
 import App from './App'
 import MengStatusBarSpacer from '@/components/meng-status-bar-spacer.vue'
-import CustomTabBar from '@/custom-tab-bar/index.vue'
+import MengTabBar from '@/components/meng-tab-bar.vue'
 import { initLocale } from '@/utils/i18n.js'
 
 initLocale()
@@ -15,7 +15,7 @@ import Vue from 'vue'
 import './uni.promisify.adaptor'
 Vue.config.productionTip = false
 Vue.component('MengStatusBarSpacer', MengStatusBarSpacer)
-Vue.component('CustomTabBar', CustomTabBar)
+Vue.component('MengTabBar', MengTabBar)
 App.mpType = 'app'
 const app = new Vue({
   ...App
@@ -29,7 +29,7 @@ export function createApp() {
   initLocale()
   const app = createSSRApp(App)
   app.component('MengStatusBarSpacer', MengStatusBarSpacer)
-  app.component('CustomTabBar', CustomTabBar)
+  app.component('MengTabBar', MengTabBar)
   return {
     app
   }

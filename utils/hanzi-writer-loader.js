@@ -7,15 +7,23 @@ import {
 	resolveAppStaticAbsoluteUrl,
 	resolveH5StaticAbsoluteUrl
 } from '@/utils/resolve-app-static-url.js'
-import { getUniFileSystemManager, isAppPlus } from '@/utils/uni-platform.js'
+import { getUniFileSystemManager, isAppPlus, isMpWeixin } from '@/utils/uni-platform.js'
+import { writerCharRemoteUrl } from '@/utils/static-asset.js'
+import { ensureDownloaded, readCachedText, writeCachedText } from '@/utils/mp-file-cache.js'
 
 export const LOCAL_HANZI_WRITER_BASE = '/static/hanzi-writer-data'
 
-/** @type {string[]} */
-const CDN_BASES = [
-	'https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1',
-	'https://fastly.jsdelivr.net/npm/hanzi-writer-data@2.0.1'
-]
+function writerFallbackBases() {
+	// #ifdef MP-WEIXIN
+	return []
+	// #endif
+	// #ifndef MP-WEIXIN
+	return [
+		'https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1',
+		'https://fastly.jsdelivr.net/npm/hanzi-writer-data@2.0.1'
+	]
+	// #endif
+}
 
 /** @type {string | null} */
 let customBase = null
@@ -120,7 +128,41 @@ export async function loadHanziWriterCharData(char, requestJson) {
 	/** @type {unknown} */
 	let lastErr = null
 
-	// 1. 打包 static（离线）
+	if (isMpWeixin()) {
+		try {
+			const cached = await readCachedText(`writer_${c}.json`)
+			if (cached) {
+				const data = parseJsonPayload(cached)
+				CHAR_DATA_CACHE[c] = data
+				return data
+			}
+		} catch (_) {}
+		const remote = writerCharRemoteUrl(c)
+		if (remote) {
+			try {
+				const file = await ensureDownloaded(remote, `writer_${c}.json`)
+				const fsm = getUniFileSystemManager()
+				if (fsm && file && !/^https?:/i.test(file)) {
+					const text = await new Promise((resolve, reject) => {
+						fsm.readFile({
+							filePath: file,
+							encoding: 'utf-8',
+							success: (res) => resolve(res.data),
+							fail: reject
+						})
+					})
+					const data = parseJsonPayload(text)
+					CHAR_DATA_CACHE[c] = data
+					await writeCachedText(`writer_${c}.json`, typeof text === 'string' ? text : JSON.stringify(data))
+					return data
+				}
+			} catch (e) {
+				lastErr = e
+			}
+		}
+	}
+
+	// 打包 static（离线）
 	try {
 		const data = await loadLocalCharData(c)
 		CHAR_DATA_CACHE[c] = data
@@ -156,9 +198,10 @@ export async function loadHanziWriterCharData(char, requestJson) {
 	}
 
 	// 3. CDN
-	for (let i = 0; i < CDN_BASES.length; i++) {
+	const bases = customBase && /^https?:\/\//i.test(customBase) ? [customBase] : writerFallbackBases()
+	for (let i = 0; i < bases.length; i++) {
 		try {
-			const data = await networkRequest(cdnCharUrl(CDN_BASES[i], c))
+			const data = await networkRequest(cdnCharUrl(bases[i], c))
 			CHAR_DATA_CACHE[c] = data
 			return data
 		} catch (e) {

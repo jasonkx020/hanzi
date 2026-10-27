@@ -94,11 +94,31 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "touristappid",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "minified" : true
         },
-        "usingComponents" : true
+        "usingComponents" : true,
+        "lazyCodeLoading" : "requiredComponents",
+        "optimization" : {
+            "subPackages" : true
+        },
+        "packOptions" : {
+            "ignore" : [
+                { "type" : "folder", "value" : "static/splash" },
+                { "type" : "folder", "value" : "static/hanzi-writer-data" },
+                { "type" : "folder", "value" : "static/pinyin" },
+                { "type" : "folder", "value" : "static/fonts" },
+                { "type" : "folder", "value" : "static/bg" },
+                { "type" : "folder", "value" : "static/mengmeng/bg" },
+                { "type" : "folder", "value" : "static/mengmeng/_source-2048" },
+                { "type" : "folder", "value" : "static/mengmeng/reference" },
+                { "type" : "suffix", "value" : ".svg" },
+                { "type" : "suffix", "value" : ".opus" }
+            ]
+        }
     },
     "mp-alipay" : {
         "usingComponents" : true

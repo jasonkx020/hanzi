@@ -1,0 +1,36 @@
+{
+	"description": "微信小程序工程配置。vue3 用 project.wx.json，必须带 appid，否则开发者工具报 code 20、运行无反应。正式 AppID 填到此处，并与 manifest.json 的 mp-weixin.appid 保持一致。",
+	"appid": "wx172545b65afefdb6",
+	"projectname": "萌萌识字",
+	"compileType": "miniprogram",
+	"libVersion": "3.5.5",
+	"packOptions": {
+		"ignore": [
+			{ "type": "folder", "value": "static/splash" },
+			{ "type": "folder", "value": "static/hanzi-writer-data" },
+			{ "type": "folder", "value": "static/pinyin" },
+			{ "type": "folder", "value": "static/fonts" },
+			{ "type": "folder", "value": "static/bg" },
+			{ "type": "folder", "value": "static/mengmeng/bg" },
+			{ "type": "folder", "value": "static/mengmeng/_source-2048" },
+			{ "type": "folder", "value": "static/mengmeng/reference" },
+			{ "type": "suffix", "value": ".svg" },
+			{ "type": "suffix", "value": ".opus" }
+		],
+		"include": [
+			{ "type": "folder", "value": "static/tabbar" },
+			{ "type": "folder", "value": "static/tab" }
+		]
+	},
+	"setting": {
+		"urlCheck": false,
+		"es6": true,
+		"minified": true,
+		"ignoreDevUnusedFiles": false,
+		"ignoreUploadUnusedFiles": false,
+		"postcss": true,
+		"compileWorklet": false,
+		"enhance": true
+	},
+	"condition": {}
+}
