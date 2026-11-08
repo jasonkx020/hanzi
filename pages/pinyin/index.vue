@@ -7,7 +7,7 @@
 -->
 <template>
 	<view
-		class="page tab-page-shell tab-page-shell--edge tab-root-page pinyin-page"
+		class="page tab-page-shell tab-root-page pinyin-page"
 		:class="{ 'pinyin-page--letters': isLetterPinyinTab }"
 		:style="tabPageStyle"
 	>
@@ -1275,6 +1275,7 @@ export default {
 					narrator,
 					useTone1Fb,
 					blend,
+					/** 仅点读缺文件时提示；连点取消由 speakBlended 内跳过 Toast */
 					showFailToast: !this.autoReadRunning,
 					isCancelled
 				})
@@ -1283,6 +1284,7 @@ export default {
 				return playLocalPinyinNeutralThenTone1(text, useTone1Fb, { isCancelled })
 			}
 			const ok = await this.withPlayTimeout(playTask(), 7500)
+			/** 已被新点读取消时勿再 stop，避免掐掉下一音 */
 			if (!ok && !(typeof isCancelled === 'function' && isCancelled())) {
 				stopLocalPinyinAudio()
 				this.cancelAutoReadSpeech()
@@ -1416,10 +1418,8 @@ export default {
 }
 
 .pinyin-page .pinyin-dock-panel {
-	padding: 12rpx 4rpx 6rpx;
+	padding: 12rpx 22rpx 6rpx;
 	margin: 0;
-	border-left: none;
-	border-right: none;
 	border-radius: 24rpx 24rpx 0 0;
 }
 

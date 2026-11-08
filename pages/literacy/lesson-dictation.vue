@@ -8,76 +8,74 @@
 <template>
 	<meng-sub-page
 		:title="lessonTitle || '听写'"
-		subtitle="听音按笔顺写一写"
+		subtitle="听音 · 写完再评分"
 		:full-height="true"
 		:padded="false"
 		:overlap-body="false"
 	>
 		<view v-if="phase === 'run'" class="run-shell">
-			<view class="top-bar">
-				<image class="top-logo" :src="logoSrc" mode="aspectFit" />
-				<view class="top-meta">
-					<text class="top-progress">第 {{ qIndex + 1 }}/{{ totalQ }} 个字</text>
-					<text class="top-lesson">{{ lessonTitle }}</text>
-				</view>
-				<view class="top-hear" @click="onHearAgain">
-					<image class="top-hear-img" :src="labaSrc" mode="aspectFit" @error="onLabaError" />
-					<text class="top-hear-txt">再听</text>
-				</view>
-			</view>
-
-			<view class="progress-track">
-				<view class="progress-fill" :style="{ width: progressPct + '%' }" />
-			</view>
-
-			<scroll-view
-				v-if="totalQ > 1"
-				class="dots-scroll"
-				scroll-x
-				:show-scrollbar="false"
-				:scroll-into-view="dotScrollId"
-				scroll-with-animation
-			>
-				<view class="dots-row">
-					<view
-						v-for="(_, i) in totalQ"
-						:id="`dict-dot-${i}`"
-						:key="i"
-						class="dot"
-						:class="{
-							'dot--done': i < qIndex,
-							'dot--imperfect': i === qIndex && awaitingRetryChoice,
-							'dot--current': i === qIndex && !completed && !awaitingRetryChoice,
-							'dot--pending': i > qIndex
-						}"
-					/>
-				</view>
-			</scroll-view>
-
-			<view class="hint-card">
-				<image class="hint-meng" :src="mengPoseSrc" mode="aspectFit" />
-				<view class="hint-body">
-					<view class="hint-title-row">
-						<text class="hint-mystery">？</text>
-						<text v-if="strokeTotal > 0" class="hint-stroke">第 {{ currentStrokeNo }}/{{ strokeTotal }} 笔</text>
-						<text v-else class="hint-stroke">听一听，写一写</text>
+			<view class="head">
+				<view class="head-main">
+					<text class="head-progress">{{ qIndex + 1 }}/{{ totalQ }}</text>
+					<view class="head-track">
+						<view class="head-fill" :style="{ width: progressPct + '%' }" />
 					</view>
-					<view v-if="strokeTotal > 1" class="stroke-pills">
+					<view v-if="totalQ > 1" class="dots">
 						<view
-							v-for="n in strokeTotal"
-							:key="n"
-							class="stroke-pill"
-							:class="{
-								'stroke-pill--done': n <= activeStroke || (completed && n <= strokeTotal),
-								'stroke-pill--current': !completed && n === currentStrokeNo
-							}"
+							v-for="(_, i) in totalQ"
+							:id="`dict-dot-${i}`"
+							:key="i"
+							class="dot"
+							:class="dotClass(i)"
 						/>
 					</view>
-					<text class="hint-sub">{{ promptSubline }}</text>
+				</view>
+				<view class="head-side">
+					<view class="hear-btn" @click="onHearAgain">
+						<image class="hear-icon" :src="labaSrc" mode="aspectFit" @error="onLabaError" />
+						<text class="hear-txt">再听</text>
+					</view>
+					<view v-if="scoreRadarVisible" class="score-card">
+						<text class="score-card-title">本字评分</text>
+						<score-radar-chart
+							:key="'radar-' + qIndex + '-' + scoreRadarKey"
+							canvas-id="dictation-score-radar"
+							:axes="scoreRadarAxes"
+							:size="radarSizePx"
+							:show-legend="true"
+							:compact="true"
+							fill-color="rgba(232, 122, 74, 0.42)"
+							stroke-color="#d4562a"
+						/>
+					</view>
 				</view>
 			</view>
 
-			<view class="canvas-area">
+			<view class="status-row">
+				<image class="status-meng" :src="mengPoseSrc" mode="aspectFit" />
+				<view class="status-body">
+					<view class="status-line">
+						<text class="status-mark">？</text>
+						<text class="status-stroke">
+							{{ strokeTotal > 0 ? `${currentStrokeNo}/${strokeTotal} 笔` : '听音书写' }}
+						</text>
+						<view v-if="strokeTotal > 1" class="pills">
+							<view
+								v-for="n in strokeTotal"
+								:key="n"
+								class="pill"
+								:class="{
+									'pill--done': n <= activeStroke || (completed && n <= strokeTotal),
+									'pill--now': !completed && n === currentStrokeNo
+								}"
+							/>
+						</view>
+					</view>
+					<text class="status-tip">{{ promptSubline }}</text>
+				</view>
+			</view>
+
+			<view class="stage">
 				<view class="canvas-shell">
 					<canvas
 						v-if="canvasReady"
@@ -96,31 +94,26 @@
 						v-if="canvasReady && !completed && !advancing && showCanvasGuide"
 						class="canvas-guide"
 					>
-						<text class="canvas-guide-icon">👆</text>
-						<text class="canvas-guide-txt">按住田字格，按笔顺写，松手自动判断</text>
+						<text class="canvas-guide-txt">写完后点「写好了」</text>
 					</view>
 				</view>
 			</view>
 
-			<view class="bottom-dock">
-				<view
-					class="feedback-bubble"
-					:class="feedbackType === 'bad' ? 'feedback-bubble--bad' : feedbackType === 'ok' ? 'feedback-bubble--ok' : ''"
-				>
-					<text v-if="feedbackIcon" class="feedback-icon">{{ feedbackIcon }}</text>
-					<text class="feedback-text">{{ feedbackText }}</text>
+			<view class="dock">
+				<text
+					class="dock-msg"
+					:class="{
+						'dock-msg--ok': feedbackType === 'ok',
+						'dock-msg--bad': feedbackType === 'bad'
+					}"
+				>{{ feedbackIcon ? feedbackIcon + ' ' : '' }}{{ feedbackText }}</text>
+				<view v-if="awaitingRetryChoice" class="dock-actions">
+					<button class="btn btn--ghost" size="mini" @click="onChooseRetryPractice">再练</button>
+					<button class="btn btn--primary" size="mini" @click="onChooseSkipToNext">下一个</button>
 				</view>
-				<view v-if="awaitingRetryChoice" class="choice-row">
-					<button class="action-btn action-btn--ghost" size="mini" @click="onChooseRetryPractice">
-						重新练习
-					</button>
-					<button class="action-btn action-btn--primary" size="mini" @click="onChooseSkipToNext">
-						先下一个
-					</button>
-				</view>
-				<view v-else class="action-row">
+				<view v-else class="dock-actions">
 					<button
-						class="action-btn action-btn--ghost"
+						class="btn btn--ghost"
 						size="mini"
 						:disabled="!canvasReady || advancing || completed"
 						@click="resetWriting"
@@ -128,9 +121,9 @@
 						重写
 					</button>
 					<button
-						class="action-btn action-btn--primary"
+						class="btn btn--primary"
 						size="mini"
-						:disabled="!canvasReady || advancing || (completed && !charPerfect)"
+						:disabled="!canvasReady || advancing"
 						@click="onManualComplete"
 					>
 						{{ primaryActionLabel }}
@@ -150,18 +143,59 @@
 				>★</text>
 			</view>
 			<text class="done-title">{{ doneTitle }}</text>
-			<text class="done-score">笔顺全对 {{ score }}/{{ totalQ }} 字</text>
+			<text class="done-score">全对 {{ score }}/{{ totalQ }}</text>
+			<text class="pass-line" :class="{ 'pass-line--muted': !dictationJustPassed }">
+				{{ dictationJustPassed ? '已达标，记入本课进度' : `达标需 ≥ ${passNeed} 字` }}
+			</text>
+			<view v-if="imperfectChars.length" class="wrong-block">
+				<text class="wrong-label">需巩固</text>
+				<view class="wrong-chips">
+					<text
+						v-for="(ch, i) in imperfectChars"
+						:key="`w-${i}-${ch.hanzi}`"
+						class="wrong-chip"
+					>{{ ch.hanzi }}</text>
+				</view>
+			</view>
 			<text class="done-msg">{{ doneEncourage }}</text>
-			<button class="back-btn" type="primary" @click="goBackLesson">回字卡</button>
+			<view class="done-actions">
+				<button
+					v-if="!dictationJustPassed"
+					class="back-btn back-btn--ghost"
+					type="default"
+					@click="restartDictation"
+				>
+					再听写
+				</button>
+				<button
+					v-if="imperfectChars.length"
+					class="back-btn back-btn--ghost"
+					type="default"
+					@click="goWritePractice"
+				>
+					去写字
+				</button>
+				<button class="back-btn" type="primary" @click="goBackLesson">回字卡</button>
+			</view>
 		</view>
 	</meng-sub-page>
 </template>
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
-import { takeLessonDictationTransfer } from '@/utils/lesson-mode-session.js'
+import ScoreRadarChart from '@/components/score-radar-chart.vue'
+import { buildScoreRadarAxes } from '@/utils/score-radar-axes.js'
+import {
+	putLessonWriteTransfer,
+	takeLessonDictationTransfer
+} from '@/utils/lesson-mode-session.js'
 import { addCharWrongCount, markCharLearned } from '@/utils/user-progress-storage.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
+import {
+	buildStoredLessonKey,
+	recordLessonDictationAttempt
+} from '@/utils/user-lesson-progress-storage.js'
+import { calcQuizPassNeed } from '@/utils/lesson-quiz-plan.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
 import {
 	playLessonHintThenTargetReading,
@@ -206,22 +240,28 @@ function orderedUniqueRows(rows) {
 
 /** 屏上提示与萌萌语音文案对齐 */
 const FEEDBACK = {
-	idle: '听一听读音，在格子里按笔顺写',
+	idle: '听一听读音，按笔顺写完再点「写好了」',
 	retryClear: '已清空，再听一遍写',
 	/** 单笔写错（过程内），语气柔和、不报「第几笔」 */
 	strokeWrong: '笔顺不太对哦，继续加油',
 	strokeShort: '笔画再长一点哦，继续加油',
+	strokeCount: (exp, act) =>
+		act < exp
+			? `还差 ${exp - act} 笔，写完再点「写好了」`
+			: `多写了 ${act - exp} 笔，重写后再试`,
+	batchFail: '方向或字形还差一点，要不要再练一遍？',
 	charPass: (ch) => `全写对了，是「${ch}」！点「下一个」`,
 	charFinishWithMistakes: (n) =>
 		n > 1 ? `写过 ${n} 处小失误，要不要再练一遍？` : '有过小失误，要不要再练一遍？'
 }
 
 export default {
-	components: { MengSubPage },
+	components: { MengSubPage, ScoreRadarChart },
 	data() {
 		return {
 			phase: 'run',
 			lessonTitle: '',
+			rjLessonIdx: null,
 			targets: [],
 			qIndex: 0,
 			score: 0,
@@ -241,6 +281,8 @@ export default {
 			completed: false,
 			/** 本轮是否全程无笔顺/笔画失误 */
 			charPerfect: false,
+			/** 当前字本轮曾有过失误（重练后仍保留，用于不计分） */
+			charHadMistakesThisRound: false,
 			/** 已写完但过程有误，等待选「重新练习」或「先下一个」 */
 			awaitingRetryChoice: false,
 			feedbackText: FEEDBACK.idle,
@@ -252,13 +294,25 @@ export default {
 			/** 取消未完成的自动听音 / 切题 */
 			hearSeq: 0,
 			labaSrcIndex: 0,
-			logoSrc: resolveMengAssetUrl(MENG_ASSETS.logoIcon)
+			logoSrc: resolveMengAssetUrl(MENG_ASSETS.logoIcon),
+			/** @type {Array<{ hanzi: string, pinyin: string, perfect: boolean, mistakeCount: number }>} */
+			roundResults: [],
+			/** 本轮已记过错题的字 */
+			imperfectRecorded: {},
+			passNeed: 0,
+			dictationJustPassed: false,
+			scoreRadarVisible: false,
+			scoreRadarAxes: [],
+			scoreRadarKey: 0
 		}
 	},
 	computed: {
 		canvasStyle() {
 			const px = this.canvasLength + 30
 			return { width: px + 'px', height: px + 'px', display: 'block' }
+		},
+		radarSizePx() {
+			return 88
 		},
 		currentStrokeNo() {
 			if (this.completed) return this.strokeTotal
@@ -271,7 +325,7 @@ export default {
 			return Math.min(100, Math.round((base + bump) * 100))
 		},
 		primaryActionLabel() {
-			if (this.charPerfect && this.completed) return '下一个'
+			if (this.completed) return '下一个'
 			return '写好了'
 		},
 		dotScrollId() {
@@ -308,7 +362,7 @@ export default {
 			if (idle && this.qIndex === 0) {
 				return getMengmengVoiceCopy(MENG_VOICE.DICTATION_WELCOME) || '听一听，按笔顺写'
 			}
-			return '点右上角喇叭可以再听'
+			return '写完所有笔画后点「写好了」'
 		},
 		showCanvasGuide() {
 			return !this.feedbackType && !this.charStrokeMistakes && !this.awaitingRetryChoice
@@ -348,6 +402,9 @@ export default {
 						? MENG_VOICE.DICTATION_DONE_GOOD
 						: MENG_VOICE.DICTATION_DONE_ENCOURAGE
 			return getMengmengVoiceCopy(id) || '继续加油！'
+		},
+		imperfectChars() {
+			return (this.roundResults || []).filter((r) => r && r.hanzi && !r.perfect)
 		}
 	},
 	onUnload() {
@@ -384,14 +441,35 @@ export default {
 			setTimeout(() => uni.navigateBack(), 1800)
 			return
 		}
+		const rj = payload.rjLessonIdx
+		const rjN = Number(rj)
+		this.rjLessonIdx =
+			rj != null && rj !== '' && Number.isFinite(rjN) && rjN >= 0 ? Math.floor(rjN) : null
 		this.targets = pool
 		this.totalQ = pool.length
+		this.passNeed = calcQuizPassNeed(pool.length)
 		this.qIndex = 0
 		this.score = 0
+		this.roundResults = []
+		this.imperfectRecorded = {}
+		this.dictationJustPassed = false
+		this.dictationWelcomed = false
 		this.phase = 'run'
 		this.loadQuestion(0)
 	},
 	methods: {
+		dotClass(i) {
+			if (i > this.qIndex) return { 'dot--pending': true }
+			if (i === this.qIndex) {
+				if (this.awaitingRetryChoice) return { 'dot--imperfect': true }
+				if (this.charPerfect && this.completed) return { 'dot--done': true }
+				if (this.completed && !this.charPerfect) return { 'dot--imperfect': true }
+				return { 'dot--current': true }
+			}
+			const r = this.roundResults[i]
+			if (r && !r.perfect) return { 'dot--imperfect-done': true }
+			return { 'dot--done': true }
+		},
 		onLabaError() {
 			if (this.labaSrcIndex < this.labaSrcCandidates.length - 1) {
 				this.labaSrcIndex += 1
@@ -480,11 +558,13 @@ export default {
 			stopLocalPinyinAudio()
 			return playMengmengVoice(id, opts).catch(() => false)
 		},
-		/** 听写过程单笔写错：屏上文案 + daily_stroke_wrong 口播 */
+		/** 听写过程单笔写错：屏上文案 + 口播 */
 		playStrokeWrongHint(reason) {
 			this.feedbackType = 'bad'
 			this.feedbackText = reason === 'tooShort' ? FEEDBACK.strokeShort : FEEDBACK.strokeWrong
-			return this.playDictVoice(MENG_VOICE.DAILY_STROKE_WRONG, { minGapMs: 1400 })
+			const voiceId =
+				reason === 'tooShort' ? MENG_VOICE.DICTATION_STROKE_SHORT : MENG_VOICE.DAILY_STROKE_WRONG
+			return this.playDictVoice(voiceId, { minGapMs: reason === 'tooShort' ? 800 : 1400 })
 		},
 		playDictationDoneVoice() {
 			if (!this.totalQ) return
@@ -505,11 +585,46 @@ export default {
 				semester: p.semester === '下' ? '下' : '上'
 			}
 		},
+		commitRoundResult(perfect) {
+			const entry = {
+				hanzi: this.targetHanzi,
+				pinyin: this.targetPinyin,
+				perfect: !!perfect,
+				mistakeCount: this.charRoundMistakeCount()
+			}
+			const next = this.roundResults.slice()
+			next[this.qIndex] = entry
+			this.roundResults = next
+		},
+		finalizeDictationSession() {
+			const totalQ = this.totalQ
+			const score = this.score
+			const need = calcQuizPassNeed(totalQ)
+			this.passNeed = need
+			const passed = totalQ > 0 && score >= need
+			this.dictationJustPassed = passed
+			const lessonKey = buildStoredLessonKey(this.rjLessonIdx, this.lessonTitle)
+			const d = this.curriculumDims()
+			try {
+				recordLessonDictationAttempt({
+					lesson_key: lessonKey,
+					textbook_version_id: d.textbook_version_id,
+					grade: d.grade,
+					semester: d.semester,
+					score,
+					totalQ,
+					passed
+				})
+			} catch (e) {
+				console.warn('[lesson-dictation] recordLessonDictationAttempt', e)
+			}
+			this.playDictationDoneVoice()
+		},
 		loadQuestion(idx) {
 			const t = this.targets[idx]
 			if (!t) {
+				this.finalizeDictationSession()
 				this.phase = 'done'
-				this.playDictationDoneVoice()
 				return
 			}
 			this.clearAdvanceTimer()
@@ -518,15 +633,20 @@ export default {
 			this.targetPinyin = t.pinyin != null ? String(t.pinyin) : ''
 			this.completed = false
 			this.charPerfect = false
+			this.charHadMistakesThisRound = false
 			this.awaitingRetryChoice = false
 			this.activeStroke = 0
 			this.charStrokeMistakes = 0
 			this.feedbackType = ''
 			this.feedbackText = FEEDBACK.idle
+			this.clearScoreRadar()
 			this.strokeNames = getCncharStrokeNameList(this.targetHanzi)
 			this.strokeTotal = this.strokeNames.length || 0
-			this.mountTestWriter()
+			/** 先排队播音；稍后再挂 canvas，避免主线程被画布占满导致无声 */
 			this.queueIntroHear(idx)
+			setTimeout(() => {
+				if (this.phase === 'run' && this.targetHanzi) this.mountTestWriter()
+			}, 120)
 		},
 		onHearAgain() {
 			if (this.phase !== 'run' || !this.targetHanzi) return
@@ -545,10 +665,18 @@ export default {
 					length: this.canvasLength,
 					charInsetRatio: 0.12,
 					strokeColor: '#2c2419',
-					outlineColor: '#d5d5d5',
+					/** 关闭灰底稿，避免听写泄题 */
+					showOutline: false,
+					outlineColor: '#fffcf8',
+					/** 评分后对比用的标准轮廓色（书写中仍不显示） */
+					revealOutlineColor: '#cfc6b8',
+					revealFailColor: '#ff6b9d',
+					backgroundColor: '#fffcf8',
 					currentColor: '#e87a4a',
 					drawingColor: '#e87a4a',
-					drawingWidth: 5
+					drawingWidth: 5,
+					guideStrokeColor: '#ff6b9d',
+					highlightColor: '#ffab40'
 				},
 				line: {
 					show: true,
@@ -590,18 +718,22 @@ export default {
 			const ch = this.targetHanzi
 			if (!ch) return
 			this.scheduleMount(() => {
+				const vm = this
 				try {
-					const vm = this
 					this.writer = drawNative(ch, {
 						...this.sharedDrawOpts(),
 						el: '#lesson-dictation-canvas',
 						type: drawNative.TYPE.TEST,
 						animation: { autoAnimate: false },
 						test: {
-							testStrictOrder: true,
-							testDirectionWeight: 0.32,
-							testScoreThreshold: 26,
-							showHintAfterMisses: 2,
+							/** 中途只记书写顺序；写好了再综合判方向+贴合度 */
+							testJudgeMode: 'direction',
+							testDirectionMinCos: 0.45,
+							testFitRefRatio: 0.28,
+							testStrokePassScore: 0.55,
+							testDirWeight: 0.35,
+							testFitWeight: 0.65,
+							showHintAfterMisses: 1,
 							onTestStatus: ({ index, status, data }) => {
 								vm.handleTestStatus(index, status, data || {})
 							}
@@ -620,11 +752,37 @@ export default {
 				}
 			})
 		},
+		clearScoreRadar() {
+			this.scoreRadarVisible = false
+			this.scoreRadarAxes = []
+		},
+		showScoreRadarFromResult(data = {}) {
+			const axes = buildScoreRadarAxes(data.strokeResults, {
+				expectedCount: data.expectedCount != null ? data.expectedCount : this.strokeTotal,
+				actualCount:
+					data.actualCount != null
+						? data.actualCount
+						: Array.isArray(data.strokeResults)
+							? data.strokeResults.length
+							: this.activeStroke
+			})
+			this.scoreRadarAxes = axes
+			this.scoreRadarKey += 1
+			this.scoreRadarVisible = true
+		},
 		handleTestStatus(index, status, data = {}) {
 			if (this.phase !== 'run' || this.advancing) return
-			const strokeNo = Number(index) + 1
+			if (status === 'stroke_recorded') {
+				const n = Number(data.recordedCount) || Number(index) || 0
+				this.activeStroke = n
+				if (this.feedbackType === 'bad' && !this.awaitingRetryChoice && !this.completed) {
+					this.feedbackType = ''
+					this.feedbackText = FEEDBACK.idle
+				}
+				return
+			}
 			if (status === 'correct') {
-				this.activeStroke = strokeNo
+				this.activeStroke = Number(index) + 1
 				if (this.feedbackType === 'bad' && !this.awaitingRetryChoice && !this.completed) {
 					this.feedbackType = ''
 					this.feedbackText = FEEDBACK.idle
@@ -632,11 +790,42 @@ export default {
 				return
 			}
 			if (status === 'mistake') {
+				/** 中途过短：只提示，不记整字失误 */
+				if (data.reason === 'tooShort' && data.deferred) {
+					this.playStrokeWrongHint('tooShort')
+					return
+				}
+				if (data.deferred && data.reason === 'strokeCount') {
+					const exp = Number(data.expectedCount) || this.strokeTotal
+					const act = Number(data.actualCount) || 0
+					/** 笔数不够：提醒继续写，不进失败结算 */
+					if (act < exp) {
+						this.feedbackType = ''
+						this.feedbackText = FEEDBACK.strokeCount(exp, act)
+						return
+					}
+					this.showScoreRadarFromResult(data)
+					this.charStrokeMistakes += 1
+					this.charHadMistakesThisRound = true
+					this.onCharFinishedWithMistakes()
+					this.feedbackText = FEEDBACK.strokeCount(exp, act)
+					return
+				}
+				if (data.deferred && data.reason === 'lowScore') {
+					this.showScoreRadarFromResult(data)
+					this.charStrokeMistakes += 1
+					this.charHadMistakesThisRound = true
+					this.onCharFinishedWithMistakes()
+					this.feedbackText = FEEDBACK.batchFail
+					return
+				}
 				this.charStrokeMistakes += 1
+				this.charHadMistakesThisRound = true
 				this.playStrokeWrongHint(data.reason)
 				return
 			}
 			if (status === 'complete') {
+				if (data.deferred) this.showScoreRadarFromResult(data)
 				this.onCharRoundFinished()
 			}
 		},
@@ -651,11 +840,16 @@ export default {
 				this.onCharFinishedWithMistakes()
 				return
 			}
+			if (this.charHadMistakesThisRound) {
+				this.onCharWriteRecovered()
+				return
+			}
 			this.onCharWriteSuccess()
 		},
 		/** 笔画都画完，但过程中有过失误：询问是否重练，不记已学 */
 		onCharFinishedWithMistakes() {
 			if (this.advancing || this.awaitingRetryChoice) return
+			this.charHadMistakesThisRound = true
 			const n = this.charRoundMistakeCount()
 			this.completed = true
 			this.charPerfect = false
@@ -664,9 +858,24 @@ export default {
 			this.feedbackText = FEEDBACK.charFinishWithMistakes(n)
 			this.playDictVoice(MENG_VOICE.DICTATION_CHAR_RETRY, { minGapMs: 1500 })
 		},
+		/** 重练后写完且本趟无新失误：不计分，记为需巩固 */
+		onCharWriteRecovered() {
+			if (this.advancing || this.completed || this.awaitingRetryChoice) return
+			this.completed = true
+			this.charPerfect = false
+			this.activeStroke = this.strokeTotal
+			this.feedbackType = 'ok'
+			this.feedbackText = `「${this.targetHanzi}」写完啦，点「下一个」继续`
+			this.recordImperfectChar()
+			this.commitRoundResult(false)
+			this.playDictVoice(MENG_VOICE.DICTATION_CHAR_PASS, { minGapMs: 1200 })
+		},
 		recordImperfectChar() {
+			const h = this.targetHanzi
+			if (!h || this.imperfectRecorded[h]) return
+			this.imperfectRecorded = { ...this.imperfectRecorded, [h]: true }
 			try {
-				addCharWrongCount(this.targetHanzi, 1, this.curriculumDims())
+				addCharWrongCount(h, 1, this.curriculumDims())
 			} catch (e) {
 				console.warn('[lesson-dictation] addCharWrongCount', e)
 			}
@@ -682,9 +891,10 @@ export default {
 		onChooseSkipToNext() {
 			if (!this.awaitingRetryChoice || this.phase !== 'run') return
 			this.awaitingRetryChoice = false
+			this.recordImperfectChar()
+			this.commitRoundResult(false)
 			this.completed = false
 			this.charPerfect = false
-			this.recordImperfectChar()
 			this.advanceQuestion()
 		},
 		resetWritingForRetry() {
@@ -696,6 +906,7 @@ export default {
 			this.activeStroke = 0
 			this.feedbackType = ''
 			this.feedbackText = FEEDBACK.retryClear
+			this.clearScoreRadar()
 			if (this.writer && typeof this.writer.resetStrokeTest === 'function') {
 				this.writer.resetStrokeTest()
 				this.scheduleTargetReadingAfterVoice()
@@ -712,6 +923,7 @@ export default {
 			this.feedbackType = 'ok'
 			this.feedbackText = FEEDBACK.charPass(this.targetHanzi)
 			this.score++
+			this.commitRoundResult(true)
 			try {
 				markCharLearned(this.targetHanzi, this.curriculumDims())
 			} catch (e) {
@@ -721,8 +933,18 @@ export default {
 		},
 		onManualComplete() {
 			if (this.phase !== 'run' || this.advancing || this.awaitingRetryChoice) return
-			if (this.charPerfect && this.completed) {
+			if (this.completed) {
 				this.advanceQuestion()
+				return
+			}
+			if (this.writer && typeof this.writer.judgeDeferredTest === 'function') {
+				const recorded = this.writer.testState?.recordedStrokes?.length || 0
+				if (!recorded) {
+					this.feedbackType = ''
+					this.feedbackText = '先在格子里写一写，再点「写好了」'
+					return
+				}
+				this.writer.judgeDeferredTest()
 				return
 			}
 			const total = this.strokeTotal || this.writer?.charData?.medians?.length || 0
@@ -747,13 +969,43 @@ export default {
 			this.teardownWriter()
 			this.qIndex++
 			if (this.qIndex >= this.totalQ) {
+				this.finalizeDictationSession()
 				this.phase = 'done'
 				this.advancing = false
-				this.playDictationDoneVoice()
 				return
 			}
 			this.advancing = false
 			this.loadQuestion(this.qIndex)
+		},
+		restartDictation() {
+			if (!this.targets.length) return
+			this.clearAutoHear()
+			this.clearAdvanceTimer()
+			this.teardownWriter()
+			stopLocalPinyinAudio()
+			stopMengmengVoice()
+			this.qIndex = 0
+			this.score = 0
+			this.roundResults = []
+			this.imperfectRecorded = {}
+			this.dictationJustPassed = false
+			this.dictationWelcomed = false
+			this.passNeed = calcQuizPassNeed(this.totalQ)
+			this.phase = 'run'
+			this.loadQuestion(0)
+		},
+		goWritePractice() {
+			const rows = this.imperfectChars.map((r) => ({
+				hanzi: r.hanzi,
+				pinyin: r.pinyin || ''
+			}))
+			if (!rows.length) return
+			putLessonWriteTransfer({
+				lessonTitle: this.lessonTitle,
+				rjLessonIdx: this.rjLessonIdx,
+				rows
+			})
+			uni.redirectTo({ url: '/pages/literacy/write-practice' })
 		},
 		pickCanvasTouch(e) {
 			if (!e) return null
@@ -802,118 +1054,70 @@ export default {
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
+	padding: 8rpx 20rpx 12rpx;
 }
 
-.done-shell {
-	width: 100%;
-	box-sizing: border-box;
-}
-
-.top-bar {
+.head {
 	flex-shrink: 0;
+	position: relative;
+	z-index: 5;
 	display: flex;
 	flex-direction: row;
-	align-items: center;
-	padding: 10rpx 14rpx;
-	margin-bottom: 8rpx;
-	border-radius: 20rpx;
-	background: var(--meng-card-solid, #fff);
-	border: 1rpx solid var(--meng-border-warm, #e3d9c8);
-	box-shadow: 0 4rpx 16rpx var(--meng-shadow, rgba(44, 36, 25, 0.07));
+	align-items: flex-start;
+	gap: 16rpx;
+	margin-bottom: 10rpx;
 }
 
-.top-logo {
-	width: 52rpx;
-	height: 52rpx;
+.head-side {
 	flex-shrink: 0;
-	margin-right: 12rpx;
+	position: relative;
+	width: 100rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 }
 
-.top-meta {
+.head-main {
 	flex: 1;
 	min-width: 0;
 }
 
-.top-progress {
+.head-progress {
 	display: block;
-	font-size: 28rpx;
+	font-size: 26rpx;
 	font-weight: 800;
 	color: var(--meng-chocolate, #5c3d2e);
-	line-height: 1.2;
-}
-
-.top-lesson {
-	display: block;
-	font-size: 22rpx;
-	color: var(--meng-text-muted, #8a8076);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	line-height: 1.25;
-}
-
-.top-hear {
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 8rpx 16rpx;
-	border-radius: 16rpx;
-	background: var(--meng-tip-bg, #fff4e8);
-	border: 1rpx solid var(--meng-chip-active-border, rgba(232, 122, 74, 0.42));
-}
-
-.top-hear:active {
-	opacity: 0.88;
-}
-
-.top-hear-img {
-	width: 44rpx;
-	height: 44rpx;
-}
-
-.top-hear-txt {
-	font-size: 20rpx;
-	color: var(--meng-tab-active-text, #b84a28);
-	font-weight: 700;
-	margin-top: 2rpx;
-}
-
-.progress-track {
-	flex-shrink: 0;
-	height: 8rpx;
-	border-radius: 8rpx;
-	background: rgba(232, 122, 74, 0.15);
+	letter-spacing: 1rpx;
 	margin-bottom: 8rpx;
+}
+
+.head-track {
+	height: 6rpx;
+	border-radius: 6rpx;
+	background: rgba(232, 122, 74, 0.14);
 	overflow: hidden;
 }
 
-.progress-fill {
+.head-fill {
 	height: 100%;
-	border-radius: 8rpx;
+	border-radius: 6rpx;
 	background: var(--meng-accent-solid, #e87a4a);
-	transition: width 0.35s ease;
+	transition: width 0.3s ease;
 }
 
-.dots-scroll {
-	flex-shrink: 0;
-	width: 100%;
-	margin-bottom: 8rpx;
-	white-space: nowrap;
-}
-
-.dots-row {
-	display: inline-flex;
+.dots {
+	display: flex;
 	flex-direction: row;
-	gap: 10rpx;
-	padding: 4rpx 8rpx 8rpx;
+	flex-wrap: wrap;
+	gap: 6rpx;
+	margin-top: 8rpx;
 }
 
 .dot {
-	width: 14rpx;
-	height: 14rpx;
+	width: 10rpx;
+	height: 10rpx;
 	border-radius: 50%;
-	background: #e8e0d6;
+	background: #e5ddd3;
 	flex-shrink: 0;
 }
 
@@ -923,104 +1127,161 @@ export default {
 
 .dot--current {
 	background: var(--meng-accent-solid, #e87a4a);
-	transform: scale(1.25);
+	transform: scale(1.2);
 }
 
-.dot--imperfect {
-	background: #ffcc80;
-	transform: scale(1.15);
+.dot--imperfect,
+.dot--imperfect-done {
+	background: #ffb74d;
 }
 
-.hint-card {
+.hear-btn {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 88rpx;
+	padding: 10rpx 0;
+	border-radius: 16rpx;
+	background: rgba(255, 244, 232, 0.95);
+}
+
+.hear-btn:active {
+	opacity: 0.85;
+}
+
+.hear-icon {
+	width: 40rpx;
+	height: 40rpx;
+}
+
+.hear-txt {
+	margin-top: 2rpx;
+	font-size: 18rpx;
+	font-weight: 700;
+	color: var(--meng-tab-active-text, #b84a28);
+}
+
+.status-row {
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 12rpx;
-	padding: 12rpx 16rpx;
-	margin-bottom: 6rpx;
-	border-radius: 20rpx;
-	background: var(--meng-card, #fffcf8);
-	border: 1rpx solid var(--meng-border, #ebe3d8);
+	gap: 10rpx;
+	margin-bottom: 10rpx;
+	padding: 8rpx 12rpx;
+	border-radius: 16rpx;
+	background: rgba(255, 252, 248, 0.9);
 }
 
-.hint-meng {
-	width: 72rpx;
-	height: 72rpx;
+.status-meng {
+	width: 52rpx;
+	height: 52rpx;
 	flex-shrink: 0;
 }
 
-.hint-body {
+.status-body {
 	flex: 1;
 	min-width: 0;
 }
 
-.hint-title-row {
+.status-line {
 	display: flex;
 	flex-direction: row;
-	align-items: baseline;
-	gap: 12rpx;
+	align-items: center;
+	gap: 8rpx;
+	flex-wrap: wrap;
 }
 
-.hint-mystery {
-	font-size: 40rpx;
+.status-mark {
+	font-size: 28rpx;
 	font-weight: 800;
-	color: var(--meng-sky, #b8dcf0);
+	color: #a8cfe6;
 	line-height: 1;
 }
 
-.hint-stroke {
-	font-size: 26rpx;
-	color: var(--meng-chocolate, #5c3d2e);
+.status-stroke {
+	font-size: 24rpx;
 	font-weight: 700;
+	color: var(--meng-chocolate, #5c3d2e);
 }
 
-.stroke-pills {
+.pills {
 	display: flex;
 	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 6rpx;
-	margin-top: 8rpx;
+	gap: 4rpx;
+	margin-left: 4rpx;
 }
 
-.stroke-pill {
-	width: 20rpx;
-	height: 8rpx;
-	border-radius: 4rpx;
-	background: #e8e0d6;
+.pill {
+	width: 14rpx;
+	height: 6rpx;
+	border-radius: 3rpx;
+	background: #e5ddd3;
 }
 
-.stroke-pill--done {
+.pill--done {
 	background: var(--meng-leaf, #7ec8a0);
 }
 
-.stroke-pill--current {
+.pill--now {
 	background: var(--meng-accent-solid, #e87a4a);
 }
 
-.hint-sub {
+.status-tip {
 	display: block;
-	margin-top: 6rpx;
-	font-size: 22rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.35;
+	margin-top: 4rpx;
+	font-size: 20rpx;
+	color: var(--meng-text-muted, #8a8076);
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.canvas-area {
+.stage {
 	flex: 1;
 	min-height: 0;
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 }
 
 .canvas-shell {
 	position: relative;
-	padding: 10rpx;
-	border-radius: 20rpx;
+	padding: 8rpx;
+	border-radius: 18rpx;
 	background: #fff;
-	border: 2rpx solid var(--meng-border-warm, #e3d9c8);
-	box-shadow: 0 8rpx 24rpx var(--meng-shadow, rgba(44, 36, 25, 0.08));
+	border: 1rpx solid var(--meng-border-warm, #e3d9c8);
+	box-shadow: 0 4rpx 16rpx rgba(44, 36, 25, 0.06);
+	flex-shrink: 0;
+}
+
+.score-card {
+	position: absolute;
+	top: calc(100% + 8rpx);
+	right: 0;
+	z-index: 20;
+	width: 220rpx;
+	padding: 8rpx 8rpx 10rpx;
+	box-sizing: border-box;
+	border-radius: 14rpx;
+	background: rgba(255, 252, 248, 0.96);
+	border: 1rpx solid rgba(232, 122, 74, 0.35);
+	box-shadow: 0 6rpx 16rpx rgba(44, 36, 25, 0.14);
+	pointer-events: none;
+}
+
+.score-card-title {
+	display: block;
+	font-size: 20rpx;
+	font-weight: 800;
+	color: #b84a28;
+	text-align: center;
+	margin-bottom: 2rpx;
+	letter-spacing: 1rpx;
 }
 
 .dictation-canvas {
@@ -1030,123 +1291,82 @@ export default {
 
 .canvas-fallback {
 	display: block;
-	width: 160rpx;
-	height: 160rpx;
-	line-height: 160rpx;
+	width: 140rpx;
+	height: 140rpx;
+	line-height: 140rpx;
 	text-align: center;
-	font-size: 28rpx;
+	font-size: 26rpx;
 	color: var(--meng-text-muted, #8a8076);
 }
 
 .canvas-guide {
 	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	padding: 10rpx 12rpx;
-	border-radius: 0 0 14rpx 14rpx;
-	background: rgba(255, 252, 248, 0.92);
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: center;
-	gap: 6rpx;
+	left: 8rpx;
+	right: 8rpx;
+	bottom: 8rpx;
+	padding: 6rpx 8rpx;
+	border-radius: 10rpx;
+	background: rgba(255, 252, 248, 0.9);
 	pointer-events: none;
 }
 
-.canvas-guide-icon {
-	font-size: 22rpx;
-}
-
 .canvas-guide-txt {
-	font-size: 20rpx;
+	display: block;
+	font-size: 18rpx;
 	color: var(--meng-tip-text, #7a5f2a);
+	text-align: center;
 	line-height: 1.3;
-	text-align: center;
 }
 
-.bottom-dock {
+.dock {
 	flex-shrink: 0;
-	padding: 8rpx 0 12rpx;
+	padding-top: 8rpx;
 }
 
-.feedback-bubble {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	justify-content: center;
-	gap: 8rpx;
-	padding: 12rpx 16rpx;
-	margin-bottom: 12rpx;
-	border-radius: 16rpx;
-	background: var(--meng-banner-soft, #fff6ec);
-	border: 1rpx solid var(--meng-border, #ebe3d8);
-	min-height: 44rpx;
-}
-
-.feedback-bubble--ok {
-	background: var(--meng-leaf-soft, #e8f4ec);
-	border-color: rgba(126, 200, 160, 0.45);
-}
-
-.feedback-bubble--bad {
-	background: #fff0e8;
-	border-color: rgba(232, 122, 74, 0.35);
-}
-
-.feedback-icon {
-	font-size: 26rpx;
+.dock-msg {
+	display: block;
+	min-height: 36rpx;
+	margin-bottom: 10rpx;
+	padding: 0 4rpx;
+	font-size: 22rpx;
 	line-height: 1.4;
-	color: var(--meng-leaf, #7ec8a0);
-	font-weight: 800;
-}
-
-.feedback-bubble--bad .feedback-icon {
-	color: var(--meng-accent-solid, #e87a4a);
-}
-
-.feedback-text {
-	flex: 1;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.45;
 	text-align: center;
+	color: var(--meng-text-secondary, #6d5e52);
 }
 
-.feedback-bubble--ok .feedback-text {
+.dock-msg--ok {
 	color: #2e6b45;
 	font-weight: 600;
 }
 
-.feedback-bubble--bad .feedback-text {
+.dock-msg--bad {
 	color: #a85a28;
 	font-weight: 600;
 }
 
-.action-row,
-.choice-row {
+.dock-actions {
 	display: flex;
 	flex-direction: row;
 	gap: 12rpx;
 }
 
-.action-btn {
+.btn {
 	flex: 1;
 	margin: 0 !important;
-	padding: 0 16rpx !important;
-	height: 72rpx !important;
-	line-height: 72rpx !important;
+	padding: 0 12rpx !important;
+	height: 68rpx !important;
+	line-height: 68rpx !important;
 	font-size: 28rpx !important;
-	border-radius: 18rpx !important;
+	border-radius: 16rpx !important;
 }
 
-.action-btn--ghost {
+.btn--ghost {
 	background: #fff !important;
-	border: 2rpx solid var(--meng-border-warm, #e3d9c8) !important;
+	border: 1rpx solid var(--meng-border-warm, #e3d9c8) !important;
 	color: var(--meng-chocolate, #5c3d2e) !important;
 }
 
-.action-btn--primary {
+.btn--primary {
 	background: var(--meng-accent-solid, #e87a4a) !important;
 	color: #fff !important;
 	border: none !important;
@@ -1155,29 +1375,29 @@ export default {
 
 .done-shell {
 	height: 100%;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 32rpx 24rpx;
-	box-sizing: border-box;
+	padding: 28rpx 28rpx 40rpx;
 }
 
 .done-meng {
-	width: 120rpx;
-	height: 120rpx;
-	margin-bottom: 12rpx;
+	width: 100rpx;
+	height: 100rpx;
+	margin-bottom: 8rpx;
 }
 
 .done-stars {
 	display: flex;
 	flex-direction: row;
-	gap: 8rpx;
-	margin-bottom: 16rpx;
+	gap: 6rpx;
+	margin-bottom: 10rpx;
 }
 
 .done-star {
-	font-size: 40rpx;
+	font-size: 34rpx;
 	color: #e8e0d6;
 }
 
@@ -1190,35 +1410,101 @@ export default {
 }
 
 .done-title {
-	font-size: 38rpx;
+	font-size: 36rpx;
 	font-weight: 800;
 	color: var(--meng-chocolate, #5c3d2e);
-	margin-bottom: 12rpx;
+	margin-bottom: 8rpx;
 }
 
 .done-score {
-	font-size: 30rpx;
+	font-size: 28rpx;
 	color: var(--meng-text-secondary, #6d5e52);
 	font-weight: 700;
+	margin-bottom: 8rpx;
+}
+
+.pass-line {
+	font-size: 24rpx;
+	color: #2e6b45;
+	font-weight: 600;
+	margin-bottom: 14rpx;
+	text-align: center;
+}
+
+.pass-line--muted {
+	color: var(--meng-text-muted, #8a8076);
+}
+
+.wrong-block {
+	width: 100%;
+	max-width: 480rpx;
 	margin-bottom: 12rpx;
+	padding: 10rpx 12rpx;
+	box-sizing: border-box;
+	border-radius: 14rpx;
+	background: #fff8f0;
+}
+
+.wrong-label {
+	display: block;
+	font-size: 20rpx;
+	color: var(--meng-text-muted, #8a8076);
+	margin-bottom: 8rpx;
+	text-align: center;
+}
+
+.wrong-chips {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8rpx;
+}
+
+.wrong-chip {
+	min-width: 48rpx;
+	padding: 4rpx 12rpx;
+	border-radius: 10rpx;
+	background: #fff;
+	border: 1rpx solid rgba(232, 122, 74, 0.28);
+	font-size: 30rpx;
+	font-weight: 700;
+	color: var(--meng-chocolate, #5c3d2e);
+	text-align: center;
 }
 
 .done-msg {
-	font-size: 26rpx;
+	font-size: 24rpx;
 	color: var(--meng-text-muted, #8a8076);
 	text-align: center;
-	line-height: 1.5;
-	margin-bottom: 32rpx;
-	padding: 0 24rpx;
+	line-height: 1.45;
+	margin-bottom: 28rpx;
+	padding: 0 16rpx;
+}
+
+.done-actions {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12rpx;
 }
 
 .back-btn {
-	width: 62%;
-	max-width: 380rpx;
-	border-radius: 20rpx;
-	font-size: 30rpx;
+	width: 58%;
+	max-width: 360rpx;
+	margin: 0 !important;
+	border-radius: 18rpx;
+	font-size: 28rpx;
 	font-weight: 700;
 	background: var(--meng-accent-solid, #e87a4a);
 	border: none;
+	color: #fff;
+}
+
+.back-btn--ghost {
+	background: #fff !important;
+	color: var(--meng-chocolate, #5c3d2e) !important;
+	border: 1rpx solid var(--meng-border-warm, #e3d9c8) !important;
 }
 </style>

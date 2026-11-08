@@ -17,7 +17,9 @@ export const STORAGE_KEYS = {
 	/** 课级缓存：小测通过时间、最佳成绩等（见 user-lesson-progress-storage.js） */
 	USER_LESSON_PROGRESS: 'user_lesson_progress_v1',
 	/** 拼音小测错题计数（见 user-pinyin-wrong-storage.js） */
-	USER_PINYIN_WRONG: 'user_pinyin_wrong_v1'
+	USER_PINYIN_WRONG: 'user_pinyin_wrong_v1',
+	/** 写字练习：是否自动播笔画名语音（1 开 / 0 关） */
+	WRITE_PRACTICE_STROKE_AUDIO: 'write_practice_stroke_audio_v1'
 }
 
 /** 教材版本标识 — 对应字段 textbook_version_id */

@@ -26,9 +26,13 @@
 				<text class="play-fab-icon">{{ animating ? '⏸' : '▶' }}</text>
 			</view>
 		</view>
-		<text v-if="!hideStrokeHint && currentStrokeLabel" class="stroke-hint">
-			第 {{ strokeIndex + 1 }} 笔 · {{ currentStrokeLabel }}
-		</text>
+		<!-- 始终占位，避免开播后才出现「第 N 笔」把下方内容顶开 -->
+		<view v-if="!hideStrokeHint" class="stroke-hint">
+			<text v-if="currentStrokeLabel" class="stroke-hint-txt">
+				第 {{ strokeIndex + 1 }} 笔 · {{ currentStrokeLabel }}
+			</text>
+			<text v-else class="stroke-hint-txt stroke-hint-txt--ph">第 1 笔</text>
+		</view>
 	</view>
 </template>
 
@@ -38,11 +42,17 @@ import { getAudioNarrator } from '@/utils/audio-settings.js'
 import {
 	getCncharStrokeNameList,
 	enqueueStrokeSegmentAudio,
-	enqueueStrokeTrailAudio,
 	getStrokeAudioQueueTail,
+	playStrokeLabelAudio,
 	resetStrokeAudioQueue,
 	stopStrokeOrderAudio
 } from '@/utils/stroke-order-audio.js'
+import { sleep } from '@/utils/play-pinyin-local-audio.js'
+
+/** 笔起首音节结束后的短缓冲，再开画 */
+const STROKE_AUDIO_LEAD_PAD_MS = 100
+/** 笔末读音结束后的缓冲，避免尾音被下一笔掐断 */
+const STROKE_AUDIO_TAIL_PAD_MS = 320
 
 let _idSeq = 0
 
@@ -162,7 +172,8 @@ export default {
 			return String(this.idleMode || '') === 'blank'
 		},
 		attachDelayMs() {
-			return this.isBlankIdle ? 16 : 48
+			/** preview 也尽量贴着挂载，避免弹层已开、田字格/字还空一拍 */
+			return this.isBlankIdle ? 0 : 16
 		}
 	},
 	watch: {
@@ -253,17 +264,34 @@ export default {
 			})
 			return {
 				...base,
-				onStrokeWillStart(strokeIndex, hanzi) {
+				/** 读音开启：笔间留白加长，等 hold 释放后再完整计时 */
+				delayBetweenStrokes: 520,
+				/**
+				 * 起笔前整笔读名播完再动笔。
+				 * 复合名走同一 InnerAudio 连读，避免分段 play 时 stop 上一音节；
+				 * 拐点不再叠播（部分端 onEnded 不准时易被听成「读到一半被掐」）。
+				 */
+				async onStrokeWillStart(strokeIndex, hanzi) {
 					vm.strokeIndex = strokeIndex
 					vm.$emit('stroke-index', strokeIndex)
-					enqueueStrokeSegmentAudio(strokeIndex, 0, hanzi, strokeAudioOpts())
+					const opts = strokeAudioOpts()
+					const names = getCncharStrokeNameList(hanzi)
+					const label = names[strokeIndex] || ''
+					if (label) {
+						try {
+							await playStrokeLabelAudio(label, opts)
+						} catch (_) {}
+					} else {
+						enqueueStrokeSegmentAudio(strokeIndex, 0, hanzi, opts)
+						try {
+							await getStrokeAudioQueueTail()
+						} catch (_) {}
+					}
+					await sleep(STROKE_AUDIO_LEAD_PAD_MS)
 				},
-				onStrokeCorner(strokeIndex, cornerIndex, hanzi) {
-					enqueueStrokeSegmentAudio(strokeIndex, cornerIndex + 1, hanzi, strokeAudioOpts())
-				},
-				onStrokeTrailSegments(strokeIndex, fromSegmentIndex, hanzi) {
-					enqueueStrokeTrailAudio(strokeIndex, fromSegmentIndex, hanzi, strokeAudioOpts())
-					return getStrokeAudioQueueTail()
+				onStrokeCorner() {},
+				async onStrokeTrailSegments() {
+					await sleep(STROKE_AUDIO_TAIL_PAD_MS)
 				}
 			}
 		},
@@ -433,8 +461,11 @@ export default {
 			const ch = this.displayChar
 			if (ch && ch !== '—') {
 				if (this.isBlankIdle) {
+					/**
+					 * blank 模式首次 ready 已由 remount 发出；此处勿再 emit，
+					 * 否则父级（抽屉）会重跑「读字→笔顺」并 stop 掉正在播的笔画音。
+					 */
 					this.strokeReady = true
-					this.$emit('ready-change', true)
 					return
 				}
 				this.remount()
@@ -516,9 +547,22 @@ export default {
 
 .stroke-hint {
 	margin-top: 10rpx;
+	min-height: 36rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.stroke-hint-txt {
 	font-size: 22rpx;
 	color: var(--meng-text-muted);
 	text-align: center;
-	max-width: 100%;
+	line-height: 1.3;
+}
+
+.stroke-hint-txt--ph {
+	visibility: hidden;
 }
 </style>

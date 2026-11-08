@@ -187,12 +187,11 @@ export async function playStrokeGuidanceAudio(strokeIndexZeroBased, label, optio
 	// if (!strokeSyl.length) return ok
 	// if (!(await sleepUnlessCancelled(pauseMs, aborted))) return ok
 	// if (aborted()) return ok
-	const okStroke = await playStrokeSyllableSequence(strokeSyl, {
+	return playStrokeSyllableSequence(strokeSyl, {
 		...seqBase,
 		gapMs: options.strokeGapMs != null ? options.strokeGapMs : gapMs,
 		compoundGapMs: options.compoundGapMs
 	})
-	return ok || okStroke
 }
 
 /**

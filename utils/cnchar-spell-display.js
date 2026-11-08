@@ -16,6 +16,7 @@
  */
 import cnchar from './cnchar-setup.js'
 import { appendDebugLog } from './debug-console-hook.js'
+import { stripPinyinToneMarks } from './pinyin-strip-tone.js'
 
 /** 调试：同时写 console + 调试页缓冲（构建移除 console 时仍可在日志页看到） */
 function debugSpell(label, payload) {
@@ -89,7 +90,21 @@ function expandSpellCellsToReadings(raw) {
 }
 
 function readingDedupeKey(s) {
-	return String(s || '').trim().toLowerCase()
+	let t = String(s || '').trim().toLowerCase()
+	try {
+		t = t.normalize('NFC')
+	} catch (_) {}
+	return t
+}
+
+function readingBareStem(s) {
+	return stripPinyinToneMarks(readingDedupeKey(s))
+}
+
+function isBareUntonedReading(s) {
+	const key = readingDedupeKey(s)
+	if (!key) return false
+	return readingBareStem(key) === key
 }
 
 /**
@@ -139,4 +154,32 @@ export function listSpellReadingsForHanzi(char) {
 	} catch (_) {
 		return []
 	}
+}
+
+/**
+ * 查字展示用：合并字库/传入文案与 cnchar 多音，去重后列出全部读音。
+ * 无调条若已有同 stem 带调读音则丢弃（避免 tian + tiān 连播两遍）。
+ * @param {string} hanzi
+ * @param {string} [displayPinyin]
+ * @returns {string[]}
+ */
+export function listAllPinyinReadingsForDisplay(hanzi, displayPinyin) {
+	const fromDisplay = parsePinyinDisplayToReadings(displayPinyin)
+	const fromCnchar = listSpellReadingsForHanzi(hanzi)
+	const merged = []
+	const seen = new Set()
+	for (const r of [...fromDisplay, ...fromCnchar]) {
+		const k = readingDedupeKey(r)
+		if (!k || seen.has(k)) continue
+		seen.add(k)
+		merged.push(r)
+	}
+	const tonedBares = new Set()
+	for (const r of merged) {
+		if (!isBareUntonedReading(r)) tonedBares.add(readingBareStem(r))
+	}
+	return merged.filter((r) => {
+		if (!isBareUntonedReading(r)) return true
+		return !tonedBares.has(readingBareStem(r))
+	})
 }

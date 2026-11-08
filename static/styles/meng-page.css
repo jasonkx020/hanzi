@@ -251,21 +251,17 @@
 }
 
 /**
- * 主内容横向铺满：抵消 tab-page-shell 左右 padding，避免「方框」两侧留白。
+ * 兼容旧 class：不再抵消 shell 左右 20rpx（与课本同步学 sheet 边距一致）。
  */
 .tab-content-bleed {
-	margin-left: -20rpx;
-	margin-right: -20rpx;
-	padding-left: 12rpx;
-	padding-right: 12rpx;
 	box-sizing: border-box;
 	width: auto;
 }
 
-/** Tab 主内容玻璃面板（全宽，顶圆角） */
+/** Tab 主内容玻璃面板（顶圆角；左右内边距对齐课本 sheet） */
 .tab-dock-panel {
 	box-sizing: border-box;
-	padding: 18rpx 12rpx 14rpx;
+	padding: 18rpx 22rpx 14rpx;
 	border-radius: 32rpx 32rpx 0 0;
 	background: var(--meng-glass-bg);
 	border: 2rpx solid var(--meng-glass-border);
@@ -276,18 +272,21 @@
 	/* #endif */
 }
 
-/** 拼音/识字/查字主内容贴边（去掉 shell 左右 padding，避免右侧留白） */
+/**
+ * 兼容旧 class：与 .tab-page-shell 同样保留左右 20rpx。
+ * 顶图仍靠 .tab-hero 负 margin 通栏，内容区缩进。
+ */
 .tab-page-shell--edge {
-	padding-left: 0;
-	padding-right: 0;
-	padding-bottom: env(safe-area-inset-bottom);
+	padding-left: 20rpx;
+	padding-right: 20rpx;
+	padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
 }
 
 .tab-page-shell--edge .tab-hero {
-	margin-left: 0;
-	margin-right: 0;
-	padding-left: 16rpx;
-	padding-right: 16rpx;
+	margin-left: -20rpx;
+	margin-right: -20rpx;
+	padding-left: 20rpx;
+	padding-right: 20rpx;
 }
 
 /** 子页统一页面底（无顶图时，纯色） */

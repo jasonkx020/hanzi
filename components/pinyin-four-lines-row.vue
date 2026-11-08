@@ -15,6 +15,10 @@
 
 			'pflr--' + size,
 
+			ink === 'poly' ? 'pflr--ink-poly' : '',
+
+			ink === 'plain' ? 'pflr--ink-plain' : '',
+
 			{
 
 				'pflr--metric-shift': metricShift,
@@ -288,6 +292,20 @@ export default {
 			default: 'font-pinyin',
 
 			validator: (v) => ['font-pinyin', 'font-pinyin-step', 'pinyin', 'step'].includes(String(v || ''))
+
+		},
+
+		/**
+		 * 音节墨色：默认保持组件原色；poly 多音蓝；plain 非多音黑
+		 * @values '' | 'poly' | 'plain'
+		 */
+		ink: {
+
+			type: String,
+
+			default: '',
+
+			validator: (v) => ['', 'poly', 'plain'].includes(String(v || ''))
 
 		},
 
@@ -1093,7 +1111,7 @@ export default {
 
 	line-height: 1;
 
-	font-weight: 700;
+	font-weight: normal;
 
 }
 
@@ -1175,6 +1193,14 @@ export default {
 
 	letter-spacing: 0;
 
+}
+
+.pflr--ink-poly .pflr-glyph {
+	color: #2f6fed;
+}
+
+.pflr--ink-plain .pflr-glyph {
+	color: #1a1a1a;
 }
 
 

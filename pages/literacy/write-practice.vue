@@ -52,123 +52,115 @@
 		avatar-pose="happy"
 		:overlap-body="false"
 	>
-			<view class="hero-card">
-				<view class="char-badge">
-					<text class="char-badge-text">{{ displayChar }}</text>
+		<view class="wp-page">
+			<!-- 顶栏：大字 + 轻量拼音 + 笔顺提示 -->
+			<view class="wp-head">
+				<view class="wp-char-col" @click.stop="replayCharReading">
+					<text class="wp-char">{{ displayChar }}</text>
+					<text v-if="pinyinPlain" class="wp-pinyin">{{ pinyinPlain }}</text>
 				</view>
-				<view v-if="pinyinTokens.length" class="pinyin-beside">
-					<pinyin-four-lines-row :syllables="pinyinTokens" size="xl" />
-				</view>
-				<view class="hero-meta">
-					<text class="progress-line">第 {{ currentStrokeNo }} / {{ strokeTotal }} 笔</text>
-					<text class="hint-line">
-						{{ completed ? '全部笔画正确，太棒了！' : (currentStrokeGuidance || '请按笔顺写…') }}
-					</text>
-					<view
-						v-if="!completed && currentStrokeLabel"
-						class="hint-speak"
-						@click.stop="playCurrentStrokeAudio"
-					>
-						<text class="hint-speak-icon">🔊</text>
-						<text class="hint-speak-text">听笔画</text>
-					</view>
-				</view>
-			</view>
-
-			<view v-if="allWords.length" class="write-words-block">
-				<view class="write-words-chips">
+				<view class="wp-head-main">
+					<text class="wp-progress">{{ strokeProgressLabel }}</text>
+					<text class="wp-guide">{{
+						completed ? '全部写对了' : currentStrokeGuidancePhrase || '按笔顺书写'
+					}}</text>
 					<text
-						v-for="(w, i) in displayWords"
-						:key="'ww-' + wordsPage + '-' + i"
-						class="write-word-chip"
-					>{{ w }}</text>
-				</view>
-				<view
-					v-if="canRefreshWords"
-					class="write-words-more"
-					@click.stop="refreshWordsBatch"
-				>
-					<text class="write-words-more-text">换一批</text>
+						v-if="!completed && currentStrokeLabel"
+						class="wp-listen"
+						@click.stop="playCurrentStrokeAudio"
+					>听笔画</text>
 				</view>
 			</view>
 
-			<view class="write-stage">
-				<view class="history-float">
-					<text class="history-title">书写记录</text>
-					<scroll-view scroll-y class="history-scroll" :show-scrollbar="false">
-						<text v-if="!history.length" class="history-empty">写完后这里会显示每一笔的结果</text>
-						<text
-							v-for="(line, i) in history"
-							:key="i"
-							class="history-item"
-							:class="historyItemClass(line)"
-						>{{ line }}</text>
-					</scroll-view>
-				</view>
+			<view v-if="allWords.length" class="wp-words">
+				<text
+					v-for="(w, i) in displayWords"
+					:key="'ww-' + wordsPage + '-' + i"
+					class="wp-word"
+				>{{ w }}</text>
+				<text
+					v-if="canRefreshWords"
+					class="wp-words-more"
+					@click.stop="refreshWordsBatch"
+				>换一批</text>
+			</view>
 
-				<view class="canvas-shell">
-					<canvas
-						v-if="canvasReady"
-						:id="canvasId"
-						:canvas-id="canvasId"
-						class="practice-canvas"
-						disable-scroll
-						:style="canvasStyle"
-						@touchstart="onTouchStart"
-						@touchmove="onTouchMove"
-						@touchend="onTouchEnd"
-						@touchcancel="onTouchCancel"
+			<!-- 田字格居中；完成态右侧悬浮雷达 -->
+			<view class="wp-stage">
+				<canvas
+					v-if="canvasReady"
+					:id="canvasId"
+					:canvas-id="canvasId"
+					class="practice-canvas"
+					disable-scroll
+					:style="canvasStyle"
+					@touchstart="onTouchStart"
+					@touchmove="onTouchMove"
+					@touchend="onTouchEnd"
+					@touchcancel="onTouchCancel"
+				/>
+				<text v-else class="canvas-fallback">{{ displayChar }}</text>
+				<view v-if="scoreRadarVisible" class="wp-score-card">
+					<text class="wp-score-card-title">本字评分</text>
+					<score-radar-chart
+						:key="'wp-radar-' + scoreRadarKey"
+						canvas-id="write-practice-score-radar"
+						:axes="scoreRadarAxes"
+						:size="radarSizePx"
+						:show-legend="true"
+						:compact="true"
+						fill-color="rgba(232, 122, 74, 0.42)"
+						stroke-color="#d4562a"
 					/>
-					<text v-else class="canvas-fallback">{{ displayChar }}</text>
-					<view v-if="!demoPlaying && !introBusy && canvasReady && !completed" class="canvas-hint">
-						<text class="canvas-hint-icon">👆</text>
-						<text class="canvas-hint-text">按住田字格，写出「{{ currentStrokeGuidancePhrase || '当前笔' }}」，松手自动判断</text>
-					</view>
 				</view>
+			</view>
+
+			<text
+				class="wp-feedback"
+				:class="{
+					'wp-feedback--ok': feedbackType === 'ok',
+					'wp-feedback--bad': feedbackType === 'bad'
+				}"
+			>{{ feedbackIcon ? feedbackIcon + ' ' : '' }}{{ feedbackText }}</text>
+
+			<view v-if="recentHistory.length" class="wp-history">
+				<text
+					v-for="(line, i) in recentHistory"
+					:key="'h-' + i"
+					class="wp-history-item"
+					:class="historyItemClass(line)"
+				>{{ line }}</text>
 			</view>
 
 			<view
-				class="feedback"
-				:class="feedbackType === 'bad' ? 'feedback--bad' : feedbackType === 'ok' ? 'feedback--ok' : 'feedback--idle'"
+				v-if="!completed"
+				class="wp-stroke-audio"
+				:class="{ 'wp-stroke-audio--off': !strokeAudioEnabled }"
+				@click.stop="toggleStrokeAudio"
 			>
-				<text v-if="feedbackIcon" class="feedback-icon">{{ feedbackIcon }}</text>
-				<text class="feedback-text">{{ feedbackText }}</text>
+				<view class="wp-stroke-audio-switch" :class="{ 'wp-stroke-audio-switch--on': strokeAudioEnabled }">
+					<view class="wp-stroke-audio-knob" />
+				</view>
+				<text class="wp-stroke-audio-label">{{
+					strokeAudioEnabled ? '笔画语音：开' : '笔画语音：关（仅动画）'
+				}}</text>
 			</view>
 
-			<view class="tool-row">
-				<view class="tool-cell">
-					<button class="tool-btn tool-btn--ghost" size="mini" :disabled="demoPlaying" @click="showStrokeDemo">
-						看笔顺
-					</button>
-					<text class="tool-caption">先看动画怎么写</text>
-				</view>
-				<view class="tool-cell">
-					<button class="tool-btn tool-btn--ghost" size="mini" @click="resetPractice">重写</button>
-					<text class="tool-caption">从第一笔重来</text>
-				</view>
-				<view class="tool-cell">
-					<button class="tool-btn tool-btn--primary" size="mini" @click="nextChar">
-						{{ lessonMode ? '下一字' : '换一字' }}
-					</button>
-					<text class="tool-caption">{{ lessonMode ? '本课下一个字' : '练别的生字' }}</text>
-				</view>
+			<!-- 书写中：三按钮；完成后：再写一次 + 下一字 -->
+			<view v-if="!completed" class="wp-tools">
+				<button class="wp-btn wp-btn--ghost" :disabled="demoPlaying" @click="showStrokeDemo">
+					看笔顺
+				</button>
+				<button class="wp-btn wp-btn--ghost" @click="resetPractice">重写</button>
+				<button class="wp-btn wp-btn--primary" @click="nextChar">
+					{{ lessonMode ? '下一字' : '换一字' }}
+				</button>
 			</view>
-
-		<view class="input-card">
-			<text class="input-label">{{
-				lessonMode ? '指定本课某个字练（须为本课生字）' : '想练哪个字？输入一个汉字后点确定'
-			}}</text>
-			<view class="input-row">
-				<input
-					v-model="inputHanzi"
-					class="hanzi-input"
-					type="text"
-					maxlength="8"
-					:placeholder="lessonMode ? '输入本课生字' : '例如：人、大、国'"
-					confirm-type="done"
-					@confirm="applyHanzi"
-				/>
-				<button class="apply-btn" size="mini" @click="applyHanzi">确定</button>
+			<view v-else class="wp-tools wp-tools--done">
+				<button class="wp-btn wp-btn--ghost" @click="resetPractice">再写一次</button>
+				<button class="wp-btn wp-btn--primary" @click="nextChar">
+					{{ lessonMode ? '下一字' : '换一字' }}
+				</button>
 			</view>
 		</view>
 	</meng-sub-page>
@@ -176,7 +168,9 @@
 
 <script>
 import MengSubPage from '@/components/meng-sub-page.vue'
+import ScoreRadarChart from '@/components/score-radar-chart.vue'
 import drawNative from '@/utils/draw-native.js'
+import { buildScoreRadarAxes } from '@/utils/score-radar-axes.js'
 import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
 import {
 	getCncharStrokeNameList,
@@ -187,11 +181,16 @@ import {
 import {
 	playOpusForDisplayPinyin,
 	playPinyinLocalAudioSequence,
-	sleepUnlessCancelled,
+	sleep,
 	stopLocalPinyinAudio
 } from '@/utils/play-pinyin-local-audio.js'
 import { stopHanziSpeech } from '@/utils/speak-hanzi.js'
-import { getAudioNarrator } from '@/utils/audio-settings.js'
+import {
+	getAudioNarrator,
+	getWritePracticeStrokeAudioEnabled,
+	setWritePracticeStrokeAudioEnabled
+} from '@/utils/audio-settings.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 import { formatStrokeLabelDisplay } from '@/data/stroke-name-pinyin.js'
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { addCharWrongCount } from '@/utils/user-progress-storage.js'
@@ -206,7 +205,6 @@ import {
 	waitForMengmengVoiceIdle
 } from '@/utils/mengmeng-voice.js'
 import { LESSON_AUDIO_GAP_MS, sleepMs } from '@/utils/lesson-mode-audio.js'
-import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
 
@@ -215,11 +213,18 @@ const CANVAS_LENGTH_COMPACT = 200
 /** 整字读音播完后，再过多久才播笔画名 / 闪笔画 */
 const CHAR_TO_STROKE_AUDIO_GAP_MS = 2000
 const CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT = 600
+/** 关闭笔画语音时：字音后尽快进入可写状态 */
+const CHAR_TO_STROKE_GAP_MS_SILENT = 420
+/** 字音结束后的短缓冲，避免尾音被笔画引导掐断 */
+const CHAR_READING_TAIL_PAD_MS = 360
 /** 组词每屏展示条数 */
 const WORDS_PAGE_SIZE = 4
+const WRITE_WELCOME_ONCE_KEY = 'meng_voice_write_practice_welcome'
 
 export default {
-	components: { MengSubPage, PinyinFourLinesRow },
+	components: { MengSubPage, ScoreRadarChart },
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.WRITE_PRACTICE,
 	props: {
 		/** 每日一练内嵌：无换字输入、紧凑布局 */
 		compact: {
@@ -264,6 +269,8 @@ export default {
 			introGen: 0,
 			introBusy: false,
 			introDelayTimer: null,
+			/** 本轮 mount 是否已启动进场引导，防重复 ready/挂载掐断字音 */
+			introStartedForMount: 0,
 			history: [],
 			charPool: [],
 			poolIndex: 0,
@@ -281,19 +288,55 @@ export default {
 			charWords: [],
 			wordsGen: 0,
 			/** 组词分页：换一批 */
-			wordsPage: 0
+			wordsPage: 0,
+			/** 自动播笔画名；关则仅闪笔画 / 看笔顺动画 */
+			strokeAudioEnabled: true,
+			/** 本字逐笔分项（供完成态雷达） */
+			strokeScoreResults: [],
+			scoreRadarVisible: false,
+			scoreRadarAxes: [],
+			scoreRadarKey: 0
 		}
 	},
+	created() {
+		this.strokeAudioEnabled = getWritePracticeStrokeAudioEnabled()
+	},
 	computed: {
+		radarSizePx() {
+			try {
+				const sys = uni.getSystemInfoSync()
+				const w = Number(sys.windowWidth) || 375
+				return Math.max(72, Math.min(96, Math.round(w * 0.22)))
+			} catch (_) {
+				return 84
+			}
+		},
 		pageTitle() {
 			return this.lessonMode ? '本课写字' : '写字练习'
 		},
+		/** 本课字表进度：第 N / M 字（按当前字在池中的位置，换字即更新） */
+		charProgressLabel() {
+			if (!this.lessonMode) return ''
+			const pool = this.charPool
+			const n = Array.isArray(pool) ? pool.length : 0
+			if (n <= 0) return ''
+			const ch = this.displayChar
+			let idx = -1
+			if (ch && ch !== '—') idx = pool.indexOf(ch)
+			if (idx < 0) {
+				const raw = Number(this.poolIndex)
+				idx = Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0
+			}
+			const no = Math.min(n, Math.max(1, idx + 1))
+			return `第 ${no} / ${n} 字`
+		},
 		pageSubtitle() {
+			const prog = this.charProgressLabel
 			if (this.lessonMode) {
-				const n = this.charPool.length
 				const title = String(this.lessonTitle || '').trim()
-				if (title) return `${title} · ${n} 字`
-				return n > 0 ? `本课写字 · ${n} 字` : '本课写字练习'
+				if (title && prog) return `${title} · ${prog}`
+				if (prog) return `本课写字 · ${prog}`
+				return title || '本课写字练习'
 			}
 			return '按笔顺在田字格里写'
 		},
@@ -306,6 +349,22 @@ export default {
 			if (tokens.length) return tokens
 			const s = String(this.pinyinText || '').trim()
 			return s ? [s] : []
+		},
+		/** 写字页只需确认读音，用纯文本即可，不必四线三格 */
+		pinyinPlain() {
+			const tokens = this.pinyinTokens
+			if (!tokens.length) return ''
+			return tokens.join(' ')
+		},
+		strokeProgressLabel() {
+			const stroke = `第 ${this.currentStrokeNo} / ${this.strokeTotal || 1} 笔`
+			const charProg = this.charProgressLabel
+			return charProg ? `${charProg} · ${stroke}` : stroke
+		},
+		/** 仅保留最近几笔，避免侧栏挤占田字格 */
+		recentHistory() {
+			const list = Array.isArray(this.history) ? this.history : []
+			return list.slice(-4)
 		},
 		currentStrokeNo() {
 			return Math.min(this.strokeTotal || 1, this.activeStroke + 1)
@@ -351,6 +410,7 @@ export default {
 			return ''
 		},
 		charToStrokeGapMs() {
+			if (!this.strokeAudioEnabled) return CHAR_TO_STROKE_GAP_MS_SILENT
 			return this.compact ? CHAR_TO_STROKE_AUDIO_GAP_MS_COMPACT : CHAR_TO_STROKE_AUDIO_GAP_MS
 		},
 		/** 当前字全部可用组词（去重） */
@@ -432,12 +492,6 @@ export default {
 	onReady() {
 		if (this.compact) return
 		this.bootstrap()
-	},
-	onShow() {
-		if (this.compact) return
-		playMengmengVoiceOnce(MENG_VOICE.STROKE_WELCOME, 'meng_voice_write_practice_welcome', {
-			debounceMs: 480
-		}).catch(() => {})
 	},
 	onUnload() {
 		this.clearAutoNextTimer()
@@ -587,6 +641,9 @@ export default {
 				clearTimeout(this.introDelayTimer)
 				this.introDelayTimer = null
 			}
+			try {
+				this._pyPlay?.cancel?.()
+			} catch (_) {}
 			if (this.writer && typeof this.writer.stop === 'function') {
 				try {
 					this.writer.stop()
@@ -606,6 +663,7 @@ export default {
 				this.attachTimer = null
 			}
 			this.mountGen++
+			this.introStartedForMount = 0
 			if (this.writer) {
 				try {
 					if (typeof this.writer.destroy === 'function') {
@@ -628,18 +686,41 @@ export default {
 				}, delay)
 			})
 		},
-		/** 进入/换字：先整字读音；之后仅高亮+笔画名 */
+		/** 进场欢迎（只播一次）→ 等闲 → 再播字音，避免与 onShow 并行掐断 */
+		async playEntryWelcomeIfNeeded(gen) {
+			if (this.compact) return
+			const cancelled = () => gen !== this.introGen || this.completed || this.demoPlaying
+			if (cancelled()) return
+			try {
+				await playMengmengVoiceOnce(MENG_VOICE.STROKE_WELCOME, WRITE_WELCOME_ONCE_KEY, {
+					debounceMs: 0
+				})
+			} catch (_) {}
+			if (cancelled()) return
+			try {
+				await waitForMengmengVoiceIdle()
+			} catch (_) {}
+			if (cancelled()) return
+			await sleep(LESSON_AUDIO_GAP_MS)
+		},
+		/** 进入/换字：先欢迎（若有）→ 整字读音 → 间隔 → 笔画名 */
 		async runWriteIntro(strokeIndex, opts = {}) {
 			const playCharFirst = opts.playCharFirst === true
 			const gen = ++this.introGen
 			this.introBusy = true
 			try {
 				if (playCharFirst) {
+					await this.playEntryWelcomeIfNeeded(gen)
+					if (gen !== this.introGen || this.completed || this.demoPlaying) return
 					if (!this.compact) {
 						this.feedbackText = `先听「${this.displayChar}」的读音`
 						this.feedbackType = ''
 					}
 					await this.playCharReading(gen)
+					if (gen !== this.introGen || this.completed || this.demoPlaying) return
+					try {
+						await sleep(CHAR_READING_TAIL_PAD_MS)
+					} catch (_) {}
 					if (gen !== this.introGen || this.completed || this.demoPlaying) return
 					if (!this.compact) {
 						this.feedbackText = '想一想，准备写第一笔…'
@@ -657,47 +738,63 @@ export default {
 		async playCharReading(introGen) {
 			const gen = introGen != null ? introGen : this.introGen
 			const charSnap = this.displayChar
-			const cancelled = () => gen !== this.introGen || this.displayChar !== charSnap
-			stopLocalPinyinAudio()
-			stopHanziSpeech()
+			const pageCancelled = () => gen !== this.introGen || this.displayChar !== charSnap
+			if (pageCancelled()) return
 			const narrator = getAudioNarrator()
 			const tokens = this.pinyinTokens
-			if (tokens.length > 1) {
-				await playPinyinLocalAudioSequence(tokens, {
-					narrator,
-					gapMs: 90,
-					isCancelled: cancelled
-				})
-				if (cancelled()) return
-				return
-			}
-			if (tokens.length === 1) {
-				await playOpusForDisplayPinyin(tokens[0], {
-					narrator,
-					gapMs: 0,
-					isCancelled: cancelled
-				})
-				if (cancelled()) return
-				return
-			}
 			const py = String(this.pinyinText || '').trim()
-			if (py) {
-				await playOpusForDisplayPinyin(py, {
-					narrator,
-					gapMs: 0,
-					isCancelled: cancelled
-				})
-				if (cancelled()) return
-				return
-			}
+			await this._pyPlay.run(({ isCancelled }) => {
+				const cancelled = () => isCancelled() || pageCancelled()
+				const body = async () => {
+					if (cancelled()) return false
+					if (tokens.length > 1) {
+						return playPinyinLocalAudioSequence(tokens, {
+							narrator,
+							gapMs: 90,
+							isCancelled: cancelled
+						})
+					}
+					if (tokens.length === 1) {
+						return playOpusForDisplayPinyin(tokens[0], {
+							narrator,
+							gapMs: 0,
+							isCancelled: cancelled
+						})
+					}
+					if (py) {
+						return playOpusForDisplayPinyin(py, {
+							narrator,
+							gapMs: 0,
+							isCancelled: cancelled
+						})
+					}
+					return false
+				}
+				return body()
+			})
 		},
-		async beginStrokeGuidance(strokeIndex, introGen) {
+		toggleStrokeAudio() {
+			const next = setWritePracticeStrokeAudioEnabled(!this.strokeAudioEnabled)
+			this.strokeAudioEnabled = next
+			if (!this.compact) {
+				this.feedbackText = next
+					? '已开启笔画语音'
+					: '已关闭笔画语音，写字时只闪笔画提示'
+				this.feedbackType = ''
+			}
+			uni.showToast({
+				title: next ? '笔画语音已开' : '笔画语音已关',
+				icon: 'none',
+				duration: 1400
+			})
+		},
+		async beginStrokeGuidance(strokeIndex, introGen, opts = {}) {
 			const gen = introGen != null ? introGen : this.introGen
 			const charSnap = this.displayChar
-			const cancelled = () => gen !== this.introGen || this.displayChar !== charSnap
+			const pageCancelled = () => gen !== this.introGen || this.displayChar !== charSnap
 			const idx = Number(strokeIndex)
 			if (!Number.isFinite(idx) || idx < 0 || this.completed || this.demoPlaying) return
-			if (cancelled()) return
+			if (pageCancelled()) return
 			if (this.writer && typeof this.writer.setTestStrokeGuide === 'function') {
 				this.writer.setTestStrokeGuide(true, { blink: true, blinkTimes: 3 })
 			}
@@ -707,17 +804,35 @@ export default {
 				this.feedbackType = ''
 			}
 			if (!label) return
-			stopLocalPinyinAudio()
-			await playStrokeGuidanceAudio(idx, label, {
-				narrator: getAudioNarrator(),
-				isCancelled: cancelled
-			})
-			if (cancelled()) return
+			/** 自动引导尊重开关；手动「听笔画」可强制播 */
+			const forceAudio = opts.forceAudio === true
+			if (!forceAudio && !this.strokeAudioEnabled) return
+			await this._pyPlay.run(({ isCancelled }) =>
+				playStrokeGuidanceAudio(idx, label, {
+					narrator: getAudioNarrator(),
+					isCancelled: () => isCancelled() || pageCancelled()
+				})
+			)
 		},
 		playCurrentStrokeAudio() {
 			if (this.completed || this.demoPlaying || this.introBusy) return
 			this.cancelWriteIntro()
-			this.runWriteIntro(this.activeStroke, { playCharFirst: false })
+			const gen = ++this.introGen
+			this.introBusy = true
+			const run = async () => {
+				try {
+					await this.beginStrokeGuidance(this.activeStroke, gen, { forceAudio: true })
+				} finally {
+					if (gen === this.introGen) this.introBusy = false
+				}
+			}
+			run()
+		},
+		/** 点大字重听整字读音（替代四线格点读） */
+		replayCharReading() {
+			if (this.completed || this.demoPlaying || this.introBusy) return
+			this.cancelWriteIntro()
+			this.runWriteIntro(this.activeStroke, { playCharFirst: true })
 		},
 		/** 内嵌模式：仅高亮当前应收笔（不播音） */
 		applyCompactStrokeGuideVisual(strokeIndex) {
@@ -744,7 +859,8 @@ export default {
 					await this.playMengVoiceIf(voiceId, { minGapMs: 700 })
 					await waitForMengmengVoiceIdle()
 					await sleepMs(LESSON_AUDIO_GAP_MS)
-					await this.beginStrokeGuidance(this.activeStroke, gen)
+					/** 用户主动点「听提示」：即使总开关关闭也播本次 */
+					await this.beginStrokeGuidance(this.activeStroke, gen, { forceAudio: true })
 				} finally {
 					if (gen === this.introGen) this.introBusy = false
 				}
@@ -758,18 +874,46 @@ export default {
 		compactToast() {
 			/* 每日一练内嵌：不弹 Toast，避免打断书写 */
 		},
+		clearScoreRadar() {
+			this.scoreRadarVisible = false
+			this.scoreRadarAxes = []
+			this.strokeScoreResults = []
+		},
+		showScoreRadarFromResults() {
+			if (this.compact) return
+			const list = this.strokeScoreResults
+			const axes = buildScoreRadarAxes(list, {
+				expectedCount: this.strokeTotal,
+				actualCount: list.length
+			})
+			this.scoreRadarAxes = axes
+			this.scoreRadarKey += 1
+			this.scoreRadarVisible = true
+		},
+		pushStrokeScoreResult(index, data = {}) {
+			if (this.compact) return
+			const idx = Number(index)
+			this.strokeScoreResults = [
+				...this.strokeScoreResults,
+				{
+					index: Number.isFinite(idx) ? idx : this.strokeScoreResults.length,
+					dirScore: Number(data.dirScore) || 0,
+					fitScore: Number(data.fitScore) || 0,
+					strokeScore: Number(data.strokeScore) || 0,
+					pass: data.pass !== false
+				}
+			]
+		},
 		handleTestStatus(index, status, data = {}) {
 			const strokeNo = Number(index) + 1
 			if (status === 'correct') {
-				if (this.compact) {
-					this.playMengVoiceIf(MENG_VOICE.DAILY_STROKE_OK, { minGapMs: 900 })
-				} else {
+				this.pushStrokeScoreResult(index, data)
+				if (!this.compact) {
 					this.feedbackType = 'ok'
 					this.feedbackText =
 						strokeNo >= this.strokeTotal
 							? `第 ${strokeNo} 笔写对了`
 							: `第 ${strokeNo} 笔写对了，请写第 ${strokeNo + 1} 笔`
-					this.playMengVoiceIf(MENG_VOICE.STROKE_WRITE_OK, { minGapMs: 900 })
 				}
 				this.activeStroke = strokeNo
 				if (!this.compact) this.pushHistory(`第 ${strokeNo} 笔 ✓`)
@@ -858,16 +1002,12 @@ export default {
 					this.playMengVoiceIf(MENG_VOICE.DAILY_COMPLETE, { minGapMs: 2000 })
 					this.$emit('compact-complete')
 				} else {
+					this.clearAutoNextTimer()
 					this.playMengVoiceIf(MENG_VOICE.STROKE_ALL_DONE, { minGapMs: 2000 })
 					this.feedbackType = 'ok'
-					this.feedbackText = '全部笔画写对了，笔顺正确！'
+					this.feedbackText = '全部笔画写对了！查看右侧评分，点「下一字」继续'
 					this.pushHistory('✓ 全部通过')
-					// 写对后稍作停留，自动进入下一字
-					this.clearAutoNextTimer()
-					this.autoNextTimer = setTimeout(() => {
-						this.autoNextTimer = null
-						this.nextChar()
-					}, 1100)
+					this.showScoreRadarFromResults()
 				}
 			}
 		},
@@ -878,7 +1018,10 @@ export default {
 					length: this.canvasLength,
 					charInsetRatio: 0.12,
 					strokeColor: '#2c3e50',
-					outlineColor: '#d5d5d5',
+					/** 关闭灰底稿，避免泄题；写对的笔画再画 strokeColor */
+					showOutline: false,
+					outlineColor: '#fffcf8',
+					backgroundColor: '#fffcf8',
 					currentColor: '#ff7043',
 					drawingColor: '#ff7043',
 					drawingWidth: 5,
@@ -917,7 +1060,7 @@ export default {
 			const attach = () => {
 				this.attachTimer = null
 				if (token !== this.mountGen) return
-				fn()
+				fn(token)
 			}
 			const delayMs = this.compact ? 120 : 48
 			this.$nextTick(() => {
@@ -928,6 +1071,8 @@ export default {
 		},
 		mountTestWriter() {
 			this.stopAllPracticeAudio()
+			this.clearAutoNextTimer()
+			this.clearScoreRadar()
 			this.completed = false
 			this.activeStroke = 0
 			if (!this.compact) {
@@ -937,9 +1082,9 @@ export default {
 			this.demoPlaying = false
 			const ch = this.displayChar
 			if (!ch || ch === '—') return
-			this.scheduleMount(() => {
+			this.scheduleMount((mountToken) => {
+				const vm = this
 				try {
-					const vm = this
 					this.writer = drawNative(ch, {
 						...this.sharedDrawOpts(),
 						el: `#${this.canvasId}`,
@@ -962,9 +1107,17 @@ export default {
 					}
 					vm.mountPending = false
 					if (vm.compact) {
-						vm.$nextTick(() => vm.applyCompactStrokeGuideVisual(0))
+						vm.$nextTick(() => {
+							if (mountToken !== vm.mountGen) return
+							vm.applyCompactStrokeGuideVisual(0)
+						})
 					} else {
-						vm.$nextTick(() => vm.runWriteIntro(0, { playCharFirst: true }))
+						vm.$nextTick(() => {
+							if (mountToken !== vm.mountGen) return
+							if (vm.introStartedForMount === mountToken) return
+							vm.introStartedForMount = mountToken
+							vm.runWriteIntro(0, { playCharFirst: true })
+						})
 					}
 				} catch (e) {
 					vm.mountPending = false
@@ -1017,10 +1170,12 @@ export default {
 		},
 		resetPractice() {
 			this.clearAutoNextTimer()
+			this.clearScoreRadar()
 			this.stopPracticePlayback()
 			this.completed = false
 			this.activeStroke = 0
 			this.wrongCountedForChar = false
+			this.history = []
 			if (!this.compact) {
 				this.feedbackText = '已重置，先听字音再写第一笔'
 				this.feedbackType = ''
@@ -1030,6 +1185,8 @@ export default {
 				if (this.compact) {
 					this.$nextTick(() => this.applyCompactStrokeGuideVisual(0))
 				} else {
+					/** 重置视为新一轮进场：允许再播字音（欢迎语仍 once） */
+					this.introStartedForMount = 0
 					this.$nextTick(() => this.runWriteIntro(0, { playCharFirst: true }))
 				}
 				return
@@ -1067,6 +1224,7 @@ export default {
 		},
 		async nextChar() {
 			this.clearAutoNextTimer()
+			this.clearScoreRadar()
 			this.stopAllPracticeAudio()
 			this.canvasReady = false
 			this.wrongCountedForChar = false
@@ -1201,211 +1359,136 @@ export default {
 	color: var(--meng-text-muted);
 }
 
-.hero-card {
+/* —— 独立写字页：田字格为主，信息克制 —— */
+.wp-page {
+	position: relative;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.wp-head {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 16rpx;
-	padding: 24rpx;
+	gap: 28rpx;
 	margin-bottom: 20rpx;
-	border-radius: 28rpx;
-	background: rgba(255, 255, 255, 0.92);
-	box-shadow: 0 8rpx 28rpx rgba(255, 140, 170, 0.12);
+	padding: 8rpx 4rpx 4rpx;
 }
 
-.char-badge {
-	width: 132rpx;
-	height: 132rpx;
-	border-radius: 24rpx;
-	background: #ffe8f0;
-	border: 2rpx solid rgba(255, 180, 200, 0.4);
+.wp-char-col {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	gap: 6rpx;
 	flex-shrink: 0;
+	min-width: 120rpx;
 }
 
-.char-badge-text {
-	font-size: 80rpx;
-	font-weight: 800;
+.wp-char {
+	font-size: 96rpx;
+	font-weight: 700;
 	color: var(--meng-text);
-	line-height: 1;
+	line-height: 1.05;
+	letter-spacing: 0;
 }
 
-.pinyin-beside {
+.wp-pinyin {
+	font-size: 26rpx;
+	color: var(--meng-text-muted);
+	line-height: 1.2;
+	font-weight: 500;
+}
+
+.wp-head-main {
 	flex: 1;
 	min-width: 0;
-}
-
-.hero-meta {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 10rpx;
-	flex-shrink: 0;
-	max-width: 42%;
-	min-width: 0;
+	gap: 8rpx;
 }
 
-.write-words-block {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	gap: 12rpx;
-	margin-bottom: 16rpx;
-	padding: 14rpx 16rpx;
-	border-radius: 16rpx;
-	background: rgba(255, 252, 248, 0.95);
-	border: 1rpx solid rgba(235, 227, 216, 0.85);
-}
-
-.write-words-chips {
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: nowrap;
-	align-items: center;
-	gap: 10rpx;
-	overflow: hidden;
-}
-
-.write-word-chip {
-	flex-shrink: 0;
-	padding: 8rpx 18rpx;
-	border-radius: 999rpx;
-	font-size: 26rpx;
+.wp-progress {
+	font-size: 24rpx;
 	font-weight: 600;
+	color: var(--meng-text-secondary);
+	line-height: 1.3;
+}
+
+.wp-guide {
+	font-size: 32rpx;
+	font-weight: 700;
 	color: var(--meng-text);
-	background: #fff;
-	border: 1rpx solid rgba(200, 190, 175, 0.55);
+	line-height: 1.35;
 }
 
-.write-words-more {
-	flex-shrink: 0;
-	padding: 8rpx 16rpx;
-	border-radius: 999rpx;
-	background: rgba(255, 240, 248, 0.95);
-	border: 1rpx solid rgba(255, 160, 190, 0.5);
-}
-
-.write-words-more-text {
+.wp-listen {
+	margin-top: 4rpx;
 	font-size: 24rpx;
-	font-weight: 700;
+	font-weight: 600;
 	color: #c44d6a;
-	line-height: 1.2;
+	padding: 4rpx 0;
 }
 
-.progress-line {
-	display: block;
-	font-size: 26rpx;
-	font-weight: 700;
-	color: #c44d6a;
-}
-
-.hint-line {
-	display: block;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary);
-	line-height: 1.45;
-}
-
-.hint-speak {
+.wp-words {
 	display: flex;
 	flex-direction: row;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 6rpx;
-	padding: 8rpx 16rpx;
-	border-radius: 999rpx;
-	background: rgba(255, 240, 248, 0.95);
-	border: 1rpx solid rgba(255, 160, 190, 0.5);
+	gap: 10rpx 14rpx;
+	margin-bottom: 16rpx;
+	padding: 0 4rpx;
 }
 
-.hint-speak-icon {
+.wp-word {
 	font-size: 26rpx;
-}
-
-.hint-speak-text {
-	font-size: 22rpx;
-	color: #c44d6a;
-	font-weight: 600;
-}
-
-.write-stage {
-	position: relative;
-	margin-bottom: 20rpx;
-}
-
-.history-float {
-	position: absolute;
-	left: 12rpx;
-	top: 20rpx;
-	bottom: 20rpx;
-	z-index: 12;
-	width: 212rpx;
-	max-width: 42%;
-	padding: 14rpx 12rpx;
-	box-sizing: border-box;
-	border-radius: 20rpx;
-	background: rgba(255, 255, 255, 0.94);
-	border: 2rpx solid rgba(255, 200, 220, 0.65);
-	box-shadow: 0 8rpx 28rpx rgba(44, 36, 25, 0.12);
-	display: flex;
-	flex-direction: column;
-	pointer-events: auto;
-}
-
-.history-title {
-	display: block;
-	font-size: 22rpx;
-	font-weight: 700;
-	color: #c44d6a;
-	margin-bottom: 8rpx;
-	flex-shrink: 0;
-}
-
-.history-scroll {
-	flex: 1;
-	min-height: 0;
-	width: 100%;
-}
-
-.history-empty {
-	display: block;
-	font-size: 22rpx;
-	color: var(--meng-text-muted);
-	line-height: 1.5;
-}
-
-.history-item {
-	display: block;
-	font-size: 22rpx;
 	color: var(--meng-text-secondary);
-	line-height: 1.5;
-	margin-top: 6rpx;
-	word-break: break-all;
+	line-height: 1.3;
 }
 
-.history-item--ok {
-	color: #3d9a5c;
+.wp-words-more {
+	font-size: 24rpx;
 	font-weight: 600;
+	color: #c44d6a;
+	margin-left: 4rpx;
 }
 
-.history-item--bad {
-	color: #c44;
-	font-weight: 600;
-}
-
-.canvas-shell {
+.wp-stage {
 	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 16rpx 16rpx 16rpx 228rpx;
-	border-radius: 32rpx;
+	padding: 20rpx;
+	margin-bottom: 16rpx;
+	border-radius: 28rpx;
 	background: #fff;
-	box-shadow: 0 12rpx 36rpx rgba(44, 36, 25, 0.08);
+	border: 1rpx solid rgba(235, 227, 216, 0.9);
 	box-sizing: border-box;
+}
+
+.wp-score-card {
+	position: absolute;
+	top: 16rpx;
+	right: 12rpx;
+	z-index: 20;
+	width: 220rpx;
+	padding: 8rpx 8rpx 10rpx;
+	box-sizing: border-box;
+	border-radius: 14rpx;
+	background: rgba(255, 252, 248, 0.96);
+	border: 1rpx solid rgba(232, 122, 74, 0.35);
+	box-shadow: 0 6rpx 16rpx rgba(44, 36, 25, 0.14);
+	pointer-events: none;
+}
+
+.wp-score-card-title {
+	display: block;
+	font-size: 20rpx;
+	font-weight: 800;
+	color: #b84a28;
+	text-align: center;
+	margin-bottom: 2rpx;
+	letter-spacing: 1rpx;
 }
 
 .canvas-shell--compact {
@@ -1431,160 +1514,138 @@ export default {
 	color: var(--meng-text-muted);
 }
 
-.canvas-hint {
-	position: absolute;
-	left: 228rpx;
-	right: 16rpx;
-	bottom: 16rpx;
-	padding: 14rpx 18rpx;
-	border-radius: 16rpx;
-	background: rgba(255, 255, 255, 0.92);
-	box-shadow: 0 4rpx 16rpx rgba(44, 36, 25, 0.1);
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	gap: 10rpx;
-	pointer-events: none;
-}
-
-.canvas-hint-icon {
-	font-size: 32rpx;
-	flex-shrink: 0;
-}
-
-.canvas-hint-text {
-	flex: 1;
-	font-size: 24rpx;
-	color: var(--meng-text);
-	line-height: 1.4;
+.wp-feedback {
+	display: block;
+	margin-bottom: 12rpx;
+	padding: 0 8rpx;
+	min-height: 44rpx;
+	font-size: 28rpx;
 	font-weight: 600;
+	color: var(--meng-text-secondary);
+	line-height: 1.45;
+	text-align: center;
 }
 
-.feedback {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	gap: 14rpx;
-	padding: 20rpx 24rpx;
-	border-radius: 20rpx;
-	margin-bottom: 18rpx;
-	min-height: 88rpx;
-	box-sizing: border-box;
-	background: #fff8f0;
-	border: 2rpx solid var(--meng-border);
-}
-
-.feedback--idle {
-	background: #faf8f5;
-}
-
-.feedback--ok {
-	background: #eefaf2;
-	border-color: #6bae7d;
-}
-
-.feedback--bad {
-	background: #fff0f0;
-	border-color: #e88;
-}
-
-.feedback-icon {
-	font-size: 44rpx;
-	font-weight: 800;
-	line-height: 1;
-	flex-shrink: 0;
-}
-
-.feedback--ok .feedback-icon {
+.wp-feedback--ok {
 	color: #3d9a5c;
 }
 
-.feedback--bad .feedback-icon {
-	color: #d44;
+.wp-feedback--bad {
+	color: #c44;
 }
 
-.feedback-text {
-	flex: 1;
-	font-size: 28rpx;
-	font-weight: 600;
-	color: var(--meng-text);
-	line-height: 1.5;
-}
-
-.tool-row {
+.wp-history {
 	display: flex;
 	flex-direction: row;
-	gap: 12rpx;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8rpx 16rpx;
 	margin-bottom: 20rpx;
+	padding: 0 8rpx;
 }
 
-.tool-cell {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8rpx;
-}
-
-.tool-caption {
-	font-size: 20rpx;
+.wp-history-item {
+	font-size: 22rpx;
 	color: var(--meng-text-muted);
-	text-align: center;
 	line-height: 1.3;
 }
 
-.tool-btn {
-	width: 100%;
-	border-radius: 999rpx !important;
-	font-size: 26rpx !important;
+.history-item--ok {
+	color: #3d9a5c;
+	font-weight: 600;
 }
 
-.tool-btn--ghost {
-	background: #fff !important;
-	color: var(--meng-text) !important;
-	border: 2rpx solid var(--meng-border-warm) !important;
+.history-item--bad {
+	color: #c44;
+	font-weight: 600;
 }
 
-.tool-btn--primary {
-	background: var(--meng-accent-solid) !important;
-	color: #fff !important;
-	border: none !important;
-}
-
-.input-card {
-	padding: 18rpx 20rpx;
-	border-radius: 20rpx;
-	background: rgba(255, 255, 255, 0.9);
-}
-
-.input-label {
-	display: block;
-	font-size: 24rpx;
-	color: var(--meng-text-secondary);
-	margin-bottom: 12rpx;
-}
-
-.input-row {
+.wp-stroke-audio {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: center;
+	gap: 14rpx;
+	margin-bottom: 18rpx;
+	padding: 12rpx 16rpx;
+	min-height: 72rpx;
+	box-sizing: border-box;
+}
+
+.wp-stroke-audio-switch {
+	width: 72rpx;
+	height: 40rpx;
+	border-radius: 999rpx;
+	background: rgba(200, 190, 175, 0.55);
+	position: relative;
+	flex-shrink: 0;
+	transition: background 0.18s ease;
+}
+
+.wp-stroke-audio-switch--on {
+	background: var(--meng-accent-solid);
+}
+
+.wp-stroke-audio-knob {
+	position: absolute;
+	top: 4rpx;
+	left: 4rpx;
+	width: 32rpx;
+	height: 32rpx;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 2rpx 8rpx rgba(44, 36, 25, 0.18);
+	transition: transform 0.18s ease;
+}
+
+.wp-stroke-audio-switch--on .wp-stroke-audio-knob {
+	transform: translateX(32rpx);
+}
+
+.wp-stroke-audio-label {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: var(--meng-text-secondary);
+	line-height: 1.3;
+}
+
+.wp-stroke-audio--off .wp-stroke-audio-label {
+	color: var(--meng-text-muted);
+}
+
+.wp-tools {
+	display: flex;
+	flex-direction: row;
 	gap: 16rpx;
+	margin-bottom: 28rpx;
 }
 
-.hanzi-input {
+.wp-tools--done .wp-btn--primary {
+	flex: 1.35;
+}
+
+.wp-btn {
 	flex: 1;
-	height: 72rpx;
-	padding: 0 20rpx;
-	font-size: 32rpx;
-	background: #faf8f5;
-	border-radius: 16rpx;
+	height: 96rpx !important;
+	min-height: 96rpx !important;
+	padding: 0 12rpx !important;
+	border-radius: 24rpx !important;
+	font-size: 32rpx !important;
+	font-weight: 700 !important;
+	line-height: 96rpx !important;
+	box-sizing: border-box !important;
 }
 
-.apply-btn {
+.wp-btn--ghost {
+	background: #fff !important;
+	color: var(--meng-text) !important;
+	border: 2rpx solid rgba(200, 190, 175, 0.85) !important;
+}
+
+.wp-btn--primary {
 	background: var(--meng-accent-solid) !important;
 	color: #fff !important;
 	border: none !important;
-	border-radius: 16rpx !important;
 }
 
 </style>

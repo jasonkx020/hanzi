@@ -7,9 +7,16 @@
  */
 import { playLocalPinyinNeutralThenTone1 } from '@/utils/play-pinyin-local-audio.js'
 
-/** 乐园内播放整体认读（与拼音页一致：仅本地 opus，无调→一声替补，不 TTS） */
+/**
+ * 乐园 / 拼音页「整体认读」播放。
+ * static/pinyin 仅有一声带调文件（如 zhī.opus），无 zhi.opus；
+ * 跳过无调试听，避免先 404/超时卡住再回退。
+ */
 export async function playWholeLabSymbol(symbol, opts = {}) {
 	const text = String(symbol || '').trim().toLowerCase()
 	if (!text) return false
-	return playLocalPinyinNeutralThenTone1(text, true, { isCancelled: opts.isCancelled })
+	return playLocalPinyinNeutralThenTone1(text, true, {
+		isCancelled: opts.isCancelled,
+		skipTonedExact: true
+	})
 }

@@ -12,6 +12,10 @@
 export const PINYIN_PLAY_SCOPES = Object.freeze({
 	GLOBAL: 'global',
 	LESSON_CARD: 'lesson-card',
+	/** 课次字卡抽屉：与 LESSON_CARD 隔离，避免课页点读取消打断抽屉笔顺读音 */
+	LESSON_CHAR_DRAWER: 'lesson-char-drawer',
+	/** 写字练习页：进场字音 / 笔画引导 */
+	WRITE_PRACTICE: 'write-practice',
 	LESSON_QUIZ: 'lesson-quiz',
 	LESSON_PINYIN_QUIZ: 'lesson-pinyin-quiz',
 	DICT_RESULT: 'dict-result',

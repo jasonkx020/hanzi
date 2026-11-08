@@ -38,7 +38,7 @@
 
 		<home-char-showcase ref="charShowcase" class="tab-dock-overlap" />
 
-		<view class="tab-dock-overlap tab-content-bleed home-main">
+		<view class="tab-dock-overlap home-main">
 				<!-- <scroll-view scroll-x class="grade-scroll" :show-scrollbar="false">
 					<view class="grade-row">
 						<view

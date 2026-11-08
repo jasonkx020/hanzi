@@ -116,9 +116,9 @@ export default {
 
 .meng-page-nav__back {
 	flex-shrink: 0;
-	min-width: 148rpx;
-	max-width: 148rpx;
-	padding: 4rpx 0;
+	min-width: 120rpx;
+	max-width: 160rpx;
+	padding: 0;
 }
 
 .meng-page-nav__back--placeholder {
@@ -130,38 +130,39 @@ export default {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	justify-content: center;
-	gap: 2rpx;
-	min-height: 80rpx;
-	padding: 0 22rpx 0 14rpx;
-	border-radius: 999rpx;
-	background: rgba(255, 248, 242, 0.92);
-	border: 2rpx solid rgba(255, 255, 255, 0.98);
-	box-shadow:
-		0 6rpx 20rpx rgba(92, 61, 46, 0.12),
-		0 0 0 1rpx rgba(236, 64, 122, 0.08);
+	justify-content: flex-start;
+	gap: 4rpx;
+	min-height: 72rpx;
+	padding: 8rpx 12rpx 8rpx 4rpx;
+	border-radius: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
 	box-sizing: border-box;
 }
 
 .meng-page-nav__back--hover .meng-page-nav__back-pill {
-	transform: scale(0.96);
-	opacity: 0.92;
+	opacity: 0.65;
 }
 
 .meng-page-nav__back-arrow {
-	font-size: 56rpx;
+	display: block;
+	font-size: 48rpx;
 	line-height: 1;
-	font-weight: 400;
+	font-weight: 500;
 	color: var(--meng-accent-solid, #ec407a);
-	margin-top: -6rpx;
-	margin-right: -4rpx;
+	width: 28rpx;
+	text-align: center;
+	transform: translateY(-1rpx);
 }
 
 .meng-page-nav__back-label {
-	font-size: 28rpx;
-	font-weight: 700;
+	display: block;
+	font-size: 30rpx;
+	font-weight: 600;
 	color: var(--meng-chocolate, #5c3d2e);
-	letter-spacing: 2rpx;
+	letter-spacing: 1rpx;
+	line-height: 1.2;
 }
 
 .meng-page-nav__title {

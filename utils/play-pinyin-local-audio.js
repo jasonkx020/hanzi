@@ -211,9 +211,9 @@ export async function sleepUnlessCancelled(ms, isCancelled) {
 }
 
 /**
- * 先试「符号原形」opus，再可选试一声（显式开启时）。
- * 展示拼音点读请用 playOpusForDisplayPinyin（禁止降级）；本函数仅乐园格子等显式兼容入口。
- * @param {boolean} useTone1Fallback 是否允许一声替补
+ * 先试「符号原形」opus；仅当音节无调且显式开启时，再试一声替补。
+ * 带调音节（á/ǎ 等）禁止回退一声，避免超时误播 ā。
+ * @param {boolean} useTone1Fallback 是否允许一声替补（仅对无调 stem 生效）
  */
 export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, opts = {}) {
 	const tryUrls = []
@@ -222,8 +222,10 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 		neutral = getLocalPinyinAudioPath(symbol) || ''
 		if (neutral) tryUrls.push(neutral)
 	}
+	/** 仅无调才允许一声替补；带调失败应保持静默，不可改播一声 */
+	const allowTone1Fb = !!useTone1Fallback && isBareUntonedPinyinStem(symbol)
 	let tone1 = ''
-	if (useTone1Fallback) {
+	if (allowTone1Fb) {
 		tone1 = getLocalPinyinTone1AudioPath(symbol) || ''
 		if (tone1 && tryUrls.indexOf(tone1) === -1) tryUrls.push(tone1)
 	}
@@ -231,7 +233,7 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 	const tone1Stem = tone1 ? tone1.replace(/^.*\//, '').replace(/\.opus$/i, '') : ''
 	logHanziSpeak('local.try_urls', {
 		symbol,
-		useTone1Fallback,
+		useTone1Fallback: allowTone1Fb,
 		urls: tryUrls,
 		stems: { neutral: neutralStem, tone1: tone1Stem }
 	})
@@ -239,10 +241,21 @@ export async function playLocalPinyinNeutralThenTone1(symbol, useTone1Fallback, 
 		logHanziSpeak('local.no_urls', { symbol })
 		return false
 	}
-	for (const src of tryUrls) {
+	for (let i = 0; i < tryUrls.length; i++) {
+		const src = tryUrls[i]
 		if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
+		/** 无调→一声：中间档「开播」短超时；开播后由 playPinyinLocalAudio 等到真正结束 */
+		const timeoutMs =
+			opts.timeoutMs != null
+				? opts.timeoutMs
+				: i < tryUrls.length - 1
+					? 900
+					: 4000
 		try {
-			await playPinyinLocalAudio(src)
+			await playPinyinLocalAudio(src, {
+				timeoutMs,
+				playTimeoutMs: opts.playTimeoutMs != null ? opts.playTimeoutMs : 10000
+			})
 			logHanziSpeak('local.play_ok', { symbol, src })
 			return true
 		} catch (e) {
@@ -292,8 +305,20 @@ export async function playToneGridCell(symbol, opts = {}) {
 	}
 }
 
+/** 展示串是否无声调标记（如 zhi / yuan；zhī 则不算） */
+function isBareUntonedPinyinStem(sym) {
+	const raw = String(sym || '')
+		.trim()
+		.toLowerCase()
+		.replace(/v/g, U_UML)
+	if (!raw) return false
+	return stripPinyinToneMarks(raw) === raw
+}
+
 /**
- * 仅播与展示一致的精确音节 opus；失败/中止不降级到无调或一声（宁可不播，不播错调）；不 TTS。
+ * 按展示拼音播本地 opus。
+ * - 带调：只播精确文件，失败不降级（避免读错调）。
+ * - 无调：精确文件缺失时直接改播一声（如 zhi → zhī），不干等超时。
  * @param {string} displayPinyin 与界面展示一致（如 pyShow）
  * @param {{ gapMs?: number, narrator?: string, isCancelled?: () => boolean }} [opts]
  * @returns {Promise<boolean>} 是否至少有一段成功播放
@@ -310,33 +335,50 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
 		const sym = String(tokens[i] || '').trim()
 		if (!sym) continue
-		const path = getLocalPinyinAudioPath(sym)
-		if (!path) {
+		const bare = isBareUntonedPinyinStem(sym)
+		const exactPath = getLocalPinyinAudioPath(sym)
+		const tone1Path = bare ? getLocalPinyinTone1AudioPath(sym) : ''
+		const tryPaths = []
+		if (exactPath) tryPaths.push(exactPath)
+		if (tone1Path && tone1Path !== exactPath) tryPaths.push(tone1Path)
+		if (!tryPaths.length) {
 			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym, reason: 'empty_path' })
 			continue
 		}
 		let played = false
 		let aborted = false
-		for (let attempt = 0; attempt < 2 && !played && !aborted; attempt++) {
-			if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-			try {
-				await playPinyinLocalAudio(path, { timeoutMs: 3200 })
-				played = true
-				logHanziSpeak('lesson.display_pinyin.exact_ok', { sym, path, attempt })
-			} catch (e) {
-				if (isPinyinPlayAborted(e)) {
-					aborted = true
-					logHanziSpeak('lesson.display_pinyin.exact_aborted', { sym, path, attempt })
-					break
-				}
-				logHanziSpeak('lesson.display_pinyin.exact_fail', {
-					sym,
-					path,
-					attempt,
-					err: e && (e.errMsg || e.message || String(e))
-				})
-				if (attempt === 0) {
-					if (!(await sleepUnlessCancelled(60, isCancelled))) return anyOk
+		for (let pi = 0; pi < tryPaths.length && !played && !aborted; pi++) {
+			const path = tryPaths[pi]
+			const isLast = pi === tryPaths.length - 1
+			/** 还有一声替补时，精确档仅「开播」短超时；开播后等播完 */
+			const timeoutMs = !isLast && bare ? 900 : 4000
+			const maxAttempt = isLast ? 2 : 1
+			for (let attempt = 0; attempt < maxAttempt && !played && !aborted; attempt++) {
+				if (typeof isCancelled === 'function' && isCancelled()) return anyOk
+				try {
+					await playPinyinLocalAudio(path, { timeoutMs, playTimeoutMs: 10000 })
+					played = true
+					logHanziSpeak(
+						pi === 0 ? 'lesson.display_pinyin.exact_ok' : 'lesson.display_pinyin.tone1_ok',
+						{ sym, path, attempt, bare }
+					)
+				} catch (e) {
+					if (isPinyinPlayAborted(e)) {
+						aborted = true
+						logHanziSpeak('lesson.display_pinyin.exact_aborted', { sym, path, attempt })
+						break
+					}
+					logHanziSpeak('lesson.display_pinyin.exact_fail', {
+						sym,
+						path,
+						attempt,
+						bare,
+						tone1Fallback: bare && !isLast,
+						err: e && (e.errMsg || e.message || String(e))
+					})
+					if (attempt === 0 && isLast) {
+						if (!(await sleepUnlessCancelled(60, isCancelled))) return anyOk
+					}
 				}
 			}
 		}
@@ -345,7 +387,7 @@ export async function playOpusForDisplayPinyin(displayPinyin, opts = {}) {
 			continue
 		}
 		if (!played) {
-			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym, path })
+			logHanziSpeak('lesson.display_pinyin.all_local_failed', { sym, paths: tryPaths })
 		}
 		if (played) anyOk = true
 		if (i < tokens.length - 1 && gapMs > 0) {
@@ -393,30 +435,80 @@ export async function playPinyinLocalAudio(src, opts = {}) {
 	if (coolMs > 0) await sleep(coolMs)
 	const inner = uni.createInnerAudioContext()
 	_inner = inner
-	const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : 3200
+	/**
+	 * timeoutMs：仅「多久内必须开始播」；开播后改用 playTimeoutMs / 按时长续命。
+	 * 避免无调→一声的 700ms 短超时在音频已开播时强行打断切下一档。
+	 */
+	const startTimeoutMs =
+		opts.startTimeoutMs != null
+			? opts.startTimeoutMs
+			: opts.timeoutMs != null
+				? opts.timeoutMs
+				: 3200
+	const playTimeoutMs = opts.playTimeoutMs != null ? opts.playTimeoutMs : 10000
 	return new Promise((resolve, reject) => {
 		let settled = false
 		let timer = null
+		let played = false
+		let playStartedAt = 0
 		const finish = (fn) => {
 			if (settled) return
 			settled = true
 			if (_activePlay && _activePlay.inner === inner) _activePlay = null
 			if (timer != null) clearTimeout(timer)
+			timer = null
 			destroyInnerAudioSafe(inner)
 			if (_inner === inner) _inner = null
 			fn()
 		}
+		const armTimer = (ms, reason) => {
+			if (settled) return
+			if (timer != null) clearTimeout(timer)
+			timer = setTimeout(
+				() => finish(() => reject(new Error(reason || 'play timeout'))),
+				Math.max(200, Number(ms) || 0)
+			)
+			if (_activePlay && _activePlay.inner === inner) _activePlay.timer = timer
+		}
 		_activePlay = { inner, reject, timer: null }
-		timer = setTimeout(() => finish(() => reject(new Error('play timeout'))), timeoutMs)
-		_activePlay.timer = timer
+		armTimer(startTimeoutMs, 'play start timeout')
 		let urlIdx = 0
 		let switchingSrc = false
+		/** 本次 tryPlay 起始时间（部分端无 onPlay，用此判断误触发 ended） */
+		let attemptAt = 0
+		const markPlaying = () => {
+			if (settled || played) return
+			played = true
+			playStartedAt = Date.now()
+			let durMs = 0
+			try {
+				const d = Number(inner.duration)
+				if (Number.isFinite(d) && d > 0) durMs = Math.ceil(d * 1000)
+			} catch (_) {}
+			const waitMs =
+				durMs > 0 ? Math.min(playTimeoutMs, Math.max(1200, durMs + 900)) : playTimeoutMs
+			armTimer(waitMs, 'play timeout')
+		}
+		const refreshPlayDeadline = () => {
+			if (settled || !played) return
+			try {
+				const d = Number(inner.duration)
+				const t = Number(inner.currentTime)
+				if (!Number.isFinite(d) || d <= 0) return
+				const remainMs = Math.ceil((d - (Number.isFinite(t) ? t : 0)) * 1000) + 900
+				if (remainMs > 200) armTimer(Math.min(playTimeoutMs, remainMs), 'play timeout')
+			} catch (_) {}
+		}
 		const tryPlayAt = (idx) => {
 			if (settled || idx >= candidates.length) {
 				if (!settled) finish(() => reject(new Error('play error')))
 				return
 			}
 			urlIdx = idx
+			played = false
+			playStartedAt = 0
+			attemptAt = Date.now()
+			armTimer(startTimeoutMs, 'play start timeout')
 			inner.src = candidates[idx]
 			try {
 				safeInnerAudioPlay(inner)
@@ -430,7 +522,25 @@ export async function playPinyinLocalAudio(src, opts = {}) {
 				} else finish(() => reject(e))
 			}
 		}
-		inner.onEnded(() => finish(() => resolve()))
+		inner.onPlay(() => markPlaying())
+		inner.onCanplay(() => {
+			if (played) refreshPlayDeadline()
+		})
+		inner.onTimeUpdate(() => {
+			if (!played) markPlaying()
+			else refreshPlayDeadline()
+		})
+		inner.onEnded(() => {
+			/** 设 src 后极短误触发忽略；部分端无 onPlay，过窗口后仍认 ended */
+			const sinceAttempt = attemptAt ? Date.now() - attemptAt : 0
+			if (!played) {
+				if (sinceAttempt < 160) return
+				played = true
+				playStartedAt = attemptAt || Date.now()
+			}
+			if (playStartedAt && Date.now() - playStartedAt < 80) return
+			finish(() => resolve())
+		})
 		inner.onError((err) => {
 			if (urlIdx + 1 < candidates.length) {
 				switchingSrc = true

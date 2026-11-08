@@ -1,1384 +1,1736 @@
-[
-	{
-		"unit": 1,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 1,
-		"lessonInUnit": 1,
-		"title": "1画（1个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为1画，共1个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "一",
-				"pinyin": "yī"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 2,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 2,
-		"lessonInUnit": 1,
-		"title": "2画（13个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为2画，共13个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "八",
-				"pinyin": "bā"
-			},
-			{
-				"hanzi": "厂",
-				"pinyin": "chǎng"
-			},
-			{
-				"hanzi": "刀",
-				"pinyin": "dāo"
-			},
-			{
-				"hanzi": "儿",
-				"pinyin": "ér"
-			},
-			{
-				"hanzi": "二",
-				"pinyin": "èr"
-			},
-			{
-				"hanzi": "几",
-				"pinyin": "jǐ"
-			},
-			{
-				"hanzi": "九",
-				"pinyin": "jiǔ"
-			},
-			{
-				"hanzi": "了",
-				"pinyin": "le"
-			},
-			{
-				"hanzi": "力",
-				"pinyin": "lì"
-			},
-			{
-				"hanzi": "七",
-				"pinyin": "qī"
-			},
-			{
-				"hanzi": "人",
-				"pinyin": "rén"
-			},
-			{
-				"hanzi": "十",
-				"pinyin": "shí"
-			},
-			{
-				"hanzi": "又",
-				"pinyin": "yòu"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 3,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 3,
-		"lessonInUnit": 1,
-		"title": "3画（25个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为3画，共25个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "才",
-				"pinyin": "cái"
-			},
-			{
-				"hanzi": "大",
-				"pinyin": "dà"
-			},
-			{
-				"hanzi": "飞",
-				"pinyin": "fēi"
-			},
-			{
-				"hanzi": "干",
-				"pinyin": "gàn"
-			},
-			{
-				"hanzi": "个",
-				"pinyin": "gè"
-			},
-			{
-				"hanzi": "工",
-				"pinyin": "gōng"
-			},
-			{
-				"hanzi": "广",
-				"pinyin": "guǎng"
-			},
-			{
-				"hanzi": "己",
-				"pinyin": "jǐ"
-			},
-			{
-				"hanzi": "巾",
-				"pinyin": "jīn"
-			},
-			{
-				"hanzi": "口",
-				"pinyin": "kǒu"
-			},
-			{
-				"hanzi": "马",
-				"pinyin": "mǎ"
-			},
-			{
-				"hanzi": "门",
-				"pinyin": "mén"
-			},
-			{
-				"hanzi": "女",
-				"pinyin": "nǚ"
-			},
-			{
-				"hanzi": "千",
-				"pinyin": "qiān"
-			},
-			{
-				"hanzi": "三",
-				"pinyin": "sān"
-			},
-			{
-				"hanzi": "山",
-				"pinyin": "shān"
-			},
-			{
-				"hanzi": "上",
-				"pinyin": "shàng"
-			},
-			{
-				"hanzi": "土",
-				"pinyin": "tǔ"
-			},
-			{
-				"hanzi": "万",
-				"pinyin": "wàn"
-			},
-			{
-				"hanzi": "卫",
-				"pinyin": "wèi"
-			},
-			{
-				"hanzi": "习",
-				"pinyin": "xí"
-			},
-			{
-				"hanzi": "下",
-				"pinyin": "xià"
-			},
-			{
-				"hanzi": "小",
-				"pinyin": "xiǎo"
-			},
-			{
-				"hanzi": "也",
-				"pinyin": "yě"
-			},
-			{
-				"hanzi": "子",
-				"pinyin": "zǐ"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 4,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 4,
-		"lessonInUnit": 1,
-		"title": "4画（44个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为4画，共44个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "办",
-				"pinyin": "bàn"
-			},
-			{
-				"hanzi": "贝",
-				"pinyin": "bèi"
-			},
-			{
-				"hanzi": "比",
-				"pinyin": "bǐ"
-			},
-			{
-				"hanzi": "不",
-				"pinyin": "bù"
-			},
-			{
-				"hanzi": "车",
-				"pinyin": "chē"
-			},
-			{
-				"hanzi": "尺",
-				"pinyin": "chǐ"
-			},
-			{
-				"hanzi": "从",
-				"pinyin": "cóng"
-			},
-			{
-				"hanzi": "反",
-				"pinyin": "fǎn"
-			},
-			{
-				"hanzi": "方",
-				"pinyin": "fāng"
-			},
-			{
-				"hanzi": "分",
-				"pinyin": "fēn"
-			},
-			{
-				"hanzi": "风",
-				"pinyin": "fēng"
-			},
-			{
-				"hanzi": "公",
-				"pinyin": "gōng"
-			},
-			{
-				"hanzi": "火",
-				"pinyin": "huǒ"
-			},
-			{
-				"hanzi": "见",
-				"pinyin": "jiàn"
-			},
-			{
-				"hanzi": "今",
-				"pinyin": "jīn"
-			},
-			{
-				"hanzi": "开",
-				"pinyin": "kāi"
-			},
-			{
-				"hanzi": "六",
-				"pinyin": "liù"
-			},
-			{
-				"hanzi": "毛",
-				"pinyin": "máo"
-			},
-			{
-				"hanzi": "木",
-				"pinyin": "mù"
-			},
-			{
-				"hanzi": "牛",
-				"pinyin": "niú"
-			},
-			{
-				"hanzi": "片",
-				"pinyin": "piàn"
-			},
-			{
-				"hanzi": "气",
-				"pinyin": "qì"
-			},
-			{
-				"hanzi": "日",
-				"pinyin": "rì"
-			},
-			{
-				"hanzi": "少",
-				"pinyin": "shǎo"
-			},
-			{
-				"hanzi": "什",
-				"pinyin": "shén"
-			},
-			{
-				"hanzi": "手",
-				"pinyin": "shǒu"
-			},
-			{
-				"hanzi": "书",
-				"pinyin": "shū"
-			},
-			{
-				"hanzi": "双",
-				"pinyin": "shuāng"
-			},
-			{
-				"hanzi": "水",
-				"pinyin": "shuǐ"
-			},
-			{
-				"hanzi": "太",
-				"pinyin": "tài"
-			},
-			{
-				"hanzi": "天",
-				"pinyin": "tiān"
-			},
-			{
-				"hanzi": "王",
-				"pinyin": "wáng"
-			},
-			{
-				"hanzi": "为",
-				"pinyin": "wéi"
-			},
-			{
-				"hanzi": "文",
-				"pinyin": "wén"
-			},
-			{
-				"hanzi": "五",
-				"pinyin": "wǔ"
-			},
-			{
-				"hanzi": "午",
-				"pinyin": "wǔ"
-			},
-			{
-				"hanzi": "心",
-				"pinyin": "xīn"
-			},
-			{
-				"hanzi": "牙",
-				"pinyin": "yá"
-			},
-			{
-				"hanzi": "以",
-				"pinyin": "yǐ"
-			},
-			{
-				"hanzi": "元",
-				"pinyin": "yuán"
-			},
-			{
-				"hanzi": "月",
-				"pinyin": "yuè"
-			},
-			{
-				"hanzi": "云",
-				"pinyin": "yún"
-			},
-			{
-				"hanzi": "长",
-				"pinyin": "cháng"
-			},
-			{
-				"hanzi": "中",
-				"pinyin": "zhōng"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 5,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 5,
-		"lessonInUnit": 1,
-		"title": "5画（44个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为5画，共44个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "白",
-				"pinyin": "bái"
-			},
-			{
-				"hanzi": "半",
-				"pinyin": "bàn"
-			},
-			{
-				"hanzi": "包",
-				"pinyin": "bāo"
-			},
-			{
-				"hanzi": "北",
-				"pinyin": "běi"
-			},
-			{
-				"hanzi": "本",
-				"pinyin": "běn"
-			},
-			{
-				"hanzi": "边",
-				"pinyin": "biān"
-			},
-			{
-				"hanzi": "册",
-				"pinyin": "cè"
-			},
-			{
-				"hanzi": "出",
-				"pinyin": "chū"
-			},
-			{
-				"hanzi": "打",
-				"pinyin": "dá"
-			},
-			{
-				"hanzi": "电",
-				"pinyin": "diàn"
-			},
-			{
-				"hanzi": "东",
-				"pinyin": "dōng"
-			},
-			{
-				"hanzi": "冬",
-				"pinyin": "dōng"
-			},
-			{
-				"hanzi": "对",
-				"pinyin": "duì"
-			},
-			{
-				"hanzi": "发",
-				"pinyin": "fā"
-			},
-			{
-				"hanzi": "瓜",
-				"pinyin": "guā"
-			},
-			{
-				"hanzi": "加",
-				"pinyin": "jiā"
-			},
-			{
-				"hanzi": "叫",
-				"pinyin": "jiào"
-			},
-			{
-				"hanzi": "可",
-				"pinyin": "kě"
-			},
-			{
-				"hanzi": "乐",
-				"pinyin": "lè"
-			},
-			{
-				"hanzi": "立",
-				"pinyin": "lì"
-			},
-			{
-				"hanzi": "们",
-				"pinyin": "men"
-			},
-			{
-				"hanzi": "民",
-				"pinyin": "mín"
-			},
-			{
-				"hanzi": "目",
-				"pinyin": "mù"
-			},
-			{
-				"hanzi": "奶",
-				"pinyin": "nǎi"
-			},
-			{
-				"hanzi": "鸟",
-				"pinyin": "niǎo"
-			},
-			{
-				"hanzi": "皮",
-				"pinyin": "pí"
-			},
-			{
-				"hanzi": "平",
-				"pinyin": "píng"
-			},
-			{
-				"hanzi": "去",
-				"pinyin": "qù"
-			},
-			{
-				"hanzi": "让",
-				"pinyin": "ràng"
-			},
-			{
-				"hanzi": "生",
-				"pinyin": "shēng"
-			},
-			{
-				"hanzi": "石",
-				"pinyin": "shí"
-			},
-			{
-				"hanzi": "市",
-				"pinyin": "shì"
-			},
-			{
-				"hanzi": "四",
-				"pinyin": "sì"
-			},
-			{
-				"hanzi": "他",
-				"pinyin": "tā"
-			},
-			{
-				"hanzi": "台",
-				"pinyin": "tái"
-			},
-			{
-				"hanzi": "田",
-				"pinyin": "tián"
-			},
-			{
-				"hanzi": "头",
-				"pinyin": "tou"
-			},
-			{
-				"hanzi": "外",
-				"pinyin": "wài"
-			},
-			{
-				"hanzi": "业",
-				"pinyin": "yè"
-			},
-			{
-				"hanzi": "叶",
-				"pinyin": "yè"
-			},
-			{
-				"hanzi": "用",
-				"pinyin": "yòng"
-			},
-			{
-				"hanzi": "正",
-				"pinyin": "zhèng"
-			},
-			{
-				"hanzi": "只",
-				"pinyin": "zhǐ"
-			},
-			{
-				"hanzi": "主",
-				"pinyin": "zhù"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 6,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 6,
-		"lessonInUnit": 1,
-		"title": "6画（59个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为6画，共59个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "百",
-				"pinyin": "bǎi"
-			},
-			{
-				"hanzi": "成",
-				"pinyin": "chéng"
-			},
-			{
-				"hanzi": "吃",
-				"pinyin": "chī"
-			},
-			{
-				"hanzi": "虫",
-				"pinyin": "chóng"
-			},
-			{
-				"hanzi": "次",
-				"pinyin": "cì"
-			},
-			{
-				"hanzi": "当",
-				"pinyin": "dāng"
-			},
-			{
-				"hanzi": "地",
-				"pinyin": "dì"
-			},
-			{
-				"hanzi": "灯",
-				"pinyin": "dēng"
-			},
-			{
-				"hanzi": "动",
-				"pinyin": "dòng"
-			},
-			{
-				"hanzi": "多",
-				"pinyin": "duō"
-			},
-			{
-				"hanzi": "耳",
-				"pinyin": "ěr"
-			},
-			{
-				"hanzi": "共",
-				"pinyin": "gòng"
-			},
-			{
-				"hanzi": "关",
-				"pinyin": "guān"
-			},
-			{
-				"hanzi": "光",
-				"pinyin": "guāng"
-			},
-			{
-				"hanzi": "过",
-				"pinyin": "guò"
-			},
-			{
-				"hanzi": "好",
-				"pinyin": "hǎo"
-			},
-			{
-				"hanzi": "合",
-				"pinyin": "hé"
-			},
-			{
-				"hanzi": "红",
-				"pinyin": "hóng"
-			},
-			{
-				"hanzi": "后",
-				"pinyin": "hòu"
-			},
-			{
-				"hanzi": "回",
-				"pinyin": "huí"
-			},
-			{
-				"hanzi": "会",
-				"pinyin": "huì"
-			},
-			{
-				"hanzi": "机",
-				"pinyin": "jī"
-			},
-			{
-				"hanzi": "江",
-				"pinyin": "jiāng"
-			},
-			{
-				"hanzi": "交",
-				"pinyin": "jiāo"
-			},
-			{
-				"hanzi": "军",
-				"pinyin": "jūn"
-			},
-			{
-				"hanzi": "老",
-				"pinyin": "lǎo"
-			},
-			{
-				"hanzi": "妈",
-				"pinyin": "mā"
-			},
-			{
-				"hanzi": "米",
-				"pinyin": "mǐ"
-			},
-			{
-				"hanzi": "那",
-				"pinyin": "nà"
-			},
-			{
-				"hanzi": "年",
-				"pinyin": "nián"
-			},
-			{
-				"hanzi": "农",
-				"pinyin": "nóng"
-			},
-			{
-				"hanzi": "全",
-				"pinyin": "quán"
-			},
-			{
-				"hanzi": "舌",
-				"pinyin": "shé"
-			},
-			{
-				"hanzi": "师",
-				"pinyin": "shī"
-			},
-			{
-				"hanzi": "岁",
-				"pinyin": "suì"
-			},
-			{
-				"hanzi": "她",
-				"pinyin": "tā"
-			},
-			{
-				"hanzi": "同",
-				"pinyin": "tóng"
-			},
-			{
-				"hanzi": "网",
-				"pinyin": "wǎng"
-			},
-			{
-				"hanzi": "问",
-				"pinyin": "wèn"
-			},
-			{
-				"hanzi": "西",
-				"pinyin": "xī"
-			},
-			{
-				"hanzi": "先",
-				"pinyin": "xiān"
-			},
-			{
-				"hanzi": "向",
-				"pinyin": "xiàng"
-			},
-			{
-				"hanzi": "行",
-				"pinyin": "xíng"
-			},
-			{
-				"hanzi": "兴",
-				"pinyin": "xìng"
-			},
-			{
-				"hanzi": "羊",
-				"pinyin": "yáng"
-			},
-			{
-				"hanzi": "阳",
-				"pinyin": "yáng"
-			},
-			{
-				"hanzi": "爷",
-				"pinyin": "yé"
-			},
-			{
-				"hanzi": "页",
-				"pinyin": "yè"
-			},
-			{
-				"hanzi": "衣",
-				"pinyin": "yī"
-			},
-			{
-				"hanzi": "因",
-				"pinyin": "yīn"
-			},
-			{
-				"hanzi": "阴",
-				"pinyin": "yīn"
-			},
-			{
-				"hanzi": "有",
-				"pinyin": "yǒu"
-			},
-			{
-				"hanzi": "羽",
-				"pinyin": "yǔ"
-			},
-			{
-				"hanzi": "再",
-				"pinyin": "zài"
-			},
-			{
-				"hanzi": "在",
-				"pinyin": "zài"
-			},
-			{
-				"hanzi": "早",
-				"pinyin": "zǎo"
-			},
-			{
-				"hanzi": "竹",
-				"pinyin": "zhú"
-			},
-			{
-				"hanzi": "字",
-				"pinyin": "zì"
-			},
-			{
-				"hanzi": "自",
-				"pinyin": "zì"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 7,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 7,
-		"lessonInUnit": 1,
-		"title": "7画（31个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为7画，共31个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "把",
-				"pinyin": "bǎ"
-			},
-			{
-				"hanzi": "别",
-				"pinyin": "bié"
-			},
-			{
-				"hanzi": "吵",
-				"pinyin": "chǎo"
-			},
-			{
-				"hanzi": "床",
-				"pinyin": "chuáng"
-			},
-			{
-				"hanzi": "但",
-				"pinyin": "dàn"
-			},
-			{
-				"hanzi": "豆",
-				"pinyin": "dòu"
-			},
-			{
-				"hanzi": "饭",
-				"pinyin": "fàn"
-			},
-			{
-				"hanzi": "更",
-				"pinyin": "gèng"
-			},
-			{
-				"hanzi": "还",
-				"pinyin": "hái"
-			},
-			{
-				"hanzi": "花",
-				"pinyin": "huā"
-			},
-			{
-				"hanzi": "进",
-				"pinyin": "jìn"
-			},
-			{
-				"hanzi": "快",
-				"pinyin": "kuài"
-			},
-			{
-				"hanzi": "来",
-				"pinyin": "lái"
-			},
-			{
-				"hanzi": "里",
-				"pinyin": "lǐ"
-			},
-			{
-				"hanzi": "两",
-				"pinyin": "liǎng"
-			},
-			{
-				"hanzi": "没",
-				"pinyin": "méi"
-			},
-			{
-				"hanzi": "每",
-				"pinyin": "měi"
-			},
-			{
-				"hanzi": "你",
-				"pinyin": "nǐ"
-			},
-			{
-				"hanzi": "身",
-				"pinyin": "shēn"
-			},
-			{
-				"hanzi": "声",
-				"pinyin": "shēng"
-			},
-			{
-				"hanzi": "时",
-				"pinyin": "shí"
-			},
-			{
-				"hanzi": "条",
-				"pinyin": "tiáo"
-			},
-			{
-				"hanzi": "听",
-				"pinyin": "tīng"
-			},
-			{
-				"hanzi": "我",
-				"pinyin": "wǒ"
-			},
-			{
-				"hanzi": "医",
-				"pinyin": "yī"
-			},
-			{
-				"hanzi": "找",
-				"pinyin": "zhǎo"
-			},
-			{
-				"hanzi": "这",
-				"pinyin": "zhè"
-			},
-			{
-				"hanzi": "住",
-				"pinyin": "zhù"
-			},
-			{
-				"hanzi": "走",
-				"pinyin": "zǒu"
-			},
-			{
-				"hanzi": "作",
-				"pinyin": "zuò"
-			},
-			{
-				"hanzi": "坐",
-				"pinyin": "zuò"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 8,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 8,
-		"lessonInUnit": 1,
-		"title": "8画（30个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为8画，共30个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "爸",
-				"pinyin": "bà"
-			},
-			{
-				"hanzi": "饱",
-				"pinyin": "bǎo"
-			},
-			{
-				"hanzi": "到",
-				"pinyin": "dào"
-			},
-			{
-				"hanzi": "的",
-				"pinyin": "de"
-			},
-			{
-				"hanzi": "放",
-				"pinyin": "fàng"
-			},
-			{
-				"hanzi": "狗",
-				"pinyin": "gǒu"
-			},
-			{
-				"hanzi": "国",
-				"pinyin": "guó"
-			},
-			{
-				"hanzi": "果",
-				"pinyin": "guǒ"
-			},
-			{
-				"hanzi": "和",
-				"pinyin": "hé"
-			},
-			{
-				"hanzi": "河",
-				"pinyin": "hé"
-			},
-			{
-				"hanzi": "画",
-				"pinyin": "huà"
-			},
-			{
-				"hanzi": "话",
-				"pinyin": "huà"
-			},
-			{
-				"hanzi": "姐",
-				"pinyin": "jiě"
-			},
-			{
-				"hanzi": "金",
-				"pinyin": "jīn"
-			},
-			{
-				"hanzi": "京",
-				"pinyin": "jīng"
-			},
-			{
-				"hanzi": "经",
-				"pinyin": "jìng"
-			},
-			{
-				"hanzi": "林",
-				"pinyin": "lín"
-			},
-			{
-				"hanzi": "妹",
-				"pinyin": "mèi"
-			},
-			{
-				"hanzi": "明",
-				"pinyin": "míng"
-			},
-			{
-				"hanzi": "朋",
-				"pinyin": "péng"
-			},
-			{
-				"hanzi": "奇",
-				"pinyin": "qí"
-			},
-			{
-				"hanzi": "青",
-				"pinyin": "qīng"
-			},
-			{
-				"hanzi": "玩",
-				"pinyin": "wán"
-			},
-			{
-				"hanzi": "现",
-				"pinyin": "xiàn"
-			},
-			{
-				"hanzi": "些",
-				"pinyin": "xiē"
-			},
-			{
-				"hanzi": "学",
-				"pinyin": "xué"
-			},
-			{
-				"hanzi": "鱼",
-				"pinyin": "yú"
-			},
-			{
-				"hanzi": "雨",
-				"pinyin": "yù"
-			},
-			{
-				"hanzi": "知",
-				"pinyin": "zhī"
-			},
-			{
-				"hanzi": "直",
-				"pinyin": "zhí"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 9,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 9,
-		"lessonInUnit": 1,
-		"title": "9画（22个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为9画，共22个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "草",
-				"pinyin": "cǎo"
-			},
-			{
-				"hanzi": "穿",
-				"pinyin": "chuān"
-			},
-			{
-				"hanzi": "春",
-				"pinyin": "chūn"
-			},
-			{
-				"hanzi": "点",
-				"pinyin": "diǎn"
-			},
-			{
-				"hanzi": "给",
-				"pinyin": "gěi"
-			},
-			{
-				"hanzi": "孩",
-				"pinyin": "hái"
-			},
-			{
-				"hanzi": "很",
-				"pinyin": "hěn"
-			},
-			{
-				"hanzi": "看",
-				"pinyin": "kàn"
-			},
-			{
-				"hanzi": "亮",
-				"pinyin": "liàng"
-			},
-			{
-				"hanzi": "美",
-				"pinyin": "měi"
-			},
-			{
-				"hanzi": "面",
-				"pinyin": "miàn"
-			},
-			{
-				"hanzi": "胖",
-				"pinyin": "pàng"
-			},
-			{
-				"hanzi": "前",
-				"pinyin": "qián"
-			},
-			{
-				"hanzi": "秋",
-				"pinyin": "qiū"
-			},
-			{
-				"hanzi": "是",
-				"pinyin": "shì"
-			},
-			{
-				"hanzi": "树",
-				"pinyin": "shù"
-			},
-			{
-				"hanzi": "说",
-				"pinyin": "shuō"
-			},
-			{
-				"hanzi": "洗",
-				"pinyin": "xǐ"
-			},
-			{
-				"hanzi": "星",
-				"pinyin": "xīng"
-			},
-			{
-				"hanzi": "要",
-				"pinyin": "yào"
-			},
-			{
-				"hanzi": "音",
-				"pinyin": "yīn"
-			},
-			{
-				"hanzi": "语",
-				"pinyin": "yù"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 10,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 10,
-		"lessonInUnit": 1,
-		"title": "10画（17个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为10画，共17个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "班",
-				"pinyin": "bān"
-			},
-			{
-				"hanzi": "被",
-				"pinyin": "bèi"
-			},
-			{
-				"hanzi": "都",
-				"pinyin": "dōu"
-			},
-			{
-				"hanzi": "高",
-				"pinyin": "gāo"
-			},
-			{
-				"hanzi": "哥",
-				"pinyin": "gē"
-			},
-			{
-				"hanzi": "海",
-				"pinyin": "hǎi"
-			},
-			{
-				"hanzi": "家",
-				"pinyin": "jiā"
-			},
-			{
-				"hanzi": "课",
-				"pinyin": "kè"
-			},
-			{
-				"hanzi": "哭",
-				"pinyin": "kū"
-			},
-			{
-				"hanzi": "起",
-				"pinyin": "qǐ"
-			},
-			{
-				"hanzi": "谁",
-				"pinyin": "shuí"
-			},
-			{
-				"hanzi": "校",
-				"pinyin": "xiào"
-			},
-			{
-				"hanzi": "笑",
-				"pinyin": "xiào"
-			},
-			{
-				"hanzi": "样",
-				"pinyin": "yàng"
-			},
-			{
-				"hanzi": "站",
-				"pinyin": "zhàn"
-			},
-			{
-				"hanzi": "真",
-				"pinyin": "zhēn"
-			},
-			{
-				"hanzi": "桌",
-				"pinyin": "zhuō"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 11,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 11,
-		"lessonInUnit": 1,
-		"title": "11画（8个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为11画，共8个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "船",
-				"pinyin": "chuán"
-			},
-			{
-				"hanzi": "脸",
-				"pinyin": "liǎn"
-			},
-			{
-				"hanzi": "猫",
-				"pinyin": "māo"
-			},
-			{
-				"hanzi": "票",
-				"pinyin": "piào"
-			},
-			{
-				"hanzi": "晚",
-				"pinyin": "wǎn"
-			},
-			{
-				"hanzi": "雪",
-				"pinyin": "xuě"
-			},
-			{
-				"hanzi": "着",
-				"pinyin": "zhe"
-			},
-			{
-				"hanzi": "做",
-				"pinyin": "zuò"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 12,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 12,
-		"lessonInUnit": 1,
-		"title": "12画（5个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为12画，共5个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "窗",
-				"pinyin": "chuāng"
-			},
-			{
-				"hanzi": "道",
-				"pinyin": "dào"
-			},
-			{
-				"hanzi": "就",
-				"pinyin": "jiù"
-			},
-			{
-				"hanzi": "跑",
-				"pinyin": "páo"
-			},
-			{
-				"hanzi": "然",
-				"pinyin": "rán"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	},
-	{
-		"unit": 13,
-		"unitName": "教育部·识字写字基本字表（300字）",
-		"unitTheme": "按笔画分类",
-		"kind": "识字",
-		"catalogLessonNo": 13,
-		"lessonInUnit": 1,
-		"title": "13画（1个字）",
-		"content": "\n本组为义务教育语文课程标准附录4「识字、写字教学基本字表」中的字，笔画为13画，共1个。\n",
-		"literacy_chars": [
-			{
-				"hanzi": "跳",
-				"pinyin": "tiào"
-			}
-		],
-		"writing_chars": [],
-		"word_terms": []
-	}
-]
+{
+    "textbook_version_id": "教育部·识字写字基本字表（300字）",
+    "grade": 0,
+    "semester": "上",
+    "catalog_note": "义务教育语文课程标准附录4「识字、写字教学基本字表」300字；按幼小衔接主题划分（人与家、身体、数字、自然、动植物、上学、生活、常用表达等），每课约6～10字。",
+    "book_catalog": {
+        "第一单元·我与家": {
+            "start_page": 1,
+            "type": "人与家庭",
+            "article_list": [
+                {
+                    "sort": 1,
+                    "title": "我认识的人",
+                    "content": "\n认读身边最常见的人称，指认「你、我、他」和家人。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "人",
+                            "pinyin": "rén"
+                        },
+                        {
+                            "hanzi": "你",
+                            "pinyin": "nǐ"
+                        },
+                        {
+                            "hanzi": "他",
+                            "pinyin": "tā"
+                        },
+                        {
+                            "hanzi": "她",
+                            "pinyin": "tā"
+                        },
+                        {
+                            "hanzi": "儿",
+                            "pinyin": "ér"
+                        },
+                        {
+                            "hanzi": "爸",
+                            "pinyin": "bà"
+                        },
+                        {
+                            "hanzi": "妈",
+                            "pinyin": "mā"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 2,
+                    "title": "温暖的家",
+                    "content": "\n用这些字介绍家里人，说说「我家有谁」。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "奶",
+                            "pinyin": "nǎi"
+                        },
+                        {
+                            "hanzi": "爷",
+                            "pinyin": "yé"
+                        },
+                        {
+                            "hanzi": "哥",
+                            "pinyin": "gē"
+                        },
+                        {
+                            "hanzi": "妹",
+                            "pinyin": "mèi"
+                        },
+                        {
+                            "hanzi": "家",
+                            "pinyin": "jiā"
+                        },
+                        {
+                            "hanzi": "好",
+                            "pinyin": "hǎo"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第二单元·我的身体": {
+            "start_page": 11,
+            "type": "身体与动作",
+            "article_list": [
+                {
+                    "sort": 3,
+                    "title": "我的脸",
+                    "content": "\n指认五官，玩「摸摸我的小鼻子」类游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "口",
+                            "pinyin": "kǒu"
+                        },
+                        {
+                            "hanzi": "耳",
+                            "pinyin": "ěr"
+                        },
+                        {
+                            "hanzi": "目",
+                            "pinyin": "mù"
+                        },
+                        {
+                            "hanzi": "舌",
+                            "pinyin": "shé"
+                        },
+                        {
+                            "hanzi": "脸",
+                            "pinyin": "liǎn"
+                        },
+                        {
+                            "hanzi": "头",
+                            "pinyin": "tóu"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 4,
+                    "title": "我的身体",
+                    "content": "\n认识身体名称，建立身体图式。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "身",
+                            "pinyin": "shēn"
+                        },
+                        {
+                            "hanzi": "心",
+                            "pinyin": "xīn"
+                        },
+                        {
+                            "hanzi": "手",
+                            "pinyin": "shǒu"
+                        },
+                        {
+                            "hanzi": "毛",
+                            "pinyin": "máo"
+                        },
+                        {
+                            "hanzi": "发",
+                            "pinyin": "fā"
+                        },
+                        {
+                            "hanzi": "面",
+                            "pinyin": "miàn"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 5,
+                    "title": "动起来（一）",
+                    "content": "\n走、跑、跳、坐、站等动作字，配合模仿游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "走",
+                            "pinyin": "zǒu"
+                        },
+                        {
+                            "hanzi": "跑",
+                            "pinyin": "páo"
+                        },
+                        {
+                            "hanzi": "跳",
+                            "pinyin": "tiào"
+                        },
+                        {
+                            "hanzi": "坐",
+                            "pinyin": "zuò"
+                        },
+                        {
+                            "hanzi": "站",
+                            "pinyin": "zhàn"
+                        },
+                        {
+                            "hanzi": "起",
+                            "pinyin": "qǐ"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 6,
+                    "title": "动起来（二）",
+                    "content": "\n听、说、看与表情，联系幼儿园一日生活。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "看",
+                            "pinyin": "kàn"
+                        },
+                        {
+                            "hanzi": "听",
+                            "pinyin": "tīng"
+                        },
+                        {
+                            "hanzi": "说",
+                            "pinyin": "shuō"
+                        },
+                        {
+                            "hanzi": "哭",
+                            "pinyin": "kū"
+                        },
+                        {
+                            "hanzi": "笑",
+                            "pinyin": "xiào"
+                        },
+                        {
+                            "hanzi": "声",
+                            "pinyin": "shēng"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第三单元·数字与多少": {
+            "start_page": 21,
+            "type": "数感与比较",
+            "article_list": [
+                {
+                    "sort": 7,
+                    "title": "数字 1—5",
+                    "content": "\n数手指、数玩具，建立数与字的对应。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "一",
+                            "pinyin": "yī"
+                        },
+                        {
+                            "hanzi": "二",
+                            "pinyin": "èr"
+                        },
+                        {
+                            "hanzi": "三",
+                            "pinyin": "sān"
+                        },
+                        {
+                            "hanzi": "四",
+                            "pinyin": "sì"
+                        },
+                        {
+                            "hanzi": "五",
+                            "pinyin": "wǔ"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 8,
+                    "title": "数字 6—10",
+                    "content": "\n继续数数，和同伴比一比谁多谁少。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "六",
+                            "pinyin": "liù"
+                        },
+                        {
+                            "hanzi": "七",
+                            "pinyin": "qī"
+                        },
+                        {
+                            "hanzi": "八",
+                            "pinyin": "bā"
+                        },
+                        {
+                            "hanzi": "九",
+                            "pinyin": "jiǔ"
+                        },
+                        {
+                            "hanzi": "十",
+                            "pinyin": "shí"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 9,
+                    "title": "大与小、多与少",
+                    "content": "\n比较大小、多少，在生活中找反义词。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "大",
+                            "pinyin": "dà"
+                        },
+                        {
+                            "hanzi": "小",
+                            "pinyin": "xiǎo"
+                        },
+                        {
+                            "hanzi": "多",
+                            "pinyin": "duō"
+                        },
+                        {
+                            "hanzi": "少",
+                            "pinyin": "shǎo"
+                        },
+                        {
+                            "hanzi": "半",
+                            "pinyin": "bàn"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 10,
+                    "title": "数一数、说一说",
+                    "content": "\n认识常用数量词，能说「两个、几片」。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "百",
+                            "pinyin": "bǎi"
+                        },
+                        {
+                            "hanzi": "个",
+                            "pinyin": "gè"
+                        },
+                        {
+                            "hanzi": "两",
+                            "pinyin": "liǎng"
+                        },
+                        {
+                            "hanzi": "几",
+                            "pinyin": "jǐ"
+                        },
+                        {
+                            "hanzi": "正",
+                            "pinyin": "zhèng"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第四单元·天地自然": {
+            "start_page": 31,
+            "type": "自然观察",
+            "article_list": [
+                {
+                    "sort": 11,
+                    "title": "日月天地",
+                    "content": "\n看天空、地面，感受自然环境中常见事物。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "日",
+                            "pinyin": "rì"
+                        },
+                        {
+                            "hanzi": "月",
+                            "pinyin": "yuè"
+                        },
+                        {
+                            "hanzi": "天",
+                            "pinyin": "tiān"
+                        },
+                        {
+                            "hanzi": "地",
+                            "pinyin": "dì"
+                        },
+                        {
+                            "hanzi": "土",
+                            "pinyin": "tǔ"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 12,
+                    "title": "山水风火",
+                    "content": "\n认识水、山、火、风等自然要素。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "山",
+                            "pinyin": "shān"
+                        },
+                        {
+                            "hanzi": "水",
+                            "pinyin": "shuǐ"
+                        },
+                        {
+                            "hanzi": "火",
+                            "pinyin": "huǒ"
+                        },
+                        {
+                            "hanzi": "风",
+                            "pinyin": "fēng"
+                        },
+                        {
+                            "hanzi": "云",
+                            "pinyin": "yún"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 13,
+                    "title": "雨雪雷电",
+                    "content": "\n观察天气变化，学说简单的天气词。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "雨",
+                            "pinyin": "yù"
+                        },
+                        {
+                            "hanzi": "雪",
+                            "pinyin": "xuě"
+                        },
+                        {
+                            "hanzi": "电",
+                            "pinyin": "diàn"
+                        },
+                        {
+                            "hanzi": "阴",
+                            "pinyin": "yīn"
+                        },
+                        {
+                            "hanzi": "阳",
+                            "pinyin": "yáng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 14,
+                    "title": "光亮与方向",
+                    "content": "\n区分明暗，认识东、西等方向词。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "光",
+                            "pinyin": "guāng"
+                        },
+                        {
+                            "hanzi": "明",
+                            "pinyin": "míng"
+                        },
+                        {
+                            "hanzi": "亮",
+                            "pinyin": "liàng"
+                        },
+                        {
+                            "hanzi": "东",
+                            "pinyin": "dōng"
+                        },
+                        {
+                            "hanzi": "西",
+                            "pinyin": "xī"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 15,
+                    "title": "四季与早晚",
+                    "content": "\n感受春夏秋冬和一天中的早晚。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "早",
+                            "pinyin": "zǎo"
+                        },
+                        {
+                            "hanzi": "晚",
+                            "pinyin": "wǎn"
+                        },
+                        {
+                            "hanzi": "春",
+                            "pinyin": "chūn"
+                        },
+                        {
+                            "hanzi": "秋",
+                            "pinyin": "qiū"
+                        },
+                        {
+                            "hanzi": "冬",
+                            "pinyin": "dōng"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第五单元·动植物": {
+            "start_page": 41,
+            "type": "动植物",
+            "article_list": [
+                {
+                    "sort": 16,
+                    "title": "树木花草",
+                    "content": "\n户外认植物，说说树干、花朵。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "木",
+                            "pinyin": "mù"
+                        },
+                        {
+                            "hanzi": "林",
+                            "pinyin": "lín"
+                        },
+                        {
+                            "hanzi": "花",
+                            "pinyin": "huā"
+                        },
+                        {
+                            "hanzi": "草",
+                            "pinyin": "cǎo"
+                        },
+                        {
+                            "hanzi": "树",
+                            "pinyin": "shù"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 17,
+                    "title": "叶竹与瓜果",
+                    "content": "\n认识叶、竹、瓜、豆等植物相关字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "叶",
+                            "pinyin": "yè"
+                        },
+                        {
+                            "hanzi": "竹",
+                            "pinyin": "zhú"
+                        },
+                        {
+                            "hanzi": "果",
+                            "pinyin": "guǒ"
+                        },
+                        {
+                            "hanzi": "瓜",
+                            "pinyin": "guā"
+                        },
+                        {
+                            "hanzi": "豆",
+                            "pinyin": "dòu"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 18,
+                    "title": "田园与牲畜",
+                    "content": "\n联系田地、米饭与牛羊。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "田",
+                            "pinyin": "tián"
+                        },
+                        {
+                            "hanzi": "米",
+                            "pinyin": "mǐ"
+                        },
+                        {
+                            "hanzi": "马",
+                            "pinyin": "mǎ"
+                        },
+                        {
+                            "hanzi": "牛",
+                            "pinyin": "niú"
+                        },
+                        {
+                            "hanzi": "羊",
+                            "pinyin": "yáng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 19,
+                    "title": "飞禽与水族",
+                    "content": "\n认鸟类、鱼类和常见小动物。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "鸟",
+                            "pinyin": "niǎo"
+                        },
+                        {
+                            "hanzi": "鱼",
+                            "pinyin": "yú"
+                        },
+                        {
+                            "hanzi": "虫",
+                            "pinyin": "chóng"
+                        },
+                        {
+                            "hanzi": "狗",
+                            "pinyin": "gǒu"
+                        },
+                        {
+                            "hanzi": "猫",
+                            "pinyin": "māo"
+                        },
+                        {
+                            "hanzi": "羽",
+                            "pinyin": "yǔ"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第六单元·上学去": {
+            "start_page": 51,
+            "type": "校园生活",
+            "article_list": [
+                {
+                    "sort": 20,
+                    "title": "去学校",
+                    "content": "\n认识学校、课、师，建立入园期待。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "学",
+                            "pinyin": "xué"
+                        },
+                        {
+                            "hanzi": "校",
+                            "pinyin": "xiào"
+                        },
+                        {
+                            "hanzi": "课",
+                            "pinyin": "kè"
+                        },
+                        {
+                            "hanzi": "师",
+                            "pinyin": "shī"
+                        },
+                        {
+                            "hanzi": "同",
+                            "pinyin": "tóng"
+                        },
+                        {
+                            "hanzi": "班",
+                            "pinyin": "bān"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 21,
+                    "title": "书本与学习",
+                    "content": "\n册、文、字、画，联系阅读与涂鸦。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "书",
+                            "pinyin": "shū"
+                        },
+                        {
+                            "hanzi": "本",
+                            "pinyin": "běn"
+                        },
+                        {
+                            "hanzi": "册",
+                            "pinyin": "cè"
+                        },
+                        {
+                            "hanzi": "文",
+                            "pinyin": "wén"
+                        },
+                        {
+                            "hanzi": "字",
+                            "pinyin": "zì"
+                        },
+                        {
+                            "hanzi": "画",
+                            "pinyin": "huà"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 22,
+                    "title": "动手学本领",
+                    "content": "\n尺、工、习，联系动手与练习。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "尺",
+                            "pinyin": "chǐ"
+                        },
+                        {
+                            "hanzi": "工",
+                            "pinyin": "gōng"
+                        },
+                        {
+                            "hanzi": "习",
+                            "pinyin": "xí"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第七单元·吃穿住行": {
+            "start_page": 61,
+            "type": "日常生活",
+            "article_list": [
+                {
+                    "sort": 23,
+                    "title": "吃饭时间",
+                    "content": "\n餐桌上的字：吃、饭等。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "吃",
+                            "pinyin": "chī"
+                        },
+                        {
+                            "hanzi": "饭",
+                            "pinyin": "fàn"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 24,
+                    "title": "穿衣",
+                    "content": "\n衣、被、巾与刀、页、业等生活用品字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "衣",
+                            "pinyin": "yī"
+                        },
+                        {
+                            "hanzi": "被",
+                            "pinyin": "bèi"
+                        },
+                        {
+                            "hanzi": "巾",
+                            "pinyin": "jīn"
+                        },
+                        {
+                            "hanzi": "页",
+                            "pinyin": "yè"
+                        },
+                        {
+                            "hanzi": "业",
+                            "pinyin": "yè"
+                        },
+                        {
+                            "hanzi": "刀",
+                            "pinyin": "dāo"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 25,
+                    "title": "里与外、上与下",
+                    "content": "\n空间方位游戏：里外、上下、中。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "里",
+                            "pinyin": "lǐ"
+                        },
+                        {
+                            "hanzi": "外",
+                            "pinyin": "wài"
+                        },
+                        {
+                            "hanzi": "上",
+                            "pinyin": "shàng"
+                        },
+                        {
+                            "hanzi": "下",
+                            "pinyin": "xià"
+                        },
+                        {
+                            "hanzi": "中",
+                            "pinyin": "zhōng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 26,
+                    "title": "前与后、来与去",
+                    "content": "\n前后、来去、进出等动态方位。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "前",
+                            "pinyin": "qián"
+                        },
+                        {
+                            "hanzi": "后",
+                            "pinyin": "hòu"
+                        },
+                        {
+                            "hanzi": "来",
+                            "pinyin": "lái"
+                        },
+                        {
+                            "hanzi": "去",
+                            "pinyin": "qù"
+                        },
+                        {
+                            "hanzi": "进",
+                            "pinyin": "jìn"
+                        },
+                        {
+                            "hanzi": "出",
+                            "pinyin": "chū"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 27,
+                    "title": "出门与回家",
+                    "content": "\n回、车、门、开，说说出行与回家。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "回",
+                            "pinyin": "huí"
+                        },
+                        {
+                            "hanzi": "车",
+                            "pinyin": "chē"
+                        },
+                        {
+                            "hanzi": "门",
+                            "pinyin": "mén"
+                        },
+                        {
+                            "hanzi": "开",
+                            "pinyin": "kāi"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 28,
+                    "title": "常用句式",
+                    "content": "\n会、是、要、在、也等口语句式用字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "是",
+                            "pinyin": "shì"
+                        },
+                        {
+                            "hanzi": "会",
+                            "pinyin": "huì"
+                        },
+                        {
+                            "hanzi": "要",
+                            "pinyin": "yào"
+                        },
+                        {
+                            "hanzi": "在",
+                            "pinyin": "zài"
+                        },
+                        {
+                            "hanzi": "也",
+                            "pinyin": "yě"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第八单元·常用表达": {
+            "start_page": 71,
+            "type": "常用虚词",
+            "article_list": [
+                {
+                    "sort": 29,
+                    "title": "也都很对",
+                    "content": "\n也、都、很、对、可、还，用于简单句。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "都",
+                            "pinyin": "dōu"
+                        },
+                        {
+                            "hanzi": "很",
+                            "pinyin": "hěn"
+                        },
+                        {
+                            "hanzi": "对",
+                            "pinyin": "duì"
+                        },
+                        {
+                            "hanzi": "可",
+                            "pinyin": "kě"
+                        },
+                        {
+                            "hanzi": "还",
+                            "pinyin": "hái"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 30,
+                    "title": "让比与给",
+                    "content": "\n让、比、给，连接动作与对象。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "让",
+                            "pinyin": "ràng"
+                        },
+                        {
+                            "hanzi": "比",
+                            "pinyin": "bǐ"
+                        },
+                        {
+                            "hanzi": "给",
+                            "pinyin": "gěi"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 31,
+                    "title": "把办与包裹",
+                    "content": "\n把、办、包、贝等常见字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "把",
+                            "pinyin": "bǎ"
+                        },
+                        {
+                            "hanzi": "办",
+                            "pinyin": "bàn"
+                        },
+                        {
+                            "hanzi": "包",
+                            "pinyin": "bāo"
+                        },
+                        {
+                            "hanzi": "贝",
+                            "pinyin": "bèi"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 32,
+                    "title": "边别与穿戴",
+                    "content": "\n边、别、吵、穿、次等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "边",
+                            "pinyin": "biān"
+                        },
+                        {
+                            "hanzi": "别",
+                            "pinyin": "bié"
+                        },
+                        {
+                            "hanzi": "吵",
+                            "pinyin": "chǎo"
+                        },
+                        {
+                            "hanzi": "穿",
+                            "pinyin": "chuān"
+                        },
+                        {
+                            "hanzi": "次",
+                            "pinyin": "cì"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 33,
+                    "title": "从但到点",
+                    "content": "\n从、但、到、的、点等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "从",
+                            "pinyin": "cóng"
+                        },
+                        {
+                            "hanzi": "但",
+                            "pinyin": "dàn"
+                        },
+                        {
+                            "hanzi": "到",
+                            "pinyin": "dào"
+                        },
+                        {
+                            "hanzi": "的",
+                            "pinyin": "de"
+                        },
+                        {
+                            "hanzi": "点",
+                            "pinyin": "diǎn"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 34,
+                    "title": "反方与放飞",
+                    "content": "\n反、方、饭、飞、放、分等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "反",
+                            "pinyin": "fǎn"
+                        },
+                        {
+                            "hanzi": "方",
+                            "pinyin": "fāng"
+                        },
+                        {
+                            "hanzi": "放",
+                            "pinyin": "fàng"
+                        },
+                        {
+                            "hanzi": "飞",
+                            "pinyin": "fēi"
+                        },
+                        {
+                            "hanzi": "分",
+                            "pinyin": "fēn"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第九单元·社会与生活": {
+            "start_page": 81,
+            "type": "社会认知",
+            "article_list": [
+                {
+                    "sort": 35,
+                    "title": "风与高低",
+                    "content": "\n风、干、高、哥、更、公、共等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "干",
+                            "pinyin": "gàn"
+                        },
+                        {
+                            "hanzi": "高",
+                            "pinyin": "gāo"
+                        },
+                        {
+                            "hanzi": "更",
+                            "pinyin": "gèng"
+                        },
+                        {
+                            "hanzi": "公",
+                            "pinyin": "gōng"
+                        },
+                        {
+                            "hanzi": "共",
+                            "pinyin": "gòng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 36,
+                    "title": "公共与国土",
+                    "content": "\n广、国、果、过、孩、海等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "广",
+                            "pinyin": "guǎng"
+                        },
+                        {
+                            "hanzi": "国",
+                            "pinyin": "guó"
+                        },
+                        {
+                            "hanzi": "过",
+                            "pinyin": "guò"
+                        },
+                        {
+                            "hanzi": "孩",
+                            "pinyin": "hái"
+                        },
+                        {
+                            "hanzi": "海",
+                            "pinyin": "hǎi"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 37,
+                    "title": "过河说话",
+                    "content": "\n合、和、河、话、机、己等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "合",
+                            "pinyin": "hé"
+                        },
+                        {
+                            "hanzi": "和",
+                            "pinyin": "hé"
+                        },
+                        {
+                            "hanzi": "河",
+                            "pinyin": "hé"
+                        },
+                        {
+                            "hanzi": "话",
+                            "pinyin": "huà"
+                        },
+                        {
+                            "hanzi": "机",
+                            "pinyin": "jī"
+                        },
+                        {
+                            "hanzi": "己",
+                            "pinyin": "jǐ"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 38,
+                    "title": "叫姐与快乐",
+                    "content": "\n江、交、叫、姐、快、乐等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "江",
+                            "pinyin": "jiāng"
+                        },
+                        {
+                            "hanzi": "交",
+                            "pinyin": "jiāo"
+                        },
+                        {
+                            "hanzi": "叫",
+                            "pinyin": "jiào"
+                        },
+                        {
+                            "hanzi": "姐",
+                            "pinyin": "jiě"
+                        },
+                        {
+                            "hanzi": "快",
+                            "pinyin": "kuài"
+                        },
+                        {
+                            "hanzi": "乐",
+                            "pinyin": "lè"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 39,
+                    "title": "力立与没每",
+                    "content": "\n力、立、了、没、每等高频字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "力",
+                            "pinyin": "lì"
+                        },
+                        {
+                            "hanzi": "立",
+                            "pinyin": "lì"
+                        },
+                        {
+                            "hanzi": "了",
+                            "pinyin": "le"
+                        },
+                        {
+                            "hanzi": "没",
+                            "pinyin": "méi"
+                        },
+                        {
+                            "hanzi": "每",
+                            "pinyin": "měi"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 40,
+                    "title": "女胖与朋气",
+                    "content": "\n女、胖、朋、气、千等字。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "女",
+                            "pinyin": "nǚ"
+                        },
+                        {
+                            "hanzi": "胖",
+                            "pinyin": "pàng"
+                        },
+                        {
+                            "hanzi": "朋",
+                            "pinyin": "péng"
+                        },
+                        {
+                            "hanzi": "气",
+                            "pinyin": "qì"
+                        },
+                        {
+                            "hanzi": "千",
+                            "pinyin": "qiān"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        },
+        "第十单元·综合巩固": {
+            "start_page": 91,
+            "type": "综合巩固",
+            "article_list": [
+                {
+                    "sort": 41,
+                    "title": "综合巩固（1）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "白",
+                            "pinyin": "bái"
+                        },
+                        {
+                            "hanzi": "饱",
+                            "pinyin": "bǎo"
+                        },
+                        {
+                            "hanzi": "北",
+                            "pinyin": "běi"
+                        },
+                        {
+                            "hanzi": "不",
+                            "pinyin": "bù"
+                        },
+                        {
+                            "hanzi": "才",
+                            "pinyin": "cái"
+                        },
+                        {
+                            "hanzi": "长",
+                            "pinyin": "cháng"
+                        },
+                        {
+                            "hanzi": "厂",
+                            "pinyin": "chǎng"
+                        },
+                        {
+                            "hanzi": "成",
+                            "pinyin": "chéng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 42,
+                    "title": "综合巩固（2）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "船",
+                            "pinyin": "chuán"
+                        },
+                        {
+                            "hanzi": "窗",
+                            "pinyin": "chuāng"
+                        },
+                        {
+                            "hanzi": "床",
+                            "pinyin": "chuáng"
+                        },
+                        {
+                            "hanzi": "打",
+                            "pinyin": "dá"
+                        },
+                        {
+                            "hanzi": "当",
+                            "pinyin": "dāng"
+                        },
+                        {
+                            "hanzi": "道",
+                            "pinyin": "dào"
+                        },
+                        {
+                            "hanzi": "灯",
+                            "pinyin": "dēng"
+                        },
+                        {
+                            "hanzi": "动",
+                            "pinyin": "dòng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 43,
+                    "title": "综合巩固（3）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "关",
+                            "pinyin": "guān"
+                        },
+                        {
+                            "hanzi": "红",
+                            "pinyin": "hóng"
+                        },
+                        {
+                            "hanzi": "加",
+                            "pinyin": "jiā"
+                        },
+                        {
+                            "hanzi": "见",
+                            "pinyin": "jiàn"
+                        },
+                        {
+                            "hanzi": "今",
+                            "pinyin": "jīn"
+                        },
+                        {
+                            "hanzi": "金",
+                            "pinyin": "jīn"
+                        },
+                        {
+                            "hanzi": "京",
+                            "pinyin": "jīng"
+                        },
+                        {
+                            "hanzi": "经",
+                            "pinyin": "jìng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 44,
+                    "title": "综合巩固（4）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "就",
+                            "pinyin": "jiù"
+                        },
+                        {
+                            "hanzi": "军",
+                            "pinyin": "jūn"
+                        },
+                        {
+                            "hanzi": "老",
+                            "pinyin": "lǎo"
+                        },
+                        {
+                            "hanzi": "美",
+                            "pinyin": "měi"
+                        },
+                        {
+                            "hanzi": "们",
+                            "pinyin": "mén"
+                        },
+                        {
+                            "hanzi": "民",
+                            "pinyin": "mín"
+                        },
+                        {
+                            "hanzi": "那",
+                            "pinyin": "nà"
+                        },
+                        {
+                            "hanzi": "年",
+                            "pinyin": "nián"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 45,
+                    "title": "综合巩固（5）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "农",
+                            "pinyin": "nóng"
+                        },
+                        {
+                            "hanzi": "皮",
+                            "pinyin": "pí"
+                        },
+                        {
+                            "hanzi": "片",
+                            "pinyin": "piàn"
+                        },
+                        {
+                            "hanzi": "票",
+                            "pinyin": "piào"
+                        },
+                        {
+                            "hanzi": "平",
+                            "pinyin": "píng"
+                        },
+                        {
+                            "hanzi": "奇",
+                            "pinyin": "qí"
+                        },
+                        {
+                            "hanzi": "青",
+                            "pinyin": "qīng"
+                        },
+                        {
+                            "hanzi": "全",
+                            "pinyin": "quán"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 46,
+                    "title": "综合巩固（6）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "然",
+                            "pinyin": "rán"
+                        },
+                        {
+                            "hanzi": "生",
+                            "pinyin": "shēng"
+                        },
+                        {
+                            "hanzi": "什",
+                            "pinyin": "shén"
+                        },
+                        {
+                            "hanzi": "石",
+                            "pinyin": "shí"
+                        },
+                        {
+                            "hanzi": "时",
+                            "pinyin": "shí"
+                        },
+                        {
+                            "hanzi": "市",
+                            "pinyin": "shì"
+                        },
+                        {
+                            "hanzi": "双",
+                            "pinyin": "shuāng"
+                        },
+                        {
+                            "hanzi": "谁",
+                            "pinyin": "shuí"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 47,
+                    "title": "综合巩固（7）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "岁",
+                            "pinyin": "suì"
+                        },
+                        {
+                            "hanzi": "台",
+                            "pinyin": "tái"
+                        },
+                        {
+                            "hanzi": "太",
+                            "pinyin": "tài"
+                        },
+                        {
+                            "hanzi": "条",
+                            "pinyin": "tiáo"
+                        },
+                        {
+                            "hanzi": "玩",
+                            "pinyin": "wán"
+                        },
+                        {
+                            "hanzi": "万",
+                            "pinyin": "wàn"
+                        },
+                        {
+                            "hanzi": "王",
+                            "pinyin": "wáng"
+                        },
+                        {
+                            "hanzi": "网",
+                            "pinyin": "wǎng"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 48,
+                    "title": "综合巩固（8）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "为",
+                            "pinyin": "wéi"
+                        },
+                        {
+                            "hanzi": "卫",
+                            "pinyin": "wèi"
+                        },
+                        {
+                            "hanzi": "问",
+                            "pinyin": "wèn"
+                        },
+                        {
+                            "hanzi": "我",
+                            "pinyin": "wǒ"
+                        },
+                        {
+                            "hanzi": "午",
+                            "pinyin": "wǔ"
+                        },
+                        {
+                            "hanzi": "洗",
+                            "pinyin": "xǐ"
+                        },
+                        {
+                            "hanzi": "先",
+                            "pinyin": "xiān"
+                        },
+                        {
+                            "hanzi": "现",
+                            "pinyin": "xiàn"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 49,
+                    "title": "综合巩固（9）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "向",
+                            "pinyin": "xiàng"
+                        },
+                        {
+                            "hanzi": "些",
+                            "pinyin": "xiē"
+                        },
+                        {
+                            "hanzi": "兴",
+                            "pinyin": "xìng"
+                        },
+                        {
+                            "hanzi": "星",
+                            "pinyin": "xīng"
+                        },
+                        {
+                            "hanzi": "行",
+                            "pinyin": "xíng"
+                        },
+                        {
+                            "hanzi": "牙",
+                            "pinyin": "yá"
+                        },
+                        {
+                            "hanzi": "样",
+                            "pinyin": "yàng"
+                        },
+                        {
+                            "hanzi": "医",
+                            "pinyin": "yī"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 50,
+                    "title": "综合巩固（10）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "以",
+                            "pinyin": "yǐ"
+                        },
+                        {
+                            "hanzi": "因",
+                            "pinyin": "yīn"
+                        },
+                        {
+                            "hanzi": "音",
+                            "pinyin": "yīn"
+                        },
+                        {
+                            "hanzi": "用",
+                            "pinyin": "yòng"
+                        },
+                        {
+                            "hanzi": "有",
+                            "pinyin": "yǒu"
+                        },
+                        {
+                            "hanzi": "又",
+                            "pinyin": "yòu"
+                        },
+                        {
+                            "hanzi": "语",
+                            "pinyin": "yù"
+                        },
+                        {
+                            "hanzi": "元",
+                            "pinyin": "yuán"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 51,
+                    "title": "综合巩固（11）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "再",
+                            "pinyin": "zài"
+                        },
+                        {
+                            "hanzi": "找",
+                            "pinyin": "zhǎo"
+                        },
+                        {
+                            "hanzi": "这",
+                            "pinyin": "zhè"
+                        },
+                        {
+                            "hanzi": "真",
+                            "pinyin": "zhēn"
+                        },
+                        {
+                            "hanzi": "知",
+                            "pinyin": "zhī"
+                        },
+                        {
+                            "hanzi": "直",
+                            "pinyin": "zhí"
+                        },
+                        {
+                            "hanzi": "只",
+                            "pinyin": "zhǐ"
+                        },
+                        {
+                            "hanzi": "主",
+                            "pinyin": "zhù"
+                        }
+                    ],
+                    "word_chars": []
+                },
+                {
+                    "sort": 52,
+                    "title": "综合巩固（12）",
+                    "content": "\n复习已学字卡，混玩认读与配对游戏。\n",
+                    "write_chars": [],
+                    "literacy_chars": [
+                        {
+                            "hanzi": "住",
+                            "pinyin": "zhù"
+                        },
+                        {
+                            "hanzi": "桌",
+                            "pinyin": "zhuō"
+                        },
+                        {
+                            "hanzi": "着",
+                            "pinyin": "zhe"
+                        },
+                        {
+                            "hanzi": "子",
+                            "pinyin": "zǐ"
+                        },
+                        {
+                            "hanzi": "自",
+                            "pinyin": "zì"
+                        },
+                        {
+                            "hanzi": "作",
+                            "pinyin": "zuò"
+                        },
+                        {
+                            "hanzi": "做",
+                            "pinyin": "zuò"
+                        }
+                    ],
+                    "word_chars": []
+                }
+            ]
+        }
+    }
+}

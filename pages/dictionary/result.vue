@@ -42,59 +42,71 @@
 				</view>
 				<view class="hero-stage">
 					<view class="hero-center">
-						<view class="hero-tianzi-wrap" :style="tianziUnifiedStyle">
-						<view class="hero-tianzi-unified">
-							<view class="tianzi-pinyin-row">
-								<view class="tianzi-pinyin-edge" @click.stop="speakCurrentPinyin">
-									<pinyin-four-lines-row
-										v-if="pinyinRowSyllables.length"
-										class="pinyin-edge-full"
-										:syllables="pinyinRowSyllables"
-										size="md"
-									/>
-									<text v-else class="pinyin-edge-plain font-pinyin">{{ pinyinPlain }}</text>
+						<view class="hero-tianzi-wrap">
+							<view class="hero-tianzi-unified">
+								<view class="tianzi-pinyin-block">
+									<view class="tianzi-pinyin-edge" @click.stop="speakCurrentPinyin">
+										<pinyin-four-lines-row
+											v-if="pinyinRowSyllables.length"
+											class="pinyin-edge-full"
+											:syllables="pinyinRowSyllables"
+											size="md"
+											:auto-wrap="true"
+											:highlight-column-index="pinyinHighlightCol"
+										/>
+										<text v-else class="pinyin-edge-plain font-pinyin">{{ pinyinPlain }}</text>
+									</view>
+									<view class="tianzi-pinyin-actions">
+										<view
+											class="tianzi-speak-btn"
+											:class="{ 'tianzi-speak-btn--playing': dictPinyinPlaying }"
+											role="button"
+											aria-label="听读音"
+											@click.stop="speakCurrentPinyin"
+										>
+											<image
+												v-if="showLabaImg"
+												:key="'laba-' + labaImgSrcIndex"
+												class="tianzi-speak-img"
+												:src="labaImgSrc"
+												mode="aspectFit"
+												:show-menu-by-longpress="false"
+												@error="onLabaImgError"
+											/>
+											<image
+												v-else
+												class="tianzi-speak-img tianzi-speak-img--fallback"
+												:src="labaFallbackIconSrc"
+												mode="aspectFit"
+											/>
+										</view>
+										<view
+											class="tianzi-write-link"
+											role="button"
+											aria-label="书写练习"
+											@click.stop="goWritePractice"
+										>
+											<text class="tianzi-write-link-text">书写练习</text>
+											<text class="tianzi-write-link-arrow">›</text>
+										</view>
+									</view>
 								</view>
-								<view
-									class="tianzi-speak-btn"
-									:class="{ 'tianzi-speak-btn--playing': dictPinyinPlaying }"
-									role="button"
-									aria-label="听读音"
-									@click.stop="speakCurrentPinyin"
-								>
-									<image
-										v-if="showLabaImg"
-										:key="'laba-' + labaImgSrcIndex"
-										class="tianzi-speak-img"
-										:src="labaImgSrc"
-										mode="aspectFit"
-										:show-menu-by-longpress="false"
-										@error="onLabaImgError"
+								<view class="hero-tianzi-body">
+									<hanzi-stroke-player
+										ref="strokePlayer"
+										canvas-id="result-stroke-box"
+										:char="displayHanzi"
+										:display-pinyin="pinyinSpeakFallback"
+										:narrator="narrator"
+										:length="tianziLength"
+										:show-play-fab="false"
+										:stroke-audio-enabled="true"
+										:hide-stroke-hint="true"
+										@animating-change="onStrokeAnimatingChange"
+										@click-canvas="speakCurrentPinyin"
 									/>
-									<image
-										v-else
-										class="tianzi-speak-img tianzi-speak-img--fallback"
-										:src="labaFallbackIconSrc"
-										mode="aspectFit"
-									/>
-									<!-- <text class="tianzi-speak-label">听读音</text> -->
 								</view>
 							</view>
-							<view class="hero-tianzi-body" @click="speakCurrentPinyin">
-								<hanzi-stroke-player
-									ref="strokePlayer"
-									canvas-id="result-stroke-box"
-									:char="displayHanzi"
-									:display-pinyin="pinyin"
-									:narrator="narrator"
-									:length="tianziLength"
-									:show-play-fab="false"
-									:stroke-audio-enabled="true"
-									:hide-stroke-hint="true"
-									@animating-change="onStrokeAnimatingChange"
-									@click-canvas="speakCurrentPinyin"
-								/>
-							</view>
-						</view>
 						</view>
 					</view>
 				</view>
@@ -180,11 +192,12 @@ import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-s
 import { getCurriculumPrefs } from '@/utils/curriculum-storage.js'
 import { recordCharLearned, recordCharWrong } from '@/repositories/learning-repository.js'
 import { getDictionaryEntry, getDictionaryRelated } from '@/repositories/dictionary-repository.js'
+import { startWritePractice } from '@/modules/literacy/usecases/start-write-practice.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
 import MengPageNav from '@/components/meng-page-nav.vue'
 import { getMengNavMetrics, mengHeaderBgHeightStyle } from '@/utils/meng-nav-metrics.js'
-import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
+import { listAllPinyinReadingsForDisplay } from '@/utils/cnchar-spell-display.js'
 import cnchar from '@/utils/cnchar-setup.js'
 import {
 	MENG_ASSETS,
@@ -225,25 +238,36 @@ export default {
 			sameLesson: [],
 			similarChars: [],
 			resultStrokeAnimating: false,
-			/** 与 hanzi-stroke-player 默认 length 一致，用于统一拼音/田字格宽度 */
-			tianziLength: 168
+			/** 与 hanzi-stroke-player 默认 length 一致 */
+			tianziLength: 168,
+			/** 四线当前高亮列（含间隔符时读音 index * 2） */
+			pinyinHighlightCol: -1
 		}
 	},
 	computed: {
-		tianziShellPx() {
-			return this.tianziLength + 30
+		/** 多音字列出全部读音（字库文案 + cnchar） */
+		pinyinReadingList() {
+			const h = String(this.displayHanzi || this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) return []
+			return listAllPinyinReadingsForDisplay(h, this.pinyin)
 		},
-		tianziUnifiedStyle() {
-			return {
-				width: `${this.tianziShellPx}px`,
-				maxWidth: '100%'
-			}
-		},
+		/** 读音间插入 ·，供四线展示；播放仍用 pinyinReadingList */
 		pinyinRowSyllables() {
-			if (this.pinyinSyllableTokens.length) return this.pinyinSyllableTokens
-			const s = this.pinyinPlain
-			if (s && s !== '—' && s !== '-') return [s]
-			return []
+			const list = this.pinyinReadingList
+			if (!list.length) return []
+			const out = []
+			for (let i = 0; i < list.length; i++) {
+				if (i > 0) out.push('·')
+				out.push(list[i])
+			}
+			return out
+		},
+		pinyinSpeakFallback() {
+			const list = this.pinyinReadingList
+			if (list.length) return list.join(' ')
+			return this.pinyinPlain !== '—' ? this.pinyinPlain : ''
 		},
 		hasStrokeAnalysis() {
 			return !!(this.ext.strokeShapes || this.ext.strokeNames)
@@ -279,15 +303,10 @@ export default {
 			return c
 		},
 		pinyinPlain() {
+			const list = this.pinyinReadingList
+			if (list.length) return list.join(' / ')
 			const t = String(this.pinyin || '').replace(/[()（）]/g, '').trim()
 			return t || '—'
-		},
-		pinyinSyllableTokens() {
-			const tokens = splitPinyinDisplayTokens(this.pinyin)
-			if (tokens.length) return tokens
-			const s = String(this.pinyin || '').trim().replace(/[()（）]/g, '').trim()
-			if (s && s !== '—' && s !== '-') return [s]
-			return []
 		},
 		wordsLine() {
 			const w = this.ext.words
@@ -309,9 +328,11 @@ export default {
 		this.narrator = getAudioNarrator()
 	},
 	onHide() {
+		this.pinyinHighlightCol = -1
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	onUnload() {
+		this.pinyinHighlightCol = -1
 		this.$refs.strokePlayer?.stopAnimation()
 	},
 	methods: {
@@ -426,23 +447,42 @@ export default {
 		},
 		async speakCurrentPinyin() {
 			if (!this.hanzi || this.hanzi === '—') return
+			if (this.dictPinyinPlaying) return
 			this.dictPinyinPlaying = true
+			this.pinyinHighlightCol = -1
 			try {
 				const ok = await this._pyPlay.run(({ isCancelled }) =>
 					speakDictionaryEntryPinyin({
 						hanzi: this.hanzi,
-						fallbackPinyin: this.pinyin,
+						fallbackPinyin: this.pinyinSpeakFallback || this.pinyin,
 						narrator: this.narrator,
 						...DICTIONARY_LOCAL_PINYIN_OPTS,
-						isCancelled
+						isCancelled,
+						onReadingStart: (i) => {
+							this.pinyinHighlightCol = Number(i) * 2
+						},
+						onReadingEnd: () => {
+							this.pinyinHighlightCol = -1
+						}
 					})
 				)
 				if (!ok) {
 					uni.showToast({ title: '暂无本地读音', icon: 'none' })
 				}
 			} finally {
+				this.pinyinHighlightCol = -1
 				this.dictPinyinPlaying = false
 			}
+		},
+		goWritePractice() {
+			const h = String(this.displayHanzi || this.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) {
+				uni.showToast({ title: '暂无汉字可练', icon: 'none' })
+				return
+			}
+			void startWritePractice({ hanzi: h })
 		},
 		markLearned() {
 			if (!this.markCurrentAsLearned()) return
@@ -634,10 +674,12 @@ export default {
 
 .hero-center {
 	position: relative;
-	flex-shrink: 0;
+	flex: 1;
+	min-width: 0;
+	width: 100%;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	align-items: stretch;
 	padding-right: 12rpx;
 	padding-bottom: 8rpx;
 	box-sizing: border-box;
@@ -645,7 +687,8 @@ export default {
 
 .hero-tianzi-wrap {
 	position: relative;
-	flex-shrink: 0;
+	width: 100%;
+	max-width: 100%;
 	box-sizing: border-box;
 }
 
@@ -660,14 +703,57 @@ export default {
 	box-sizing: border-box;
 }
 
-.tianzi-pinyin-row {
+.tianzi-pinyin-block {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8rpx;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 8rpx 8rpx 10rpx;
+	background: #fff8f0;
+	border-bottom: 2rpx solid #e8d5c8;
+}
+
+.tianzi-pinyin-actions {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: center;
+	gap: 16rpx;
 	width: 100%;
 	box-sizing: border-box;
-	background: #fff8f0;
-	border-bottom: 2rpx solid #e8d5c8;
+	padding: 0 8rpx 4rpx;
+}
+
+.tianzi-write-link {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 6rpx;
+	margin: 0;
+	padding: 8rpx 28rpx;
+	border-radius: 999rpx;
+	background: rgba(61, 143, 217, 0.12);
+	border: 1rpx solid rgba(61, 143, 217, 0.35);
+}
+
+.tianzi-write-link:active {
+	opacity: 0.88;
+}
+
+.tianzi-write-link-text {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #2f7ec4;
+}
+
+.tianzi-write-link-arrow {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #2f7ec4;
+	line-height: 1;
 }
 
 .tianzi-speak-btn {
@@ -676,8 +762,8 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	width: 96rpx;
-	padding: 6rpx 10rpx 4rpx 4rpx;
+	width: 88rpx;
+	padding: 4rpx;
 	background: transparent;
 	border: none;
 }
@@ -716,14 +802,15 @@ export default {
 }
 
 .tianzi-pinyin-edge {
-	flex: 1;
+	width: 100%;
 	min-width: 0;
-	padding: 8rpx 0 6rpx 4rpx;
+	padding: 4rpx 4rpx 2rpx;
 	box-sizing: border-box;
 }
 
 .pinyin-edge-full {
 	width: 100%;
+	min-width: 0;
 	display: block;
 }
 

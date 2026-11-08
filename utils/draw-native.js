@@ -63,6 +63,16 @@ const DRAW_OPTION_DEFAULT = {
 	testStrictOrder: true,
 	testDirectionWeight: 0.35,
 	testScoreThreshold: null,
+	/**
+	 * shape：逐笔贴形判定（写字练习）
+	 * direction：中途只按书写顺序记录，整字再综合判（听写）
+	 */
+	testJudgeMode: 'shape',
+	testDirectionMinCos: 0.45,
+	testFitRefRatio: 0.28,
+	testStrokePassScore: 0.55,
+	testDirWeight: 0.35,
+	testFitWeight: 0.65,
 	// 字形相对外框的内缩比例（基于可绘区域），略大则字离田字格线更远
 	charInsetRatio: 0.08
 }
@@ -292,12 +302,23 @@ class NativeWriter {
 			totalMistakes: 0,
 			mistakesOnStroke: 0,
 			drawing: false,
-			path: []
+			path: [],
+			/** @type {Array<Array<{ x: number, y: number }>>} 书写顺序记录的笔迹 */
+			recordedStrokes: []
 		}
 		/** 测验模式：高亮提示「待写」的那一笔 */
 		this.testGuideActive = false
 		this.testGuideShown = false
 		this.testGuideBlinkTimer = null
+		/** 闪提示时高亮的笔画下标；null 则用 activeStroke */
+		this.testGuideStrokeIndex = null
+		/** direction 模式：评分后展示标准轮廓供对比 */
+		this.testRevealOutline = false
+		/** @type {number[]} 评分失败的笔画下标 */
+		this.testFailedStrokeIndexes = []
+		/** 错笔轮廓脉冲是否处于高亮帧 */
+		this.testFailedPulseOn = false
+		this.testFailedPulseTimer = null
 		/** @type {{ left: number, top: number, width: number, height: number } | null} */
 		this._canvasRect = null
 
@@ -325,13 +346,31 @@ class NativeWriter {
 		}
 	}
 
-	/** 笔顺动画：该笔第一分段开始（如「横折」的「横」） */
+	/**
+	 * 笔顺动画：该笔第一分段开始（如「横折」的「横」）。
+	 * onStrokeWillStart 若返回 Promise，则 strokeAudioHold 直至 resolve，
+	 * 绘制阶段也会暂停，避免首音节未播完就被笔迹/下一笔掐断。
+	 */
 	notifyStrokeAudio(strokeIndex) {
-		this._invokeStrokeCallback(
-			this.onStrokeWillStart,
-			[strokeIndex, this.getMainChar()],
-			'onStrokeWillStart'
-		)
+		if (!this.onStrokeWillStart || this.destroyed) {
+			this.strokeAudioHold = false
+			return
+		}
+		this.strokeAudioHold = true
+		try {
+			const ret = this.onStrokeWillStart(strokeIndex, this.getMainChar())
+			const release = () => {
+				if (!this.destroyed) this.strokeAudioHold = false
+			}
+			if (ret && typeof ret.then === 'function') {
+				ret.then(release, release)
+			} else {
+				release()
+			}
+		} catch (e) {
+			console.warn('[draw-native] onStrokeWillStart', e)
+			this.strokeAudioHold = false
+		}
 	}
 
 	/** 中线拐点：触发下一分段读音（不冻结绘制，避免拐弯处卡顿） */
@@ -587,6 +626,13 @@ class NativeWriter {
 	}
 
 	computeDirectionPenalty(userPath, strokeIndex) {
+		const cos = this.directionCos(userPath, strokeIndex)
+		// cos: 1 同向, -1 反向 -> 惩罚范围 [0,1]
+		return (1 - cos) / 2
+	}
+
+	/** 用户笔迹起止方向与标准中线起止方向的余弦 [-1, 1] */
+	directionCos(userPath, strokeIndex) {
 		const target = this.getMappedMedian(strokeIndex)
 		if (!userPath || userPath.length < 2 || !target || target.length < 2) return 0
 		const uStart = userPath[0]
@@ -599,14 +645,60 @@ class NativeWriter {
 		const ty = tEnd.y - tStart.y
 		const uLen = Math.hypot(ux, uy) || 1
 		const tLen = Math.hypot(tx, ty) || 1
-		const cos = (ux / uLen) * (tx / tLen) + (uy / uLen) * (ty / tLen)
-		// cos: 1 同向, -1 反向 -> 惩罚范围 [0,1]
-		return (1 - cos) / 2
+		return (ux / uLen) * (tx / tLen) + (uy / uLen) * (ty / tLen)
 	}
 
+	isDeferredJudgeMode() {
+		return this.type === TYPE.TEST && this.option.testJudgeMode === 'direction'
+	}
+
+	/**
+	 * 单笔综合分：方向 + 中线贴合度
+	 * @returns {{ cos: number, matchDist: number, dirScore: number, fitScore: number, strokeScore: number, pass: boolean }}
+	 */
+	scoreDeferredStroke(userPath, strokeIndex) {
+		const { canvasSize } = this.getSize()
+		const minCos = Number(this.option.testDirectionMinCos ?? 0.45)
+		const fitRefRatio = Number(this.option.testFitRefRatio ?? 0.28)
+		const fitRefDist = Math.max(24, fitRefRatio * canvasSize)
+		const passNeed = Number(this.option.testStrokePassScore ?? 0.55)
+		const dirW = Number(this.option.testDirWeight ?? 0.35)
+		const fitW = Number(this.option.testFitWeight ?? 0.65)
+		const cos = this.directionCos(userPath, strokeIndex)
+		const matchDist = this.computeStrokeMatchScore(userPath, strokeIndex)
+		const denom = Math.max(0.001, 1 - minCos)
+		const dirScore = cos < minCos ? 0 : Math.min(1, Math.max(0, (cos - minCos) / denom))
+		const fitScore = Number.isFinite(matchDist)
+			? Math.min(1, Math.max(0, 1 - matchDist / fitRefDist))
+			: 0
+		const strokeScore = dirW * dirScore + fitW * fitScore
+		const pass = strokeScore >= passNeed && cos >= minCos
+		return {
+			cos: Number(cos.toFixed(4)),
+			matchDist: Number((Number.isFinite(matchDist) ? matchDist : 999).toFixed(2)),
+			dirScore: Number(dirScore.toFixed(4)),
+			fitScore: Number(fitScore.toFixed(4)),
+			strokeScore: Number(strokeScore.toFixed(4)),
+			pass
+		}
+	}
+
+	/**
+	 * 提示当前应写笔画。TEST 模式用轮廓闪动后清空，避免常驻泄题。
+	 */
 	showHintStroke(strokeIndex) {
 		const total = this.charData?.medians?.length || 0
 		if (strokeIndex < 0 || strokeIndex >= total) return
+		if (this.type === TYPE.TEST) {
+			this.testGuideStrokeIndex = strokeIndex
+			this.setTestStrokeGuide(true, {
+				blink: true,
+				blinkTimes: 2,
+				blinkIntervalMs: 220,
+				clearAfter: true
+			})
+			return
+		}
 		const prev = this.option.currentColor
 		const hintColor = this.option.highlightColor || '#aaf'
 		this.option.currentColor = hintColor
@@ -616,6 +708,15 @@ class NativeWriter {
 			this.option.currentColor = prev
 			this.drawState(this.testState.activeStroke, 0)
 		}, ms)
+	}
+
+	/** 同笔失误达到阈值时闪提示 */
+	maybeShowHintOnMiss(strokeIndex) {
+		if (this.option.showHintAfterMisses === false) return false
+		const need = Number(this.option.showHintAfterMisses || 3)
+		if (this.testState.mistakesOnStroke < need) return false
+		this.showHintStroke(strokeIndex)
+		return true
 	}
 
 	emitTestStatus(status, extra = {}) {
@@ -641,6 +742,7 @@ class NativeWriter {
 			this.stopTestGuideBlink()
 			this.testGuideActive = false
 			this.testGuideShown = false
+			this.testGuideStrokeIndex = null
 			this.testState.drawing = true
 			this.testState.path = []
 			const p = this.resolveTouchPoint(touch, detail)
@@ -661,6 +763,10 @@ class NativeWriter {
 	handleTouchEnd() {
 		if (this.type !== TYPE.TEST || !this.testState.drawing) return
 		this.testState.drawing = false
+		if (this.isDeferredJudgeMode()) {
+			this.handleDeferredTouchEnd()
+			return
+		}
 		const total = this.charData?.medians?.length || 0
 		const strokeIndex = this.testState.activeStroke
 		if (strokeIndex >= total) return
@@ -671,7 +777,9 @@ class NativeWriter {
 				expectedStroke: strokeIndex,
 				reason: 'tooShort'
 			})
-			this.drawState(this.testState.activeStroke, 0)
+			if (!this.maybeShowHintOnMiss(strokeIndex)) {
+				this.drawState(this.testState.activeStroke, 0)
+			}
 			return
 		}
 		const endTarget = this.getMedianPoint(strokeIndex, 1)
@@ -693,12 +801,23 @@ class NativeWriter {
 		const pass = finalScore <= passThreshold && endDist <= endpointThreshold && orderPass
 		if (pass) {
 			const finishedPath = this.testState.path.slice()
+			/** 分项分仅供雷达汇总，不改变本笔通过门槛 */
+			let detail = null
+			try {
+				detail = this.scoreDeferredStroke(finishedPath, strokeIndex)
+			} catch (_) {
+				detail = null
+			}
 			this.emitTestStatus(TEST_STATUS.CORRECT, {
 				drawnPath: {
 					pathString: this.buildPathString(finishedPath),
 					points: finishedPath
 				},
-				score: Number(finalScore.toFixed(3))
+				score: Number(finalScore.toFixed(3)),
+				dirScore: detail ? detail.dirScore : undefined,
+				fitScore: detail ? detail.fitScore : undefined,
+				strokeScore: detail ? detail.strokeScore : undefined,
+				pass: true
 			})
 			this.testState.activeStroke += 1
 			this.testState.mistakesOnStroke = 0
@@ -709,40 +828,149 @@ class NativeWriter {
 			}
 			this.drawState(this.testState.activeStroke, 0)
 			return
-		} else {
-			this.testState.totalMistakes += 1
-			this.testState.mistakesOnStroke += 1
-			let hinted = false
+		}
+		this.testState.totalMistakes += 1
+		this.testState.mistakesOnStroke += 1
+		let hinted = false
+		this.emitTestStatus(TEST_STATUS.MISTAKE, {
+			drawnPath: {
+				pathString: this.buildPathString(this.testState.path),
+				points: this.testState.path
+			},
+			score: Number(finalScore.toFixed(3)),
+			expectedStroke
+		})
+		hinted = this.maybeShowHintOnMiss(strokeIndex)
+		if (!hinted) {
+			this.drawState(this.testState.activeStroke, 0)
+		}
+	}
+
+	/** direction 模式：抬笔只按书写顺序记入，不判对错 */
+	handleDeferredTouchEnd() {
+		if (this.testState.path.length < 2) {
 			this.emitTestStatus(TEST_STATUS.MISTAKE, {
-				drawnPath: {
-					pathString: this.buildPathString(this.testState.path),
-					points: this.testState.path
-				},
-				score: Number(finalScore.toFixed(3)),
-				expectedStroke
+				expectedStroke: this.testState.recordedStrokes.length,
+				reason: 'tooShort',
+				deferred: true
 			})
-			if (
-				this.option.showHintAfterMisses !== false &&
-				this.testState.mistakesOnStroke >= Number(this.option.showHintAfterMisses || 3)
-			) {
-				this.showHintStroke(strokeIndex)
-				hinted = true
-			}
-			if (!hinted) {
-				this.drawState(this.testState.activeStroke, 0)
-			}
+			this.testState.path = []
+			this.drawState(this.testState.activeStroke, 0)
 			return
 		}
+		if (!Array.isArray(this.testState.recordedStrokes)) {
+			this.testState.recordedStrokes = []
+		}
+		const finishedPath = this.testState.path.slice()
+		this.testState.recordedStrokes.push(finishedPath)
+		this.testState.activeStroke = this.testState.recordedStrokes.length
+		this.testState.path = []
+		this.testState.mistakesOnStroke = 0
+		this.emitTestStatus('stroke_recorded', {
+			recordedCount: this.testState.recordedStrokes.length,
+			drawnPath: {
+				pathString: this.buildPathString(finishedPath),
+				points: finishedPath
+			}
+		})
 		this.drawState(this.testState.activeStroke, 0)
 	}
 
-	drawTestPath() {
-		if (this.type !== TYPE.TEST) return
-		const points = this.testState.path
+	/**
+	 * direction 模式：整字综合判定（笔数 + 顺序对齐后的方向与贴合度）
+	 * @returns {boolean} 是否整字通过
+	 */
+	stopFailedStrokePulse() {
+		if (this.testFailedPulseTimer != null) {
+			clearInterval(this.testFailedPulseTimer)
+			this.testFailedPulseTimer = null
+		}
+		this.testFailedPulseOn = false
+	}
+
+	/**
+	 * 评分后在标准轮廓上对失败笔循环色闪；始终保留用户墨迹
+	 * @param {number[]} indexes
+	 */
+	startFailedStrokePulse(indexes = []) {
+		this.stopFailedStrokePulse()
+		const list = (indexes || [])
+			.map((n) => Math.floor(Number(n)))
+			.filter((n) => Number.isFinite(n) && n >= 0)
+		this.testFailedStrokeIndexes = list
+		if (!list.length) {
+			this.drawState(this.testState.activeStroke, 0)
+			return
+		}
+		this.testFailedPulseOn = true
+		this.drawState(this.testState.activeStroke, 0)
+		this.testFailedPulseTimer = setInterval(() => {
+			if (this.destroyed || !this.testRevealOutline) {
+				this.stopFailedStrokePulse()
+				return
+			}
+			this.testFailedPulseOn = !this.testFailedPulseOn
+			this.drawState(this.testState.activeStroke, 0)
+		}, 420)
+	}
+
+	judgeDeferredTest() {
+		if (!this.isDeferredJudgeMode() || !this.charData) return false
+		const medians = this.charData.medians || []
+		const total = medians.length
+		const recorded = this.testState.recordedStrokes || []
+		this.stopFailedStrokePulse()
+		this.testFailedStrokeIndexes = []
+		if (recorded.length !== total) {
+			const under = recorded.length < total
+			if (!under) {
+				this.testState.totalMistakes += 1
+				/** 笔数过多进入评分对比：展示标准轮廓 */
+				this.testRevealOutline = true
+			}
+			this.emitTestStatus(TEST_STATUS.MISTAKE, {
+				reason: 'strokeCount',
+				deferred: true,
+				expectedCount: total,
+				actualCount: recorded.length,
+				failedStrokes: [],
+				soft: under
+			})
+			this.drawState(this.testState.activeStroke, 0)
+			return false
+		}
+		/** 进入正式评分：底层画出标准轮廓，方便对照用户笔迹 */
+		this.testRevealOutline = true
+		const strokeResults = []
+		const failedStrokes = []
+		for (let i = 0; i < total; i++) {
+			const detail = this.scoreDeferredStroke(recorded[i], i)
+			strokeResults.push({ index: i, ...detail })
+			if (!detail.pass) failedStrokes.push(i)
+		}
+		if (failedStrokes.length) {
+			this.testState.totalMistakes += failedStrokes.length
+			this.emitTestStatus(TEST_STATUS.MISTAKE, {
+				reason: 'lowScore',
+				deferred: true,
+				failedStrokes,
+				strokeResults
+			})
+			this.startFailedStrokePulse(failedStrokes)
+			return false
+		}
+		this.emitTestStatus(TEST_STATUS.COMPLETE, {
+			deferred: true,
+			strokeResults
+		})
+		this.notifyComplete(true)
+		this.drawState(this.testState.activeStroke, 0)
+		return true
+	}
+
+	strokePolyline(points, color, width) {
 		if (!points || !points.length) return
 		const ctx = this.ctx
-		const color = this.option.drawingColor || '#ff7043'
-		const width = Number(this.option.drawingWidth) || 4
 		ctx.setStrokeStyle(color)
 		ctx.setLineWidth(width)
 		ctx.setLineCap('round')
@@ -760,6 +988,26 @@ class NativeWriter {
 			ctx.lineTo(points[i].x, points[i].y)
 		}
 		ctx.stroke()
+	}
+
+	/** 绘制已按书写顺序记录的用户笔迹（不泄标准轮廓） */
+	drawRecordedStrokes() {
+		if (!this.isDeferredJudgeMode()) return
+		const color = this.option.drawingColor || '#ff7043'
+		const width = Number(this.option.drawingWidth) || 4
+		const list = this.testState.recordedStrokes || []
+		for (let i = 0; i < list.length; i++) {
+			this.strokePolyline(list[i], color, width)
+		}
+	}
+
+	drawTestPath() {
+		if (this.type !== TYPE.TEST) return
+		const points = this.testState.path
+		if (!points || !points.length) return
+		const color = this.option.drawingColor || '#ff7043'
+		const width = Number(this.option.drawingWidth) || 4
+		this.strokePolyline(points, color, width)
 	}
 
 	drawGrid(canvasSize) {
@@ -888,7 +1136,7 @@ class NativeWriter {
 		const { canvasSize, fontSize } = this.getSize()
 		const outlineColor = this.option.outlineColor || '#d5d5d5'
 		const strokeColor = this.option.strokeColor || '#2c3e50'
-		const currentColor = this.option.currentColor || '#e74c3c'
+		const showOutline = this.option.showOutline !== false
 		const ctx = this.ctx
 		ctx.clearRect(0, 0, canvasSize, canvasSize)
 		this.drawGrid(canvasSize)
@@ -896,13 +1144,16 @@ class NativeWriter {
 		ctx.setTextBaseline('middle')
 		ctx.setFontSize(fontSize)
 
-		// 底层轮廓
-		ctx.setFillStyle(outlineColor)
-		ctx.fillText(char, canvasSize / 2, canvasSize / 2 + 2)
+		if (showOutline) {
+			ctx.setFillStyle(outlineColor)
+			ctx.fillText(char, canvasSize / 2, canvasSize / 2 + 2)
+		}
 
-		// 主字色
-		ctx.setFillStyle(strokeColor)
-		ctx.fillText(char, canvasSize / 2, canvasSize / 2 + 2)
+		// 主字色（无轮廓时仍画主色，避免空白）
+		if (showOutline || this.type === TYPE.NORMAL) {
+			ctx.setFillStyle(strokeColor)
+			ctx.fillText(char, canvasSize / 2, canvasSize / 2 + 2)
+		}
 		this.drawWatermark(canvasSize)
 		ctx.draw()
 	}
@@ -1171,6 +1422,7 @@ class NativeWriter {
 		const outlineColor = this.option.outlineColor || '#d5d5d5'
 		const strokeColor = this.option.strokeColor || '#2c3e50'
 		const currentColor = this.option.currentColor || '#e74c3c'
+		const showOutline = this.option.showOutline !== false
 		const strokeWidth = Math.max(8, Math.round(canvasSize * 0.05))
 		const medians = this.charData?.medians || []
 		const strokePaths = this.charData?.strokes || []
@@ -1179,16 +1431,54 @@ class NativeWriter {
 		ctx.clearRect(0, 0, canvasSize, canvasSize)
 		this.drawGrid(canvasSize)
 
+		const deferred = this.isDeferredJudgeMode()
 		const testCompleted = this.type === TYPE.TEST ? this.testState.activeStroke : completedStrokeCount
 		// 反向绘制：后写笔画先画，保证先写笔画始终位于最上层
 		for (let i = medians.length - 1; i >= 0; i--) {
 			const mapped = medians[i].map((p) => this.mapPoint(p, canvasSize))
-			// 底层用真实笔画轮廓，贴近标准字形
-			this.drawStrokePath(strokePaths[i], outlineColor, canvasSize)
+			// 底层轮廓（填写可关，避免灰底泄题）
+			if (showOutline) {
+				this.drawStrokePath(strokePaths[i], outlineColor, canvasSize)
+			}
 
 			// normal 模式直接完整成字；stroke/test 保留受控绘制
 			if (this.type === TYPE.NORMAL) {
 				this.drawStrokePath(strokePaths[i], strokeColor, canvasSize)
+				continue
+			}
+
+			// direction 听写：书写中不泄题；评分后叠标准轮廓；错笔在轮廓上色闪
+			if (deferred) {
+				if (this.testRevealOutline) {
+					const revealColor =
+						this.option.revealOutlineColor ||
+						(this.option.outlineColor && this.option.outlineColor !== this.option.backgroundColor
+							? this.option.outlineColor
+							: '#cfc6b8')
+					this.drawStrokePath(strokePaths[i], revealColor, canvasSize)
+					const failSet = this.testFailedStrokeIndexes || []
+					if (
+						this.testFailedPulseOn &&
+						failSet.indexOf(i) >= 0
+					) {
+						const failColor =
+							this.option.revealFailColor ||
+							this.option.guideStrokeColor ||
+							'#ff6b9d'
+						this.drawStrokePath(strokePaths[i], failColor, canvasSize)
+					}
+				}
+				const guideIdx =
+					this.testGuideStrokeIndex != null
+						? this.testGuideStrokeIndex
+						: testCompleted
+				if (i === guideIdx && this.testGuideActive && this.testGuideShown) {
+					const guideColor =
+						this.option.guideStrokeColor ||
+						this.option.highlightColor ||
+						'#ff8a65'
+					this.drawStrokePath(strokePaths[i], guideColor, canvasSize)
+				}
 				continue
 			}
 
@@ -1232,6 +1522,7 @@ class NativeWriter {
 			}
 		}
 		if (this.type === TYPE.TEST) {
+			if (deferred) this.drawRecordedStrokes()
 			this.drawTestPath()
 		}
 		this.drawWatermark(canvasSize)
@@ -1281,38 +1572,51 @@ class NativeWriter {
 			const totalLen = timeline.totalLen || 1
 
 			if (this.phase === 'drawing') {
-				let currentLen = this.strokeProgress * totalLen
-				const deltaLen = (dt / strokeDuration) * totalLen
-				let nextLen = Math.min(totalLen, currentLen + deltaLen)
+				/** hold：等本笔首音节播完再动笔，避免读音中途被掐 */
+				if (!this.strokeAudioHold) {
+					let currentLen = this.strokeProgress * totalLen
+					const deltaLen = (dt / strokeDuration) * totalLen
+					let nextLen = Math.min(totalLen, currentLen + deltaLen)
 
-				const nextCornerLen = timeline.cornerLens[this.cornerPauseCursor + 1]
-				if (
-					typeof nextCornerLen === 'number' &&
-					nextLen >= nextCornerLen &&
-					nextCornerLen > currentLen
-				) {
-					this.cornerPauseCursor += 1
-					this.notifyStrokeCorner(this.strokeIndex, this.cornerPauseCursor)
-				}
+					const nextCornerLen = timeline.cornerLens[this.cornerPauseCursor + 1]
+					if (
+						typeof nextCornerLen === 'number' &&
+						nextLen >= nextCornerLen &&
+						nextCornerLen > currentLen
+					) {
+						this.cornerPauseCursor += 1
+						this.notifyStrokeCorner(this.strokeIndex, this.cornerPauseCursor)
+					}
 
-				this.strokeProgress = Math.min(1, nextLen / totalLen)
-				if (this.strokeProgress >= 1 && this.phase !== 'waiting') {
-					const fromSeg = this.cornerPauseCursor + 2
-					this.phase = 'waiting'
-					this.waitElapsed = 0
-					this.notifyStrokeTrailSegments(this.strokeIndex, fromSeg)
+					this.strokeProgress = Math.min(1, nextLen / totalLen)
+					if (this.strokeProgress >= 1 && this.phase !== 'waiting') {
+						const fromSeg = this.cornerPauseCursor + 2
+						this.phase = 'waiting'
+						this.waitElapsed = 0
+						this.notifyStrokeTrailSegments(this.strokeIndex, fromSeg)
+					}
 				}
 			} else {
-				this.waitElapsed += dt
 				this.strokeProgress = 1
-				if (this.waitElapsed >= delayBetweenStrokes && !this.strokeAudioHold) {
-					const nextIndex = this.strokeIndex + 1
-					this.strokeIndex = nextIndex
-					this.strokeElapsed = 0
-					this.strokeProgress = 0
-					this.phase = 'drawing'
-					this.cornerPauseCursor = -1
-					this.notifyStrokeAudio(nextIndex)
+				/** hold 期间不累计笔间等待，读音结束后再完整等 delayBetweenStrokes */
+				if (!this.strokeAudioHold) {
+					this.waitElapsed += dt
+					if (this.waitElapsed >= delayBetweenStrokes) {
+						const nextIndex = this.strokeIndex + 1
+						this.strokeIndex = nextIndex
+						/**
+						 * 最后一笔等完后 nextIndex===total：只推进下标供下方收尾，
+						 * 切勿 notifyStrokeAudio(total)——否则会按 displayPinyin 兜底起播，
+						 * 并通过 stopLocalPinyinAudio 掐断上一笔尚未收干净的读音。
+						 */
+						if (nextIndex < total) {
+							this.strokeElapsed = 0
+							this.strokeProgress = 0
+							this.phase = 'drawing'
+							this.cornerPauseCursor = -1
+							this.notifyStrokeAudio(nextIndex)
+						}
+					}
 				}
 			}
 
@@ -1403,6 +1707,7 @@ class NativeWriter {
 		if (!active) {
 			this.testGuideActive = false
 			this.testGuideShown = false
+			this.testGuideStrokeIndex = null
 			this.drawState(this.testState.activeStroke, 0)
 			return true
 		}
@@ -1420,6 +1725,7 @@ class NativeWriter {
 	startTestGuideBlink(opts = {}) {
 		const cycles = Math.max(1, Math.min(6, Number(opts.blinkTimes) || 3))
 		const intervalMs = Math.max(160, Number(opts.blinkIntervalMs) || 280)
+		const clearAfter = opts.clearAfter === true
 		const totalSteps = cycles * 2
 		let step = 0
 		this.testGuideShown = false
@@ -1434,7 +1740,13 @@ class NativeWriter {
 			this.drawState(this.testState.activeStroke, 0)
 			if (step >= totalSteps) {
 				this.stopTestGuideBlink()
-				this.testGuideShown = true
+				if (clearAfter) {
+					this.testGuideActive = false
+					this.testGuideShown = false
+					this.testGuideStrokeIndex = null
+				} else {
+					this.testGuideShown = true
+				}
 				this.drawState(this.testState.activeStroke, 0)
 			}
 		}, intervalMs)
@@ -1444,13 +1756,18 @@ class NativeWriter {
 	resetStrokeTest() {
 		if (this.type !== TYPE.TEST || !this.charData) return false
 		this.stopTestGuideBlink()
+		this.stopFailedStrokePulse()
 		this.testState.activeStroke = 0
 		this.testState.totalMistakes = 0
 		this.testState.mistakesOnStroke = 0
 		this.testState.drawing = false
 		this.testState.path = []
+		this.testState.recordedStrokes = []
 		this.testGuideActive = false
 		this.testGuideShown = false
+		this.testGuideStrokeIndex = null
+		this.testRevealOutline = false
+		this.testFailedStrokeIndexes = []
 		this.drawState(0, 0)
 		return true
 	}
@@ -1489,6 +1806,7 @@ class NativeWriter {
 
 	destroy() {
 		this.stopTestGuideBlink()
+		this.stopFailedStrokePulse()
 		this.stop()
 		this.destroyed = true
 	}

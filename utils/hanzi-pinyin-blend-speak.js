@@ -26,7 +26,8 @@ import {
 export const PINYIN_BLEND_TIMING = {
 	betweenParts: 28,
 	beforeWhole: 120,
-	readingGapMs: 300
+	/** 多音字读音之间的停顿（上一音 onEnded 之后） */
+	readingGapMs: 450
 }
 
 /** 去掉声调符号（实现见 pinyin-strip-tone.js）；供拼读拆分等使用。 */
@@ -97,6 +98,8 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
 			logHanziSpeak('syllable.local_ok', { symbol: sym })
 			return true
 		}
+		/** 连点打断 / 会话取消：失败不等于缺文件，勿 Toast */
+		if (typeof opts.isCancelled === 'function' && opts.isCancelled()) return false
 		logHanziSpeak('syllable.local_failed', { symbol: sym, narrator })
 		if (showFailToast) {
 			uni.showToast({ title: '暂无该拼音读音', icon: 'none' })
@@ -142,6 +145,8 @@ export async function speakBlendedPinyinSyllable(tonedSyllable, opts = {}) {
  * @param {boolean} [opts.blend=false]
  * @param {number} [opts.readingGapMs] 多音之间停顿
  * @param {number} [opts.gapMs] 同 readingGapMs（查字页沿用旧字段）
+ * @param {(index: number, reading: string) => void} [opts.onReadingStart]
+ * @param {() => void} [opts.onReadingEnd]
  */
 export async function speakHanziViaPinyinBlend(opts = {}) {
 	const h = String(opts.hanzi || '').match(/[\u4e00-\u9fff]/)?.[0]
@@ -178,29 +183,44 @@ export async function speakHanziViaPinyinBlend(opts = {}) {
 	const betweenParts = opts.betweenParts != null ? opts.betweenParts : PINYIN_BLEND_TIMING.betweenParts
 	const beforeWhole = opts.beforeWhole != null ? opts.beforeWhole : PINYIN_BLEND_TIMING.beforeWhole
 	const showFailToast = opts.showFailToast === true
+	const onReadingStart = typeof opts.onReadingStart === 'function' ? opts.onReadingStart : null
+	const onReadingEnd = typeof opts.onReadingEnd === 'function' ? opts.onReadingEnd : null
 
 	let anyOk = false
-	const multi = readings.length > 1
 	const isCancelled = opts.isCancelled
-	for (let i = 0; i < readings.length; i++) {
-		if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-		logHanziSpeak('speak.reading_start', { hanzi: h, index: i, total: readings.length, reading: readings[i] })
-		const ok = await speakBlendedPinyinSyllable(readings[i], {
-			narrator,
-			useTone1Fb,
-			blend,
-			betweenParts,
-			beforeWhole,
-			showFailToast,
-			isCancelled
-		})
-		logHanziSpeak('speak.reading_finish', { hanzi: h, index: i, reading: readings[i], ok })
-		if (ok) anyOk = true
-		if (i < readings.length - 1) {
+	try {
+		for (let i = 0; i < readings.length; i++) {
 			if (typeof isCancelled === 'function' && isCancelled()) return anyOk
-			if (!(await sleepUnlessCancelled(readingGapMs, isCancelled))) return anyOk
+			logHanziSpeak('speak.reading_start', {
+				hanzi: h,
+				index: i,
+				total: readings.length,
+				reading: readings[i]
+			})
+			try {
+				onReadingStart?.(i, readings[i])
+			} catch (_) {}
+			const ok = await speakBlendedPinyinSyllable(readings[i], {
+				narrator,
+				useTone1Fb,
+				blend,
+				betweenParts,
+				beforeWhole,
+				showFailToast,
+				isCancelled
+			})
+			logHanziSpeak('speak.reading_finish', { hanzi: h, index: i, reading: readings[i], ok })
+			if (ok) anyOk = true
+			if (i < readings.length - 1) {
+				if (typeof isCancelled === 'function' && isCancelled()) return anyOk
+				if (!(await sleepUnlessCancelled(readingGapMs, isCancelled))) return anyOk
+			}
 		}
+		logHanziSpeak('speak.all_done', { hanzi: h, anyOk, readingsCount: readings.length })
+		return anyOk
+	} finally {
+		try {
+			onReadingEnd?.()
+		} catch (_) {}
 	}
-	logHanziSpeak('speak.all_done', { hanzi: h, anyOk, readingsCount: readings.length })
-	return anyOk
 }

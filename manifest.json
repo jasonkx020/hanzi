@@ -60,9 +60,9 @@
                 "androidStyle" : "default",
                 "useOriginalMsgbox" : true,
                 "android" : {
-                    "hdpi" : "unpackage/res/480x762.png",
-                    "xhdpi" : "unpackage/res/720x1242.png",
-                    "xxhdpi" : "unpackage/res/1080x1882.png"
+                    "hdpi" : "480x762.png",
+                    "xhdpi" : "720x1242.png",
+                    "xxhdpi" : "1080x1882.png"
                 }
             },
             "icons" : {

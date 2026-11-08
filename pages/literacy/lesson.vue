@@ -32,9 +32,10 @@
 					<text class="lesson-stars-paren">)</text>
 				</view>
 				<view
-					v-if="quizPassedForLesson || pinyinQuizPassedForLesson"
+					v-if="quizPassedForLesson || pinyinQuizPassedForLesson || dictationPassedForLesson"
 					class="lesson-progress-row"
 				>
+					<text v-if="dictationPassedForLesson" class="lesson-quiz-badge lesson-quiz-badge--dictation">听写已达标</text>
 					<text v-if="quizPassedForLesson" class="lesson-quiz-badge">小测已通过</text>
 					<text v-if="pinyinQuizPassedForLesson" class="lesson-quiz-badge lesson-quiz-badge--pinyin">拼音已通过</text>
 				</view>
@@ -71,10 +72,14 @@
 					</view>
 					<view class="cell-py-row" @tap.stop="onCellPyTap(row)">
 						<text class="cell-py-hint">拼音 · 点读</text>
-						<pinyin-four-lines-row :syllables="pyTokens(row)" size="compact" />
+						<pinyin-four-lines-row
+							:syllables="pyTokens(row)"
+							size="compact"
+							:ink="pinyinInkFor(row)"
+						/>
 					</view>
 					<view class="cell-char-hit" @tap.stop="onCellCharTap(row)">
-						<text class="cell-char">{{ row.hanzi }}</text>
+						<text class="cell-char" :class="charColorClass(row)">{{ row.hanzi }}</text>
 					</view>
 				</view>
 			</view>
@@ -93,9 +98,13 @@
 			<text class="lesson-practice-title">本课练习</text>
 			<view class="mode-row">
 				<template v-if="lessonChars.length">
-					<view class="mode-tile mode-tile--dictation" @click="onDictation">
+					<view
+						class="mode-tile mode-tile--dictation"
+						:class="{ 'mode-tile--passed': dictationPassedForLesson }"
+						@click="onDictation"
+					>
 						<text class="mode-emoji">✏️</text>
-						<text class="mode-label">听写</text>
+						<text class="mode-label">{{ dictationPassedForLesson ? '听写✓' : '听写' }}</text>
 					</view>
 					<view class="mode-tile mode-tile--write" @click="onWritePractice">
 						<text class="mode-emoji">✍️</text>
@@ -128,18 +137,28 @@
 </template>
 
 <script>
-import { COL_PROGRESS, TEXTBOOK_VERSION_IDS } from '@/constants/curriculum-schema.js'
+import {
+	COL_PROGRESS,
+	LIST_TYPE,
+	LIST_TYPE_PREFERENCE,
+	TEXTBOOK_VERSION_IDS
+} from '@/constants/curriculum-schema.js'
 import { queryCurriculumChars } from '@/utils/curriculum-db.js'
 import {
 	buildLessonCharRowsFromRenjiaoItem,
 	buildLessonPinyinItemsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
+	getRenjiaoTextbookLoaderParams,
+	isRenjiaoTextbookSyncPrefs,
 	loadRenjiaoTextbookTexts,
 	collectPriorLessonPinyinSymbols
 } from '@/utils/renjiao-textbook-loader.js'
 import { chunkHomeworkSymbols } from '@/utils/pinyin-homework-chunk.js'
 import { getCurriculumPrefs, formatGradeSemesterLabel } from '@/utils/curriculum-storage.js'
-import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
+import {
+	listSpellReadingsForHanzi,
+	spellDisplayString
+} from '@/utils/cnchar-spell-display.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
 import {
 	putLessonQuizTransfer,
@@ -151,7 +170,8 @@ import { startWritePractice } from '@/modules/literacy/usecases/start-write-prac
 import {
 	buildStoredLessonKey,
 	hasLessonQuizPassed,
-	hasLessonPinyinQuizPassed
+	hasLessonPinyinQuizPassed,
+	hasLessonDictationPassed
 } from '@/utils/user-lesson-progress-storage.js'
 import { orderedUniqueSymbols } from '@/utils/lesson-pinyin-quiz-plan.js'
 import { logHanziSpeak } from '@/utils/hanzi-speak-debug-log.js'
@@ -194,9 +214,16 @@ export default {
 			quizPassedForLesson: false,
 			/** 本课拼音小测是否通关 */
 			pinyinQuizPassedForLesson: false,
+			/** 本课听写是否达标 */
+			dictationPassedForLesson: false,
 			charDrawerVisible: false,
 			charDrawerHanzi: '',
-			charDrawerPinyin: ''
+			charDrawerPinyin: '',
+			/** 当年级+学期写字表 / 识字表（hanzi → 1） */
+			writingHanziMap: Object.create(null),
+			literacyHanziMap: Object.create(null),
+			/** 本课多音缓存（hanzi → 1|0） */
+			polyHanziMap: Object.create(null)
 		}
 	},
 	computed: {
@@ -287,6 +314,10 @@ export default {
 		onCellCharTap(row) {
 			const hanzi = String(row && row.hanzi ? row.hanzi : '').trim().charAt(0)
 			if (!hanzi) return
+			/** 先停课页点读，避免与抽屉共用 InnerAudio 互相掐断 */
+			try {
+				this._pyPlay?.cancel?.()
+			} catch (_) {}
 			this.charDrawerHanzi = hanzi
 			this.charDrawerPinyin = this.pyShow(row)
 			this.charDrawerVisible = true
@@ -311,13 +342,65 @@ export default {
 			if (tokens.length) return tokens
 			return s ? [s] : []
 		},
+		/** 写字表优先蓝，识字表橙，其它默认 */
+		charColorClass(row) {
+			const h = String(row && row.hanzi != null ? row.hanzi : '')
+				.trim()
+				.charAt(0)
+			if (!h) return ''
+			if (this.writingHanziMap[h]) return 'cell-char--writing'
+			if (this.literacyHanziMap[h]) return 'cell-char--literacy'
+			return ''
+		},
+		pinyinInkFor(row) {
+			const h = String(row && row.hanzi != null ? row.hanzi : '')
+				.trim()
+				.charAt(0)
+			if (!h) return 'plain'
+			return this.polyHanziMap[h] ? 'poly' : 'plain'
+		},
+		rebuildPolyCacheForLesson() {
+			const map = Object.create(null)
+			for (const row of this.lessonChars || []) {
+				const h = String(row && row.hanzi != null ? row.hanzi : '')
+					.trim()
+					.charAt(0)
+				if (!h || map[h] != null) continue
+				map[h] = listSpellReadingsForHanzi(h).length > 1 ? 1 : 0
+			}
+			this.polyHanziMap = map
+		},
+		async refreshGradeListMaps() {
+			const prefs = {
+				...getCurriculumPrefs(),
+				list_type_preference: LIST_TYPE_PREFERENCE.ALL
+			}
+			try {
+				const rows = await queryCurriculumChars(prefs)
+				const writing = Object.create(null)
+				const literacy = Object.create(null)
+				for (const r of rows || []) {
+					const h = String(r && r.hanzi != null ? r.hanzi : '')
+						.trim()
+						.charAt(0)
+					if (!h) continue
+					if (r.list_type === LIST_TYPE.XIEZI) writing[h] = 1
+					else if (r.list_type === LIST_TYPE.SHIZI) literacy[h] = 1
+				}
+				this.writingHanziMap = writing
+				this.literacyHanziMap = literacy
+			} catch (e) {
+				console.warn('[lesson] refreshGradeListMaps', e)
+				this.writingHanziMap = Object.create(null)
+				this.literacyHanziMap = Object.create(null)
+			}
+		},
 		async reloadLesson() {
 			const prefs = getCurriculumPrefs()
-			if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && this.rjLessonIdx != null) {
-				const rows = await loadRenjiaoTextbookTexts({
-					grade: prefs.grade,
-					semester: prefs.semester
-				})
+			await this.refreshGradeListMaps()
+			if (isRenjiaoTextbookSyncPrefs(prefs) && this.rjLessonIdx != null) {
+				const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
+				const rows = await loadRenjiaoTextbookTexts(loaderParams)
 				const syncLessons = filterRenjiaoTextbookSyncLessons(rows)
 				const item = syncLessons[this.rjLessonIdx]
 				if (!item) {
@@ -326,6 +409,7 @@ export default {
 					this.totalChars = 0
 					this.rjContent = ''
 					this.hint = '课次字卡'
+					this.polyHanziMap = Object.create(null)
 					this.setLessonNavTitle()
 					return
 				}
@@ -334,6 +418,7 @@ export default {
 				this.lessonChars = buildLessonCharRowsFromRenjiaoItem(item)
 				this.lessonPinyinItems = buildLessonPinyinItemsFromRenjiaoItem(item)
 				this.totalChars = this.lessonChars.length
+				this.rebuildPolyCacheForLesson()
 				this.setLessonNavTitle()
 				return
 			}
@@ -342,6 +427,7 @@ export default {
 			const rows = await queryCurriculumChars(getCurriculumPrefs())
 			this.lessonChars = rows.filter((r) => String(r.lesson_hint || '未分课次') === this.hint)
 			this.totalChars = this.lessonChars.length
+			this.rebuildPolyCacheForLesson()
 			this.setLessonNavTitle()
 		},
 		async onLessonPinyinCell(payload) {
@@ -385,6 +471,7 @@ export default {
 			const lk = buildStoredLessonKey(this.rjLessonIdx, this.hint)
 			this.quizPassedForLesson = hasLessonQuizPassed(dims, lk)
 			this.pinyinQuizPassedForLesson = hasLessonPinyinQuizPassed(dims, lk)
+			this.dictationPassedForLesson = hasLessonDictationPassed(dims, lk)
 		},
 		isLearned(hanzi) {
 			const h = String(hanzi || '').trim().charAt(0)
@@ -480,10 +567,11 @@ export default {
 			if (this.rjLessonIdx != null) {
 				try {
 					const prefs = getCurriculumPrefs()
-					const rows = await loadRenjiaoTextbookTexts({
+					const loaderParams = getRenjiaoTextbookLoaderParams(prefs) || {
 						grade: prefs.grade,
 						semester: prefs.semester
-					})
+					}
+					const rows = await loadRenjiaoTextbookTexts(loaderParams)
 					const syncLessons = filterRenjiaoTextbookSyncLessons(rows)
 					priorSymbols = collectPriorLessonPinyinSymbols(syncLessons, this.rjLessonIdx)
 				} catch (e) {
@@ -657,6 +745,12 @@ export default {
 	border-color: rgba(30, 136, 229, 0.35);
 }
 
+.lesson-quiz-badge--dictation {
+	color: #6a1b9a;
+	background: #f3e5f5;
+	border-color: rgba(156, 39, 176, 0.35);
+}
+
 .mode-tile--pinyin-quiz {
 	background: #64b5f6;
 }
@@ -763,6 +857,12 @@ export default {
 	background: #7eb8ff;
 }
 
+.mode-tile--passed {
+	box-shadow:
+		0 6rpx 14rpx rgba(44, 36, 25, 0.08),
+		inset 0 0 0 3rpx rgba(255, 255, 255, 0.85);
+}
+
 .mode-tile--write {
 	background: #e8a070;
 }
@@ -855,6 +955,14 @@ export default {
 	color: var(--meng-chocolate, #5c3d2e);
 	line-height: 1.05;
 	-webkit-font-smoothing: antialiased;
+}
+
+.cell-char--literacy {
+	color: #e8783a;
+}
+
+.cell-char--writing {
+	color: #2f6fed;
 }
 
 .cell-py-row {

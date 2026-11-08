@@ -20,7 +20,7 @@
 			</template>
 		</meng-tab-hero>
 
-		<view class="dict-body tab-dock-overlap tab-content-bleed">
+		<view class="dict-body tab-dock-overlap">
 			<view class="glass-card search-card">
 				<view class="search-row">
 					<text class="search-glyph">🔍</text>
@@ -110,13 +110,16 @@
 						<view class="meta-compact-row meta-compact-row-py">
 							<text class="meta-compact-k">拼音</text>
 							<view class="meta-compact-v meta-py-wrap">
-								<view v-if="pinyinSyllableTokens.length" class="meta-py-row meta-py-rows-stack">
+								<view v-if="pinyinReadingList.length" class="meta-py-row meta-py-rows-stack">
 									<view
-										v-for="(tok, ti) in pinyinSyllableTokens"
-										:key="'dict-py-' + ti"
+										v-for="(tok, ti) in pinyinReadingList"
+										:key="'dict-py-' + ti + '-' + tok"
 										class="meta-py-line-row"
 									>
-										<!-- <text v-if="pinyinSyllableTokens.length > 1" class="meta-py-line-label">拼音{{ ti + 1 }}</text> -->
+										<text
+											v-if="pinyinReadingList.length > 1"
+											class="meta-py-line-label"
+										>读音{{ ti + 1 }}</text>
 										<pinyin-four-lines-row
 											class="meta-py-line-core"
 											:syllables="[tok]"
@@ -126,6 +129,10 @@
 								</view>
 								<text v-else class="meta-py-fallback font-pinyin">{{ pinyinDisplayPlain }}</text>
 							</view>
+						</view>
+						<view class="meta-write-link" @click.stop="goWritePractice">
+							<text class="meta-write-link-text">书写练习</text>
+							<text class="meta-write-link-arrow">›</text>
 						</view>
 						<view class="meta-compact-row">
 							<text class="meta-compact-k">结构</text>
@@ -223,7 +230,10 @@
 <script>
 import cnchar from '@/utils/cnchar-setup.js'
 import drawNative from '@/utils/draw-native.js'
-import { spellDisplayString } from '@/utils/cnchar-spell-display.js'
+import {
+	spellDisplayString,
+	listAllPinyinReadingsForDisplay
+} from '@/utils/cnchar-spell-display.js'
 import { getAudioNarrator } from '@/utils/audio-settings.js'
 import { speakDictionaryEntryPinyin, DICTIONARY_LOCAL_PINYIN_OPTS } from '@/utils/dictionary-pinyin-speak.js'
 import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
@@ -242,6 +252,7 @@ import { gateAndPromptWithAd, VIP_FEATURE, QUOTA_KEYS } from '@/utils/vip-gate.j
 import { AD_PLACEMENTS } from '@/constants/ad-placements.js'
 import { recordDictLookup } from '@/utils/achievement-stats-storage.js'
 import { recordCharLearned } from '@/repositories/learning-repository.js'
+import { startWritePractice } from '@/modules/literacy/usecases/start-write-practice.js'
 import tabMain from '@/mixins/tab-main-page.js'
 import MengAvatar from '@/components/meng-avatar.vue'
 import MengTabHero from '@/components/meng-tab-hero.vue'
@@ -253,7 +264,6 @@ import {
 	stopMengmengVoice
 } from '@/utils/mengmeng-voice.js'
 import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
-import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 
 const DETECTIVES = [
 	{ clue: '猜一猜「艹 + 明」是什么字？', answer: '萌' },
@@ -315,15 +325,17 @@ export default {
 			return `${this.curriculumChip} · 字库 ${this.chars.length} 字`
 		},
 		pinyinDisplayPlain() {
+			const list = this.pinyinReadingList
+			if (list.length) return list.join(' / ')
 			const t = String(this.pinyinDisplay || '').replace(/[()（）]/g, '').trim()
 			return t || '—'
 		},
-		pinyinSyllableTokens() {
-			const tokens = splitPinyinDisplayTokens(this.pinyinDisplay)
-			if (tokens.length) return tokens
-			const s = String(this.pinyinDisplay || '').trim().replace(/[()（）]/g, '').trim()
-			if (s && s !== '—' && s !== '-') return [s]
-			return []
+		pinyinReadingList() {
+			const h = String(this.activeEntry?.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) return []
+			return listAllPinyinReadingsForDisplay(h, this.pinyinDisplay)
 		},
 		filteredChars() {
 			const kw = this.normalizePinyin(this.pinyinKeyword)
@@ -608,7 +620,9 @@ export default {
 			try {
 				await speakDictionaryEntryPinyin({
 					hanzi: this.activeEntry.hanzi,
-					// fallbackPinyin: this.pinyinDisplay,
+					fallbackPinyin: this.pinyinReadingList.length
+						? this.pinyinReadingList.join(' ')
+						: this.pinyinDisplay,
 					narrator: this.narrator,
 					...DICTIONARY_LOCAL_PINYIN_OPTS
 				})
@@ -665,6 +679,16 @@ export default {
 			if (!this.activeEntry?.hanzi) return
 			recordCharLearned(this.activeEntry.hanzi, getCurriculumPrefs())
 			uni.showToast({ title: '已加入生字本（已学字库）', icon: 'success' })
+		},
+		goWritePractice() {
+			const h = String(this.activeEntry?.hanzi || '')
+				.trim()
+				.match(/[\u4e00-\u9fff]/)?.[0]
+			if (!h) {
+				uni.showToast({ title: '请先查一个汉字', icon: 'none' })
+				return
+			}
+			void startWritePractice({ hanzi: h })
 		},
 		goSettings() {
 			uni.navigateTo({ url: '/pages/settings/curriculum' })
@@ -1039,6 +1063,33 @@ export default {
 	font-weight: normal;
 	color: #4e4e4e;
 	line-height: 1.4;
+}
+
+.meta-write-link {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 6rpx;
+	margin: 4rpx 0 10rpx 72rpx;
+	padding: 6rpx 0;
+}
+
+.meta-write-link:active {
+	opacity: 0.85;
+}
+
+.meta-write-link-text {
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #2f7ec4;
+}
+
+.meta-write-link-arrow {
+	font-size: 26rpx;
+	font-weight: 700;
+	color: #2f7ec4;
+	line-height: 1;
 }
 
 /* 外包框尺寸与画布一致（由内联 dictStrokeWrapStyle 控制），田字线由 draw-native 绘制 */

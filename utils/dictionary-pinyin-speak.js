@@ -54,7 +54,9 @@ export async function speakDictionaryEntryPinyin(opts = {}) {
 			betweenParts: opts.betweenParts,
 			beforeWhole: opts.beforeWhole,
 			showFailToast: opts.showFailToast ?? DICTIONARY_LOCAL_PINYIN_OPTS.showFailToast,
-			isCancelled: opts.isCancelled
+			isCancelled: opts.isCancelled,
+			onReadingStart: opts.onReadingStart,
+			onReadingEnd: opts.onReadingEnd
 		})
 		logHanziSpeak('dict.done', { hanzi: h, ok })
 		return ok

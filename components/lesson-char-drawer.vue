@@ -1,39 +1,49 @@
 <!--
   @file lesson-char-drawer.vue
   @layer L1 表现层
-  @description 课次字卡底部抽屉：笔顺动画 + 组词分页；详情进详情页，仅关闭按钮收起
+  @description 课次字卡顶部抽屉：笔顺动画 + 组词分页；点遮罩收起
   @software 萌萌识字移动应用软件 V1.0
   @copyright Copyright (c) 2026 陶流昌. All Rights Reserved.
 -->
 <template>
 	<view v-if="visible" class="lcd-root">
-		<view class="lcd-mask" @touchmove.stop.prevent />
-		<view class="lcd-panel" @touchmove.stop.prevent>
-			<view class="lcd-handle" />
-			<view class="lcd-top">
-				<view class="lcd-title-block">
-					<text class="lcd-hanzi">{{ displayChar }}</text>
-					<text v-if="pinyinLabel" class="lcd-pinyin">{{ pinyinLabel }}</text>
-				</view>
-				<view class="lcd-actions">
-					<view class="lcd-btn lcd-btn--close" @click.stop="onClose" aria-label="关闭">
-						<text class="lcd-close-icon">×</text>
-					</view>
+		<view class="lcd-mask" @click="onClose" @touchmove.stop.prevent />
+		<view class="lcd-panel" @click.stop @touchmove.stop.prevent>
+			<!-- 与原先关闭按钮同高占位，保持四线三格距顶距离 -->
+			<view class="lcd-top" aria-hidden="true">
+				<view class="lcd-top-spacer" />
+				<view class="lcd-btn lcd-btn--close lcd-btn--ph">
+					<text class="lcd-close-icon">×</text>
 				</view>
 			</view>
-
-			<view class="lcd-stroke-wrap">
-				<hanzi-stroke-player
-					v-if="playerMounted"
-					ref="strokePlayer"
-					:char="displayChar"
-					:display-pinyin="pinyinLabel"
-					:length="180"
-					:preview-only="true"
-					idle-mode="preview"
-					canvas-id="lesson-char-drawer-stroke"
-					@ready-change="onStrokeReady"
-				/>
+			<view class="lcd-stroke-block">
+				<view v-if="pinyinSyllables.length" class="lcd-py-row">
+					<pinyin-four-lines-row :syllables="pinyinSyllables" size="compact" />
+				</view>
+				<view class="lcd-stroke-wrap">
+					<view class="lcd-stroke-stage">
+						<!-- 弹层首帧即见田字格；canvas/字形可稍后叠上 -->
+						<view class="lcd-tianzi" aria-hidden="true">
+							<view class="lcd-tianzi-border" />
+							<view class="lcd-tianzi-h" />
+							<view class="lcd-tianzi-v" />
+							<view class="lcd-tianzi-d1" />
+							<view class="lcd-tianzi-d2" />
+						</view>
+						<hanzi-stroke-player
+							v-if="playerMounted"
+							ref="strokePlayer"
+							:char="displayChar"
+							:display-pinyin="pinyinLabel"
+							:length="180"
+							:preview-only="true"
+							:show-play-fab="false"
+							idle-mode="preview"
+							canvas-id="lesson-char-drawer-stroke"
+							@ready-change="onStrokeReady"
+						/>
+					</view>
+				</view>
 			</view>
 
 			<view class="lcd-words">
@@ -47,7 +57,8 @@
 						>
 							<text class="lcd-pill-txt">下一页</text>
 						</view>
-						<view class="lcd-pill lcd-pill--detail" @click.stop="onDetail">
+						<!-- 占位：取消详情入口，保留与「下一页」并排宽度 -->
+						<view class="lcd-pill lcd-pill--detail lcd-pill--ph" aria-hidden="true">
 							<text class="lcd-pill-txt">详情</text>
 						</view>
 					</view>
@@ -67,13 +78,18 @@
 
 <script>
 import HanziStrokePlayer from '@/components/hanzi-stroke-player.vue'
+import PinyinFourLinesRow from '@/components/pinyin-four-lines-row.vue'
 import { getDictionaryEntry } from '@/repositories/dictionary-repository.js'
-import { stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { playLessonTargetReading } from '@/utils/lesson-mode-play-target.js'
+import { sleep, stopLocalPinyinAudio } from '@/utils/play-pinyin-local-audio.js'
+import { splitPinyinDisplayTokens } from '@/utils/pinyin-display-tokens.js'
 import { stopHanziSpeech } from '@/utils/speak-hanzi.js'
+import { stopStrokeOrderAudio } from '@/utils/stroke-order-audio.js'
+import pinyinPlayScopeMixin, { PINYIN_PLAY_SCOPES } from '@/mixins/pinyin-play-scope.js'
 
 const WORDS_PAGE_SIZE = 4
-/** 字形预览就绪后，再过多久自动播笔顺 */
-const PREVIEW_TO_STROKE_MS = 400
+/** 整字读音播完后再开笔顺的短间隔 */
+const AFTER_READING_TO_STROKE_MS = 360
 
 function normalizeWords(raw) {
 	const out = []
@@ -91,7 +107,9 @@ function normalizeWords(raw) {
 
 export default {
 	name: 'LessonCharDrawer',
-	components: { HanziStrokePlayer },
+	components: { HanziStrokePlayer, PinyinFourLinesRow },
+	mixins: [pinyinPlayScopeMixin],
+	pinyinPlayScope: PINYIN_PLAY_SCOPES.LESSON_CHAR_DRAWER,
 	props: {
 		visible: {
 			type: Boolean,
@@ -115,6 +133,8 @@ export default {
 			wordsLoading: false,
 			wordsGen: 0,
 			openGen: 0,
+			/** 本轮 open 是否已启动「读字→笔顺」流水线，防 ready 重复触发掐断 */
+			pipelineStartedGen: 0,
 			strokePlayTimer: null
 		}
 	},
@@ -126,6 +146,13 @@ export default {
 		pinyinLabel() {
 			const s = String(this.pinyin || '').replace(/\s+/g, ' ').trim()
 			return s && s !== '-' ? s : ''
+		},
+		/** 与课次字卡外层一致：四线三格音节列表 */
+		pinyinSyllables() {
+			const s = this.pinyinLabel
+			if (!s) return []
+			const tokens = splitPinyinDisplayTokens(s)
+			return tokens.length ? tokens : [s]
 		},
 		allWords() {
 			return normalizeWords(this.charWords)
@@ -161,42 +188,76 @@ export default {
 				this.strokePlayTimer = null
 			}
 		},
+		/** 同步停播：禁止 setTimeout(0) 再 stop，否则会掐断随后启动的整字读音 */
+		syncStopAudio() {
+			try {
+				this._pyPlay?.cancel?.()
+			} catch (_) {}
+			try {
+				stopStrokeOrderAudio()
+			} catch (_) {}
+			try {
+				stopLocalPinyinAudio()
+				stopHanziSpeech()
+			} catch (_) {}
+		},
 		onOpen() {
 			this.openGen++
+			const gen = this.openGen
+			/**
+			 * 先占住 pipelineStartedGen，避免 stopStroke→旧 player ready
+			 * 在换字时误开读字流水线、掐断随后挂载的笔顺音。
+			 */
+			this.pipelineStartedGen = gen
 			this.clearStrokePlayTimer()
-			stopLocalPinyinAudio()
-			stopHanziSpeech()
 			this.stopStroke()
 			this.wordsPage = 0
 			this.charWords = []
-			/** 立刻显示字形；组词异步，不挡挂载；预览就绪后再播笔顺 */
+			this.syncStopAudio()
+			this.pipelineStartedGen = 0
+			/** 与弹层同帧挂载，田字格/预览字不再晚一拍像卡住 */
 			this.playerMounted = !!this.displayChar
 			this.loadWords()
 		},
 		onHideInternal() {
 			this.openGen++
+			this.pipelineStartedGen = 0
 			this.clearStrokePlayTimer()
-			stopLocalPinyinAudio()
-			stopHanziSpeech()
 			this.stopStroke()
 			this.playerMounted = false
+			this.syncStopAudio()
 		},
 		stopStroke() {
 			try {
 				this.$refs.strokePlayer?.stopAnimation?.()
 			} catch (_) {}
 		},
-		onStrokeReady(ready) {
+		async onStrokeReady(ready) {
 			if (!ready || !this.visible || !this.playerMounted) return
 			const gen = this.openGen
+			if (this.pipelineStartedGen === gen) return
+			this.pipelineStartedGen = gen
 			this.clearStrokePlayTimer()
-			this.strokePlayTimer = setTimeout(() => {
-				this.strokePlayTimer = null
-				if (gen !== this.openGen || !this.visible) return
-				try {
-					this.$refs.strokePlayer?.playAnimation?.()
-				} catch (_) {}
-			}, PREVIEW_TO_STROKE_MS)
+			const ch = this.displayChar
+			const py = this.pinyinLabel
+			if (!ch) return
+			try {
+				await this._pyPlay.run(({ isCancelled }) =>
+					playLessonTargetReading(ch, py, {
+						isCancelled: () => isCancelled() || gen !== this.openGen || !this.visible
+					})
+				)
+			} catch (e) {
+				console.warn('[lesson-char-drawer] char reading', e)
+			}
+			if (gen !== this.openGen || !this.visible) return
+			try {
+				await sleep(AFTER_READING_TO_STROKE_MS)
+			} catch (_) {}
+			if (gen !== this.openGen || !this.visible) return
+			try {
+				this.$refs.strokePlayer?.playAnimation?.()
+			} catch (_) {}
 		},
 		async loadWords() {
 			const ch = this.displayChar
@@ -248,7 +309,7 @@ export default {
 	z-index: 1000;
 	display: flex;
 	flex-direction: column;
-	justify-content: flex-end;
+	justify-content: flex-start;
 }
 
 .lcd-mask {
@@ -264,20 +325,27 @@ export default {
 	position: relative;
 	z-index: 1;
 	max-height: 86vh;
-	padding: 10rpx 24rpx calc(28rpx + env(safe-area-inset-bottom));
-	border-radius: 32rpx 32rpx 0 0;
+	/* 状态栏 + 额外间距（与有关闭钮时一致） */
+	padding: calc(24rpx + constant(safe-area-inset-top)) 24rpx 28rpx;
+	padding: calc(24rpx + env(safe-area-inset-top, 0px)) 24rpx 28rpx;
+	border-radius: 0 0 32rpx 32rpx;
 	background: #fffdf9;
-	box-shadow: 0 -12rpx 40rpx rgba(44, 36, 25, 0.14);
+	box-shadow: 0 12rpx 40rpx rgba(44, 36, 25, 0.14);
 	box-sizing: border-box;
 	overflow-y: auto;
+	transform: translateZ(0);
+	animation: lcd-panel-in 200ms ease-out;
 }
 
-.lcd-handle {
-	width: 64rpx;
-	height: 8rpx;
-	margin: 4rpx auto 16rpx;
-	border-radius: 999rpx;
-	background: rgba(0, 0, 0, 0.12);
+@keyframes lcd-panel-in {
+	from {
+		transform: translate3d(0, -18%, 0);
+		opacity: 0.72;
+	}
+	to {
+		transform: translate3d(0, 0, 0);
+		opacity: 1;
+	}
 }
 
 .lcd-top {
@@ -286,38 +354,12 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16rpx;
-	margin-bottom: 12rpx;
+	margin-bottom: 8rpx;
 }
 
-.lcd-title-block {
+.lcd-top-spacer {
 	flex: 1;
 	min-width: 0;
-	display: flex;
-	flex-direction: row;
-	align-items: baseline;
-	flex-wrap: wrap;
-	gap: 8rpx 14rpx;
-}
-
-.lcd-hanzi {
-	font-size: 48rpx;
-	font-weight: 800;
-	color: #2c2419;
-	line-height: 1.1;
-}
-
-.lcd-pinyin {
-	font-size: 26rpx;
-	font-weight: 600;
-	color: #8a6a78;
-}
-
-.lcd-actions {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	gap: 10rpx;
-	flex-shrink: 0;
 }
 
 .lcd-btn {
@@ -336,6 +378,11 @@ export default {
 	border: 1rpx solid rgba(0, 0, 0, 0.06);
 }
 
+.lcd-btn--ph {
+	visibility: hidden;
+	pointer-events: none;
+}
+
 .lcd-close-icon {
 	font-size: 44rpx;
 	font-weight: 500;
@@ -344,12 +391,117 @@ export default {
 	margin-top: -4rpx;
 }
 
+.lcd-stroke-block {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10rpx;
+	margin-bottom: 8rpx;
+}
+
+.lcd-py-row {
+	width: 100%;
+	max-width: 360rpx;
+	min-width: 0;
+	padding: 8rpx 8rpx 6rpx;
+	box-sizing: border-box;
+	background: #fff5f8;
+	border-radius: 14rpx;
+	border: 1rpx solid rgba(255, 200, 180, 0.4);
+}
+
 .lcd-stroke-wrap {
 	display: flex;
 	justify-content: center;
-	padding: 8rpx 56rpx 16rpx 24rpx;
+	padding: 0 56rpx 8rpx 24rpx;
 	box-sizing: border-box;
 	overflow: visible;
+}
+
+/** length=180 + 30，与 hanzi-stroke-player 外壳一致 */
+.lcd-stroke-stage {
+	position: relative;
+	width: 210px;
+	min-height: 210px;
+	flex-shrink: 0;
+}
+
+/** 弹层打开瞬间可见的 CSS 田字格；字形 canvas 叠在上面 */
+.lcd-tianzi {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 210px;
+	height: 210px;
+	box-sizing: border-box;
+	border-radius: 16rpx;
+	background: #fffefb;
+	pointer-events: none;
+	z-index: 0;
+}
+
+.lcd-tianzi-border {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	border: 2px solid #e0cfc0;
+	border-radius: 16rpx;
+	box-sizing: border-box;
+}
+
+.lcd-tianzi-h,
+.lcd-tianzi-v {
+	position: absolute;
+	background: #d4c4b4;
+	opacity: 0.9;
+}
+
+.lcd-tianzi-h {
+	left: 6%;
+	right: 6%;
+	top: 50%;
+	height: 1px;
+	margin-top: -0.5px;
+}
+
+.lcd-tianzi-v {
+	top: 6%;
+	bottom: 6%;
+	left: 50%;
+	width: 1px;
+	margin-left: -0.5px;
+}
+
+.lcd-tianzi-d1,
+.lcd-tianzi-d2 {
+	position: absolute;
+	left: 10%;
+	right: 10%;
+	top: 50%;
+	height: 1px;
+	background: #ebe0d6;
+	opacity: 0.95;
+}
+
+.lcd-tianzi-d1 {
+	transform: rotate(45deg);
+}
+
+.lcd-tianzi-d2 {
+	transform: rotate(-45deg);
+}
+
+.lcd-stroke-wrap /deep/ .hanzi-stroke-player,
+.lcd-stroke-wrap ::v-deep .hanzi-stroke-player {
+	position: relative;
+	z-index: 1;
+}
+
+.lcd-stroke-wrap /deep/ .tianzi-shell,
+.lcd-stroke-wrap ::v-deep .tianzi-shell {
+	background: transparent;
 }
 
 /* 播放钮再靠右，避免压住田字格 */
@@ -399,6 +551,11 @@ export default {
 .lcd-pill--detail {
 	background: #ffd4f0;
 	border: 1rpx solid rgba(255, 120, 160, 0.35);
+}
+
+.lcd-pill--ph {
+	visibility: hidden;
+	pointer-events: none;
 }
 
 .lcd-pill-txt {

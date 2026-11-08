@@ -15,97 +15,55 @@
 				@error="onStaticImgError('hero-bg', '/static/mengmeng/hero-bg.png')"
 			/>
 			<view class="meng-hero-sky-layer" />
-			<view class="tb-hero-sky" />
 			<meng-status-bar-spacer :height-px="statusBarPx" />
-			<meng-page-nav title="课本同步学" class="tb-nav" :inset-status-bar="false">
-				<template #right>
-					<view class="tb-circle-btn tb-circle-btn--nav" @click="reload">
-						<text class="tb-circle-icon">🔄</text>
+			<meng-page-nav title="课本同步学" class="tb-nav" :inset-status-bar="false" />
+			<view class="tb-hero-bar">
+				<view class="tb-hero-meta">
+					<text class="tb-hero-sub">{{ summary }}</text>
+					<text v-if="lessons.length" class="tb-hero-stat"
+						>{{ lessons.length }} 课 · {{ statSlotCount }} 字</text
+					>
+				</view>
+				<text class="tb-switch-link" @click="openCurriculumPicker">换教材</text>
+			</view>
+		</view>
+
+		<view v-if="!curriculumPickerRequired" class="tb-body">
+			<view v-if="lessonUnitGroups.length" class="lesson-list">
+				<view
+					v-for="group in lessonUnitGroups"
+					:key="group.key"
+					class="lesson-unit-block"
+				>
+					<view v-if="group.showHeader" class="unit-head">
+						<text class="unit-name">{{ unitHeadTitle(group) }}</text>
 					</view>
-				</template>
-			</meng-page-nav>
-			<view class="tb-hero-card">
-				<view class="tb-hero-body">
-					<view class="tb-cover-wrap" @click="openCurriculumPicker">
-						<image
-							class="tb-cover-img"
-							:src="staticImg(heroCoverRawPath, heroCoverRawPath)"
-							mode="aspectFit"
-							:lazy-load="false"
-							@error="onStaticImgError(heroCoverRawPath, heroCoverRawPath)"
-						/>
-						<text class="tb-cover-tag">换教材</text>
-					</view>
-					<view class="tb-hero-meta">
-						<text class="tb-hero-sub">{{ summary }}</text>
-						<view v-if="lessons.length" class="tb-stat-pill">
-							<text class="tb-stat-txt">
-								共 <text class="tb-stat-num">{{ lessons.length }}</text> 课 ·
-								<text class="tb-stat-num">{{ statSlotCount }}</text> 个生字
-							</text>
+					<view
+						v-for="lesson in group.lessons"
+						:key="`${lesson.hint}-${lesson.index1}`"
+						class="lesson-card"
+						@click="openLesson(lesson)"
+					>
+						<text class="lesson-num">{{ lesson.index1 }}</text>
+						<view class="lesson-main">
+							<view class="lesson-title-row">
+								<text class="lesson-title">{{ lesson.hint }}</text>
+								<text v-if="lesson.doneBadgeText" class="lesson-done-badge">{{
+									lesson.doneBadgeText
+								}}</text>
+							</view>
+							<text class="lesson-meta">{{ lessonMetaText(lesson) }}</text>
 						</view>
+						<text class="lesson-arrow">›</text>
 					</view>
 				</view>
 			</view>
-		</view>
 
-		<view v-if="!curriculumPickerRequired" class="tb-sheet">
-		<view v-if="textbookTexts.length" class="textbook-panel">
-			<view class="textbook-panel-head">
-				<text class="textbook-panel-title">人教版（部编）课文原文</text>
-				<text class="textbook-panel-sub">当前册别共 {{ textbookTexts.length }} 篇，点标题可阅读</text>
+			<view v-else class="empty-box">
+				<text class="empty-title">暂无课次</text>
+				<text class="empty-desc">请先选择教材与年级册别</text>
+				<button class="empty-btn" type="primary" size="mini" @click="goHome">回识字首页</button>
 			</view>
-			<view
-				v-for="(item, idx) in textbookTexts.slice(0, 12)"
-				:key="`${idx}-${item.title}`"
-				class="text-row"
-				@click="openText(item, idx)"
-			>
-				<text class="text-row-title">{{ item.title || `第${idx + 1}篇` }}</text>
-				<text class="text-row-arrow">›</text>
-			</view>
-		</view>
-
-		<!-- 课次列表：大卡片，好点 -->
-		<view class="section-head">
-			<text class="section-title">选一课，学生字</text>
-			<text class="section-hint">点课进入字卡；该课识字表生字均已标「已学」时显示绿标（无识字表数据时按本课全部生字）</text>
-		</view>
-
-		<view v-if="lessons.length" class="lesson-list">
-			<view
-				v-for="(lesson, i) in lessons"
-				:key="`${lesson.hint}-${i}`"
-				class="lesson-card"
-				@click="openLesson(lesson)"
-			>
-				<view class="lesson-num">{{ i + 1 }}</view>
-				<view class="lesson-main">
-					<view class="lesson-title-row">
-						<text class="lesson-title">{{ lesson.hint }}</text>
-						<text v-if="lesson.doneBadgeText" class="lesson-done-badge">{{ lesson.doneBadgeText }}</text>
-					</view>
-					<text class="lesson-meta">{{ lessonMetaText(lesson) }}</text>
-				</view>
-				<text class="lesson-arrow">›</text>
-			</view>
-		</view>
-
-		<view v-else class="empty-box">
-			<text class="empty-title">暂时没有课次数据</text>
-			<text class="empty-desc">请先到识字首页「当前进度」里选好教材与年级册别；若已选择仍无数据，可检查字表类型是否过滤过窄。</text>
-			<button class="empty-btn" type="primary" size="mini" @click="goHome">回识字首页</button>
-		</view>
-
-		<view class="foot-tip">
-			<image
-				class="foot-icon-img"
-				:src="staticImg('foot-logo', '/static/mengmeng/logo-icon.png')"
-				mode="aspectFit"
-				@error="onStaticImgError('foot-logo', '/static/mengmeng/logo-icon.png')"
-			/>
-			<text class="foot-msg">点一课进入字卡听读音；点封面可换年级册别。</text>
-		</view>
 		</view>
 
 		<view
@@ -195,6 +153,8 @@ import {
 	buildLiteracyOnlyCharRowsFromRenjiaoItem,
 	buildLessonPinyinItemsFromRenjiaoItem,
 	filterRenjiaoTextbookSyncLessons,
+	getRenjiaoTextbookLoaderParams,
+	isRenjiaoTextbookSyncPrefs,
 	loadRenjiaoTextbookTexts
 } from '@/utils/renjiao-textbook-loader.js'
 import { makeProgressKey, getUserProgressMap } from '@/utils/user-progress-storage.js'
@@ -231,21 +191,6 @@ const VERSION_OPTIONS = [
 	// { label: '苏教版', value: 'sujiao', icon: '/static/images/yuwen0201.jpg' }
 ]
 
-/** 与当前教材偏好对应的静态封面 web 路径 */
-function rawCoverPathForPrefs(prefs) {
-	const p = prefs || {}
-	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
-		return '/static/images/yuwen_youxiao.jpg'
-	}
-	const g = Number(p.grade)
-	const sem = p.semester === '下' ? '下' : '上'
-	if (p.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ && g >= 1 && g <= 6) {
-		const hit = COVER_BOOKS.find((b) => b.grade === g && b.semester === sem)
-		if (hit) return hit.cover
-	}
-	return '/static/images/yuwen0101.jpg'
-}
-
 export default {
 	components: { MengPageNav, MengStatusBarSpacer },
 	data() {
@@ -255,7 +200,6 @@ export default {
 			chars: [],
 			lessons: [],
 			loading: false,
-			textbookTexts: [],
 			showCurriculumPicker: false,
 			/** 未保存过教材偏好：须选一本教材后才能使用本页 */
 			curriculumPickerRequired: false,
@@ -266,9 +210,6 @@ export default {
 		}
 	},
 	computed: {
-		heroCoverRawPath() {
-			return rawCoverPathForPrefs(getCurriculumPrefs())
-		},
 		currentBookRows() {
 			if (this.modalVersion === TEXTBOOK_VERSION_IDS.MOE_JIBENZIBIAO_300) {
 				const book = {
@@ -300,6 +241,50 @@ export default {
 				return this.lessons.reduce((s, l) => s + (Number(l.count) || 0), 0)
 			}
 			return this.chars.length
+		},
+		/**
+		 * 按 unitName 连续分组合并；带全局序号 index1。
+		 * 无人教单元字段时整表一组且 showHeader=false（平铺）。
+		 */
+		lessonUnitGroups() {
+			const list = Array.isArray(this.lessons) ? this.lessons : []
+			if (!list.length) return []
+			const hasAnyUnit = list.some((l) => String(l.unitName || '').trim())
+			if (!hasAnyUnit) {
+				return [
+					{
+						key: 'flat',
+						unitName: '',
+						unitTheme: '',
+						showHeader: false,
+						lessons: list.map((lesson, i) => ({
+							...lesson,
+							index1: i + 1
+						}))
+					}
+				]
+			}
+			const groups = []
+			let cur = null
+			list.forEach((lesson, i) => {
+				const name = String(lesson.unitName || '').trim() || '其他'
+				const theme = String(lesson.unitTheme || '').trim()
+				const row = { ...lesson, index1: i + 1 }
+				if (!cur || cur.unitName !== name) {
+					cur = {
+						key: `u-${groups.length}-${name}`,
+						unitName: name,
+						unitTheme: theme,
+						showHeader: true,
+						lessons: [row]
+					}
+					groups.push(cur)
+				} else {
+					if (!cur.unitTheme && theme) cur.unitTheme = theme
+					cur.lessons.push(row)
+				}
+			})
+			return groups
 		}
 	},
 	onShow() {
@@ -334,12 +319,9 @@ export default {
 			try {
 				const prefs = getCurriculumPrefs()
 				this.summary = formatCurriculumSummary(prefs)
-				this.textbookTexts = []
-				if (prefs.textbook_version_id === TEXTBOOK_VERSION_IDS.TONGBIAN_RJ) {
-					const raw = await loadRenjiaoTextbookTexts({
-						grade: prefs.grade,
-						semester: prefs.semester
-					})
+				if (isRenjiaoTextbookSyncPrefs(prefs)) {
+					const loaderParams = getRenjiaoTextbookLoaderParams(prefs)
+					const raw = await loadRenjiaoTextbookTexts(loaderParams)
 					const syncLessons = filterRenjiaoTextbookSyncLessons(raw)
 					this.chars = []
 					this.lessons = syncLessons.map((item, idx) => {
@@ -347,11 +329,16 @@ export default {
 						const litRows = buildLiteracyOnlyCharRowsFromRenjiaoItem(item)
 						const pinyinItems = buildLessonPinyinItemsFromRenjiaoItem(item)
 						const learnCheckKeys = this.collectLessonLearnCharKeys(litRows)
+						const unitNum = Number(item.unit)
 						return {
 							hint: String(item.title || `第${idx + 1}课`),
 							count: charRows.length,
 							pinyinCount: pinyinItems.length,
 							rjIdx: idx,
+							unit: Number.isFinite(unitNum) ? unitNum : null,
+							unitName: String(item.unitName || '').trim(),
+							unitTheme:
+								item.unitTheme != null ? String(item.unitTheme).trim() : '',
 							learnCheckKeys,
 							doneBadgeKind: learnCheckKeys.length ? 'literacy' : '',
 							doneBadgeText: ''
@@ -421,7 +408,6 @@ export default {
 				this.curriculumPickerRequired = true
 				this.lessons = []
 				this.chars = []
-				this.textbookTexts = []
 				this.summary = '请先选择教材'
 				this.openCurriculumPicker()
 				return
@@ -460,25 +446,22 @@ export default {
 				icon: 'success'
 			})
 		},
-		openText(item, idx) {
-			const title = item && item.title ? item.title : `第${idx + 1}篇`
-			const raw = item && item.content ? String(item.content).trim() : ''
-			uni.showModal({
-				title,
-				content: raw.length > 900 ? `${raw.slice(0, 900)}\n\n（内容较长，已截断）` : raw || '暂无内容',
-				showCancel: false,
-				confirmText: '关闭'
-			})
-		},
 		goHome() {
 			uni.switchTab({ url: '/pages/home/home' })
+		},
+		/** 单元头：unitName.unitTheme（无主题则仅单元名） */
+		unitHeadTitle(group) {
+			const name = String((group && group.unitName) || '').trim()
+			const theme = String((group && group.unitTheme) || '').trim()
+			if (name && theme) return `${name}.${theme}`
+			return name || theme
 		},
 		lessonMetaText(lesson) {
 			const chars = Number(lesson && lesson.count) || 0
 			const py = Number(lesson && lesson.pinyinCount) || 0
-			if (chars > 0 && py > 0) return `${chars} 个字 · ${py} 个拼音 · 去学习`
-			if (py > 0) return `${py} 个拼音 · 去学习`
-			return `${chars} 个字 · 去学习`
+			if (chars > 0 && py > 0) return `${chars} 字 · ${py} 拼音`
+			if (py > 0) return `${py} 拼音`
+			return `${chars} 字`
 		},
 		openLesson(lesson) {
 			if (this.curriculumPickerRequired) {
@@ -502,15 +485,14 @@ export default {
 <style scoped>
 .tb-page {
 	min-height: 100vh;
-	padding: 0 0 48rpx;
+	padding: 0 0 40rpx;
 	box-sizing: border-box;
 	background: var(--meng-page-bg);
 }
 
-/* —— 顶区（对齐首页 Hero 粉奶油氛围）—— */
 .tb-hero {
 	position: relative;
-	padding: 0 20rpx 36rpx;
+	padding: 0 20rpx 12rpx;
 	box-sizing: border-box;
 	overflow: hidden;
 }
@@ -522,109 +504,14 @@ export default {
 	margin-right: -20rpx;
 }
 
-.tb-circle-btn--nav {
-	width: 64rpx;
-	height: 64rpx;
-}
-
-.tb-hero-sky {
-	position: absolute;
-	left: 0;
-	right: 0;
-	top: 0;
-	height: 280rpx;
-	background: rgba(255, 255, 255, 0);
-	pointer-events: none;
-}
-
-.tb-hero-card {
+.tb-hero-bar {
 	position: relative;
 	z-index: 1;
-	padding: 24rpx 22rpx 22rpx;
-	border-radius: 32rpx;
-	background: rgba(255, 255, 255, 0.9);
-	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow:
-		0 12rpx 40rpx rgba(255, 150, 180, 0.14),
-		0 8rpx 24rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
-}
-
-.tb-hero-head {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 20rpx;
-}
-
-.tb-hero-title {
-	font-size: 38rpx;
-	font-weight: 800;
-	color: var(--meng-text, #2c2419);
-	letter-spacing: 2rpx;
-}
-
-.tb-hero-tools {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.tb-circle-btn {
-	width: 72rpx;
-	height: 72rpx;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.95);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 8rpx 22rpx rgba(255, 120, 160, 0.2);
-	border: 2rpx solid rgba(255, 200, 215, 0.5);
-}
-
-.tb-circle-icon {
-	font-size: 30rpx;
-}
-
-.tb-hero-body {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.tb-cover-wrap {
-	flex-shrink: 0;
-	position: relative;
-	width: 152rpx;
-	height: 0;
-	padding-bottom: 200rpx;
-	margin-right: 22rpx;
-	border-radius: 18rpx;
-	background: #fff8f0;
-	overflow: hidden;
-	box-shadow: 0 10rpx 28rpx rgba(44, 36, 25, 0.1);
-	border: 2rpx solid rgba(255, 200, 180, 0.35);
-}
-
-.tb-cover-img {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
-}
-
-.tb-cover-tag {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	padding: 8rpx 0;
-	text-align: center;
-	font-size: 20rpx;
-	font-weight: 700;
-	color: #fff;
-	background: rgba(196, 77, 106, 0.35);
+	gap: 12rpx;
+	padding: 12rpx 4rpx 4rpx;
 }
 
 .tb-hero-meta {
@@ -635,158 +522,92 @@ export default {
 .tb-hero-sub {
 	display: block;
 	font-size: 26rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.5;
+	font-weight: 700;
+	color: var(--meng-text, #2c2419);
+	line-height: 1.3;
 	word-break: break-all;
 }
 
-.tb-stat-pill {
-	display: inline-flex;
-	margin-top: 14rpx;
-	padding: 10rpx 18rpx;
-	border-radius: 999rpx;
-	background: #d4f0dc;
-	border: 2rpx solid rgba(111, 186, 125, 0.35);
-}
-
-.tb-stat-txt {
-	font-size: 24rpx;
-	color: #3d6b4a;
-	font-weight: 600;
-}
-
-.tb-stat-num {
-	font-weight: 800;
-	color: #2e7d32;
-}
-
-/* —— 主内容玻璃区（对齐首页 dock-glass）—— */
-.tb-sheet {
-	position: relative;
-	z-index: 2;
-	margin: -32rpx 20rpx 0;
-	padding: 24rpx 22rpx 20rpx;
-	border-radius: 36rpx 36rpx 28rpx 28rpx;
-	background: rgba(255, 255, 255, 0.88);
-	border: 2rpx solid rgba(255, 255, 255, 0.95);
-	box-shadow:
-		0 -8rpx 36rpx rgba(255, 150, 180, 0.1),
-		0 16rpx 40rpx var(--meng-shadow, rgba(44, 36, 25, 0.06));
-	box-sizing: border-box;
-}
-
-.textbook-panel {
-	margin-bottom: 20rpx;
-	background: #fff5f8;
-	border-radius: 22rpx;
-	padding: 18rpx 20rpx;
-	border: 1rpx solid rgba(255, 200, 180, 0.35);
-}
-
-.textbook-panel-head {
-	margin-bottom: 8rpx;
-}
-
-.textbook-panel-title {
-	display: block;
-	font-size: 28rpx;
-	font-weight: 700;
-	color: var(--meng-text);
-}
-
-.textbook-panel-sub {
+.tb-hero-stat {
 	display: block;
 	margin-top: 4rpx;
 	font-size: 22rpx;
-	color: #8a8279;
-}
-
-.text-row {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	padding: 16rpx 6rpx;
-	border-top: 1rpx solid rgba(255, 220, 200, 0.45);
-}
-
-.text-row:active {
-	opacity: 0.85;
-}
-
-.text-row-title {
-	flex: 1;
-	font-size: 26rpx;
-	color: var(--meng-text-secondary, #6d5e52);
-	line-height: 1.45;
-	font-weight: 500;
-}
-
-.text-row-arrow {
-	font-size: 34rpx;
-	color: rgba(196, 77, 106, 0.4);
-	margin-left: 12rpx;
-}
-
-.section-head {
-	margin-bottom: 14rpx;
-	padding-left: 4rpx;
-}
-
-.section-title {
-	display: block;
-	font-size: 30rpx;
-	font-weight: 800;
-	color: var(--meng-text, #2c2419);
-	margin-bottom: 6rpx;
-}
-
-.section-hint {
-	display: block;
-	font-size: 22rpx;
 	color: var(--meng-text-muted, #8a8076);
-	line-height: 1.45;
+	line-height: 1.3;
+}
+
+.tb-switch-link {
+	flex-shrink: 0;
+	padding: 10rpx 4rpx 10rpx 12rpx;
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #c44d6a;
+	line-height: 1.2;
+}
+
+.tb-switch-link:active {
+	opacity: 0.75;
+}
+
+.tb-body {
+	position: relative;
+	z-index: 2;
+	padding: 8rpx 20rpx 0;
+	box-sizing: border-box;
 }
 
 .lesson-list {
 	display: flex;
 	flex-direction: column;
+	gap: 22rpx;
 }
 
-.lesson-list > .lesson-card + .lesson-card {
-	margin-top: 14rpx;
+.lesson-unit-block {
+	display: flex;
+	flex-direction: column;
+	gap: 10rpx;
+}
+
+.unit-head {
+	padding: 8rpx 4rpx 2rpx;
+}
+
+.unit-name {
+	display: block;
+	font-size: 24rpx;
+	font-weight: 700;
+	color: var(--meng-text-muted, #8a8076);
+	line-height: 1.3;
+	letter-spacing: 0.02em;
 }
 
 .lesson-card {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 24rpx 20rpx;
-	background: #fff;
-	border-radius: 24rpx;
-	border: 2rpx solid rgba(255, 230, 210, 0.6);
-	box-shadow: 0 8rpx 20rpx rgba(44, 36, 25, 0.05);
+	padding: 18rpx 16rpx;
+	background: var(--meng-card-solid, #fff);
+	border-radius: 18rpx;
+	border: 1rpx solid var(--meng-border, rgba(44, 36, 25, 0.08));
 	box-sizing: border-box;
 }
 
 .lesson-card:active {
-	opacity: 0.94;
-	transform: scale(0.995);
+	opacity: 0.92;
 }
 
 .lesson-num {
 	flex-shrink: 0;
-	width: 56rpx;
-	height: 56rpx;
-	line-height: 56rpx;
+	width: 48rpx;
+	height: 48rpx;
+	line-height: 48rpx;
 	text-align: center;
-	font-size: 26rpx;
-	font-weight: 800;
-	color: #fff;
-	background: #7fd49a;
-	border-radius: 16rpx;
-	margin-right: 18rpx;
-	box-shadow: 0 6rpx 14rpx rgba(90, 160, 110, 0.28);
+	font-size: 24rpx;
+	font-weight: 700;
+	color: #3d6b4a;
+	background: #e8f6ec;
+	border-radius: 12rpx;
+	margin-right: 14rpx;
 }
 
 .lesson-main {
@@ -797,100 +618,72 @@ export default {
 .lesson-title-row {
 	display: flex;
 	flex-direction: row;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
+	gap: 10rpx;
 }
 
 .lesson-title-row .lesson-title {
 	flex: 1;
 	min-width: 0;
 	display: block;
-	font-size: 30rpx;
+	font-size: 28rpx;
 	font-weight: 700;
 	color: var(--meng-text);
-	line-height: 1.35;
+	line-height: 1.3;
 	word-break: break-all;
 }
 
 .lesson-done-badge {
 	flex-shrink: 0;
-	margin-left: 12rpx;
-	padding: 4rpx 14rpx;
-	font-size: 22rpx;
+	padding: 2rpx 10rpx;
+	font-size: 20rpx;
 	font-weight: 600;
-	color: #fff;
-	background: #43a047;
-	border-radius: 999rpx;
-	line-height: 1.3;
+	color: #2e7d32;
+	background: #e8f6ec;
+	border-radius: 8rpx;
+	line-height: 1.35;
 }
 
 .lesson-meta {
 	display: block;
-	margin-top: 8rpx;
-	font-size: 24rpx;
-	color: #c44d6a;
-	font-weight: 600;
+	margin-top: 4rpx;
+	font-size: 22rpx;
+	color: var(--meng-text-muted, #8a8076);
+	font-weight: 500;
 }
 
 .lesson-arrow {
 	flex-shrink: 0;
-	font-size: 40rpx;
-	color: rgba(196, 77, 106, 0.35);
-	margin-left: 12rpx;
+	font-size: 32rpx;
+	color: rgba(44, 36, 25, 0.22);
+	margin-left: 8rpx;
 	font-weight: 300;
 }
 
 .empty-box {
-	padding: 48rpx 28rpx;
-	background: #fff0f5;
-	border-radius: 24rpx;
-	border: 2rpx dashed rgba(255, 180, 200, 0.45);
+	padding: 56rpx 24rpx;
 	text-align: center;
 }
 
 .empty-title {
 	display: block;
-	font-size: 30rpx;
+	font-size: 28rpx;
 	font-weight: 700;
-	color: #6d4c41;
-	margin-bottom: 12rpx;
+	color: var(--meng-text);
+	margin-bottom: 8rpx;
 }
 
 .empty-desc {
 	display: block;
 	font-size: 24rpx;
-	color: #9e9e9e;
-	line-height: 1.55;
+	color: var(--meng-text-muted, #8a8076);
+	line-height: 1.45;
 	margin-bottom: 24rpx;
 }
 
 .empty-btn {
 	border-radius: 999rpx !important;
-}
-
-.foot-tip {
-	display: flex;
-	flex-direction: row;
-	align-items: flex-start;
-	margin-top: 8rpx;
-	padding: 16rpx 18rpx;
-	background: #fff0f5;
-	border-radius: 20rpx;
-	border: 1rpx solid rgba(255, 200, 180, 0.35);
-}
-
-.foot-icon-img {
-	width: 44rpx;
-	height: 44rpx;
-	margin-right: 10rpx;
-	flex-shrink: 0;
-}
-
-.foot-msg {
-	flex: 1;
-	font-size: 22rpx;
-	color: #6b6560;
-	line-height: 1.5;
 }
 
 .picker-mask {
